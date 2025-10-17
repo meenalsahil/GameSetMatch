@@ -61,7 +61,7 @@ export default function PlayerProfile() {
             </Avatar>
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3 mb-2">
-                <h1 className="text-4xl font-bold text-foreground">Sarah Martinez</h1>
+                <h1 className="text-4xl font-bold text-foreground">Player A</h1>
                 <Badge className="bg-primary text-primary-foreground">Rank #234</Badge>
               </div>
               <div className="flex items-center gap-4 text-muted-foreground mb-4">
@@ -71,7 +71,7 @@ export default function PlayerProfile() {
                 </div>
               </div>
               <Button size="lg" data-testid="button-sponsor-player">
-                Sponsor Sarah
+                Sponsor Player
               </Button>
             </div>
           </div>
@@ -84,10 +84,10 @@ export default function PlayerProfile() {
             <Card className="p-6">
               <h2 className="text-2xl font-bold text-card-foreground mb-4">About</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Professional tennis player specializing in clay court competitions. Currently competing
-                in ATP Challenger and ITF circuits across Europe. My goal is to break into the top 150
-                rankings and qualify for Grand Slam events. With your support, I can focus on training
-                and competing at the highest level.
+                Tennis player specializing in clay court competitions. Currently competing
+                in ATP Challenger and ITF circuits across Europe. Seeking sponsorship support
+                for tournament travel, training, and equipment to continue competing at the
+                professional level.
               </p>
             </Card>
 

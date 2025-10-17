@@ -12,7 +12,7 @@ export default function Footer() {
               <span className="text-lg font-bold text-card-foreground">AceSponsors</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Empowering tennis players through community sponsorship
+              Connecting tennis players with sponsors at all competitive levels
             </p>
           </div>
 

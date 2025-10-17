@@ -8,28 +8,28 @@ import { Search, SlidersHorizontal } from "lucide-react";
 const allPlayers = [
   {
     id: "1",
-    name: "Sarah Martinez",
+    name: "Player A",
     location: "Barcelona, Spain",
     ranking: 234,
     specialization: "Clay Court",
   },
   {
     id: "2",
-    name: "James Chen",
+    name: "Player B",
     location: "Singapore",
     ranking: 187,
     specialization: "Hard Court",
   },
   {
     id: "3",
-    name: "Emma Thompson",
+    name: "Player C",
     location: "London, UK",
     ranking: 156,
     specialization: "Grass Court",
   },
   {
     id: "4",
-    name: "Diego Rodriguez",
+    name: "Player D",
     location: "Buenos Aires, Argentina",
     ranking: 298,
     specialization: "All Surface",
@@ -48,7 +48,7 @@ export default function Players() {
               Browse Players
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl">
-              Discover talented tennis players seeking sponsorship support
+              Discover tennis players at all levels seeking sponsorship support
             </p>
           </div>
         </div>

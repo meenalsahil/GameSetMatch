@@ -5,7 +5,7 @@ export default function PlayerCardExample() {
     <div className="p-8 max-w-sm">
       <PlayerCard
         id="demo"
-        name="Sarah Martinez"
+        name="Player A"
         location="Barcelona, Spain"
         ranking={234}
         specialization="Clay Court"

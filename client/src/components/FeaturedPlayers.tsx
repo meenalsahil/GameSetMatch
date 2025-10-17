@@ -3,28 +3,28 @@ import PlayerCard from "./PlayerCard";
 const players = [
   {
     id: "1",
-    name: "Sarah Martinez",
+    name: "Player A",
     location: "Barcelona, Spain",
     ranking: 234,
     specialization: "Clay Court",
   },
   {
     id: "2",
-    name: "James Chen",
+    name: "Player B",
     location: "Singapore",
     ranking: 187,
     specialization: "Hard Court",
   },
   {
     id: "3",
-    name: "Emma Thompson",
+    name: "Player C",
     location: "London, UK",
     ranking: 156,
     specialization: "Grass Court",
   },
   {
     id: "4",
-    name: "Diego Rodriguez",
+    name: "Player D",
     location: "Buenos Aires, Argentina",
     ranking: 298,
     specialization: "All Surface",
@@ -37,10 +37,10 @@ export default function FeaturedPlayers() {
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Featured Athletes
+            Featured Players
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Support rising stars on their journey to professional tennis
+            Support tennis players competing at ATP, Challenger, and ITF levels
           </p>
         </div>
 
