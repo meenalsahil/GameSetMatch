@@ -8,6 +8,9 @@ import Header from "@/components/Header";
 import Home from "@/pages/Home";
 import Players from "@/pages/Players";
 import PlayerProfile from "@/pages/PlayerProfile";
+import HowItWorks from "@/pages/HowItWorks";
+import PlayerSignup from "@/pages/PlayerSignup";
+import SponsorSignup from "@/pages/SponsorSignup";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -16,6 +19,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/players" component={Players} />
       <Route path="/player/:id" component={PlayerProfile} />
+      <Route path="/how-it-works" component={HowItWorks} />
+      <Route path="/signup/player" component={PlayerSignup} />
+      <Route path="/signup/sponsor" component={SponsorSignup} />
       <Route component={NotFound} />
     </Switch>
   );

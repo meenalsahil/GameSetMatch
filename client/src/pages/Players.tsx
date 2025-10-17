@@ -34,6 +34,62 @@ const allPlayers = [
     ranking: 298,
     specialization: "All Surface",
   },
+  {
+    id: "5",
+    name: "Player E",
+    location: "Paris, France",
+    ranking: 412,
+    specialization: "Clay Court",
+  },
+  {
+    id: "6",
+    name: "Player F",
+    location: "Melbourne, Australia",
+    ranking: 321,
+    specialization: "Hard Court",
+  },
+  {
+    id: "7",
+    name: "Player G",
+    location: "New York, USA",
+    ranking: 267,
+    specialization: "Hard Court",
+  },
+  {
+    id: "8",
+    name: "Player H",
+    location: "Rome, Italy",
+    ranking: 189,
+    specialization: "Clay Court",
+  },
+  {
+    id: "9",
+    name: "Player I",
+    location: "Tokyo, Japan",
+    ranking: 445,
+    specialization: "Hard Court",
+  },
+  {
+    id: "10",
+    name: "Player J",
+    location: "Stockholm, Sweden",
+    ranking: 356,
+    specialization: "Hard Court",
+  },
+  {
+    id: "11",
+    name: "Player K",
+    location: "São Paulo, Brazil",
+    ranking: 523,
+    specialization: "Clay Court",
+  },
+  {
+    id: "12",
+    name: "Player L",
+    location: "Berlin, Germany",
+    ranking: 278,
+    specialization: "Grass Court",
+  },
 ];
 
 export default function Players() {

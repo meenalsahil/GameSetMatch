@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Hero() {
   return (
@@ -14,23 +15,27 @@ export default function Hero() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button 
-              size="lg" 
-              variant="default"
-              className="text-lg h-12 px-8"
-              data-testid="button-player-signup"
-            >
-              I'm a Player
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline"
-              className="text-lg h-12 px-8"
-              data-testid="button-sponsor-signup"
-            >
-              Become a Sponsor
-            </Button>
+            <Link href="/signup/player">
+              <Button 
+                size="lg" 
+                variant="default"
+                className="text-lg h-12 px-8"
+                data-testid="button-player-signup"
+              >
+                I'm a Player
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/signup/sponsor">
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="text-lg h-12 px-8"
+                data-testid="button-sponsor-signup"
+              >
+                Become a Sponsor
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

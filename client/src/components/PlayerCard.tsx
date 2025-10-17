@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MapPin, User } from "lucide-react";
+import { Link } from "wouter";
 
 interface PlayerCardProps {
   id: string;
@@ -52,9 +53,11 @@ export default function PlayerCard({
           Specialization: {specialization}
         </div>
 
-        <Button className="w-full" data-testid={`button-sponsor-${id}`}>
-          View Profile
-        </Button>
+        <Link href={`/player/${id}`}>
+          <Button className="w-full" data-testid={`button-sponsor-${id}`}>
+            View Profile
+          </Button>
+        </Link>
       </div>
     </Card>
   );
