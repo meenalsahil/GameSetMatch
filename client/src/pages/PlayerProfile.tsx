@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import SponsorshipNeedCard from "@/components/SponsorshipNeedCard";
 import Footer from "@/components/Footer";
-import { MapPin, Trophy, Calendar, Plane, Shirt, DollarSign, Hotel } from "lucide-react";
-import playerImage from "@assets/generated_images/Female_tennis_player_portrait_60ebf680.png";
+import { MapPin, Calendar, Plane, Shirt, DollarSign, Hotel, User } from "lucide-react";
 
 const tournaments = [
   { date: "Mar 2025", event: "ATP Challenger Barcelona", result: "Semifinal" },
@@ -51,16 +51,16 @@ const sponsorshipNeeds = [
 export default function PlayerProfile() {
   return (
     <div className="min-h-screen">
-      <div className="relative h-96 bg-gradient-to-b from-primary/20 to-background">
-        <div className="container mx-auto px-6 h-full flex items-end pb-8">
-          <div className="flex flex-col md:flex-row gap-6 items-end">
-            <img
-              src={playerImage}
-              alt="Sarah Martinez"
-              className="w-48 h-48 rounded-md object-cover border-4 border-background shadow-lg"
-            />
+      <div className="relative bg-gradient-to-b from-primary/20 to-background py-16">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            <Avatar className="h-32 w-32">
+              <AvatarFallback className="bg-primary/10 text-primary text-3xl">
+                <User className="h-16 w-16" />
+              </AvatarFallback>
+            </Avatar>
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex flex-wrap items-center gap-3 mb-2">
                 <h1 className="text-4xl font-bold text-foreground">Sarah Martinez</h1>
                 <Badge className="bg-primary text-primary-foreground">Rank #234</Badge>
               </div>
@@ -68,10 +68,6 @@ export default function PlayerProfile() {
                 <div className="flex items-center gap-1">
                   <MapPin className="h-4 w-4" />
                   <span>Barcelona, Spain</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Trophy className="h-4 w-4" />
-                  <span>12 Recent Wins</span>
                 </div>
               </div>
               <Button size="lg" data-testid="button-sponsor-player">

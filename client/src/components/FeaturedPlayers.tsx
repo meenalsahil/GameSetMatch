@@ -1,8 +1,4 @@
 import PlayerCard from "./PlayerCard";
-import femalePlayer1 from "@assets/generated_images/Female_tennis_player_portrait_60ebf680.png";
-import malePlayer1 from "@assets/generated_images/Male_tennis_player_portrait_057ee5cf.png";
-import femalePlayer2 from "@assets/generated_images/Female_player_forehand_action_1763c141.png";
-import malePlayer2 from "@assets/generated_images/Male_player_backhand_action_78dc1f59.png";
 
 const players = [
   {
@@ -10,10 +6,6 @@ const players = [
     name: "Sarah Martinez",
     location: "Barcelona, Spain",
     ranking: 234,
-    image: femalePlayer1,
-    fundsRaised: 8500,
-    fundingGoal: 15000,
-    recentWins: 12,
     specialization: "Clay Court",
   },
   {
@@ -21,10 +13,6 @@ const players = [
     name: "James Chen",
     location: "Singapore",
     ranking: 187,
-    image: malePlayer1,
-    fundsRaised: 12000,
-    fundingGoal: 20000,
-    recentWins: 8,
     specialization: "Hard Court",
   },
   {
@@ -32,10 +20,6 @@ const players = [
     name: "Emma Thompson",
     location: "London, UK",
     ranking: 156,
-    image: femalePlayer2,
-    fundsRaised: 18000,
-    fundingGoal: 25000,
-    recentWins: 15,
     specialization: "Grass Court",
   },
   {
@@ -43,10 +27,6 @@ const players = [
     name: "Diego Rodriguez",
     location: "Buenos Aires, Argentina",
     ranking: 298,
-    image: malePlayer2,
-    fundsRaised: 5400,
-    fundingGoal: 12000,
-    recentWins: 6,
     specialization: "All Surface",
   },
 ];
