@@ -17,20 +17,26 @@ export default function Header() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">
-          <Link href="/">
-            <a className="text-sm font-medium text-foreground hover:text-primary transition-colors" data-testid="link-home">
-              Home
-            </a>
+          <Link 
+            href="/" 
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors" 
+            data-testid="link-home"
+          >
+            Home
           </Link>
-          <Link href="/players">
-            <a className="text-sm font-medium text-foreground hover:text-primary transition-colors" data-testid="link-players">
-              Browse Players
-            </a>
+          <Link 
+            href="/players" 
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors" 
+            data-testid="link-players"
+          >
+            Browse Players
           </Link>
-          <Link href="/how-it-works">
-            <a className="text-sm font-medium text-foreground hover:text-primary transition-colors" data-testid="link-how-it-works">
-              How It Works
-            </a>
+          <Link 
+            href="/how-it-works" 
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors" 
+            data-testid="link-how-it-works"
+          >
+            How It Works
           </Link>
         </nav>
 

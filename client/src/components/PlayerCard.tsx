@@ -53,11 +53,11 @@ export default function PlayerCard({
           Specialization: {specialization}
         </div>
 
-        <Link href={`/player/${id}`}>
-          <Button className="w-full" data-testid={`button-sponsor-${id}`}>
+        <Button asChild className="w-full" data-testid={`button-sponsor-${id}`}>
+          <Link href={`/player/${id}`}>
             View Profile
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
     </Card>
   );

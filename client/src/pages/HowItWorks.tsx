@@ -113,11 +113,11 @@ export default function HowItWorks() {
               ))}
             </div>
             <div className="text-center">
-              <Link href="/signup/player">
-                <Button size="lg" data-testid="button-player-signup-how-it-works">
+              <Button asChild size="lg" data-testid="button-player-signup-how-it-works">
+                <Link href="/signup/player">
                   Sign Up as a Player
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
 
@@ -144,11 +144,11 @@ export default function HowItWorks() {
               ))}
             </div>
             <div className="text-center">
-              <Link href="/signup/sponsor">
-                <Button size="lg" variant="outline" data-testid="button-sponsor-signup-how-it-works">
+              <Button asChild size="lg" variant="outline" data-testid="button-sponsor-signup-how-it-works">
+                <Link href="/signup/sponsor">
                   Become a Sponsor
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
 

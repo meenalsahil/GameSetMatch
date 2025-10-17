@@ -82,16 +82,16 @@ export default function PlayerSignup() {
               Thank you for applying to AceSponsors. We'll review your application and send you an email within 2-3 business days with next steps.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/">
-                <Button variant="outline" data-testid="button-home">
+              <Button asChild variant="outline" data-testid="button-home">
+                <Link href="/">
                   Back to Home
-                </Button>
-              </Link>
-              <Link href="/players">
-                <Button data-testid="button-browse-players">
+                </Link>
+              </Button>
+              <Button asChild data-testid="button-browse-players">
+                <Link href="/players">
                   Browse Other Players
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </Card>
         </div>
@@ -105,12 +105,12 @@ export default function PlayerSignup() {
       <div className="flex-1">
         <div className="bg-gradient-to-b from-primary/10 to-background py-12">
           <div className="container mx-auto px-6">
-            <Link href="/how-it-works">
-              <Button variant="ghost" size="sm" className="mb-4" data-testid="button-back">
+            <Button asChild variant="ghost" size="sm" className="mb-4" data-testid="button-back">
+              <Link href="/how-it-works">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               Player Application
             </h1>

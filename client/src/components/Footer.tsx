@@ -20,18 +20,18 @@ export default function Footer() {
             <h4 className="font-semibold text-card-foreground mb-4">Platform</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link href="/players">
-                  <a className="hover:text-primary transition-colors">Browse Players</a>
+                <Link href="/players" className="hover:text-primary transition-colors">
+                  Browse Players
                 </Link>
               </li>
               <li>
-                <Link href="/how-it-works">
-                  <a className="hover:text-primary transition-colors">How It Works</a>
+                <Link href="/how-it-works" className="hover:text-primary transition-colors">
+                  How It Works
                 </Link>
               </li>
               <li>
-                <Link href="/pricing">
-                  <a className="hover:text-primary transition-colors">Pricing</a>
+                <Link href="/pricing" className="hover:text-primary transition-colors">
+                  Pricing
                 </Link>
               </li>
             </ul>

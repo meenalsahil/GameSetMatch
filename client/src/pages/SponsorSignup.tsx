@@ -88,16 +88,16 @@ export default function SponsorSignup() {
               Your account has been created. You can now browse players and start making a difference in their tennis careers.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/players">
-                <Button data-testid="button-browse-players">
+              <Button asChild data-testid="button-browse-players">
+                <Link href="/players">
                   Browse Players
-                </Button>
-              </Link>
-              <Link href="/">
-                <Button variant="outline" data-testid="button-home">
+                </Link>
+              </Button>
+              <Button asChild variant="outline" data-testid="button-home">
+                <Link href="/">
                   Back to Home
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </Card>
         </div>
@@ -111,12 +111,12 @@ export default function SponsorSignup() {
       <div className="flex-1">
         <div className="bg-gradient-to-b from-accent/10 to-background py-12">
           <div className="container mx-auto px-6">
-            <Link href="/how-it-works">
-              <Button variant="ghost" size="sm" className="mb-4" data-testid="button-back">
+            <Button asChild variant="ghost" size="sm" className="mb-4" data-testid="button-back">
+              <Link href="/how-it-works">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               Become a Sponsor
             </h1>

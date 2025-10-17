@@ -15,27 +15,29 @@ export default function Hero() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/signup/player">
-              <Button 
-                size="lg" 
-                variant="default"
-                className="text-lg h-12 px-8"
-                data-testid="button-player-signup"
-              >
+            <Button 
+              asChild
+              size="lg" 
+              variant="default"
+              className="text-lg h-12 px-8"
+              data-testid="button-player-signup"
+            >
+              <Link href="/signup/player">
                 I'm a Player
                 <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link href="/signup/sponsor">
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="text-lg h-12 px-8"
-                data-testid="button-sponsor-signup"
-              >
+              </Link>
+            </Button>
+            <Button 
+              asChild
+              size="lg" 
+              variant="outline"
+              className="text-lg h-12 px-8"
+              data-testid="button-sponsor-signup"
+            >
+              <Link href="/signup/sponsor">
                 Become a Sponsor
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
