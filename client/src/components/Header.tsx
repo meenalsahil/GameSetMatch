@@ -1,10 +1,12 @@
-import { Moon, Sun, Trophy } from "lucide-react";
+import { Moon, Sun, Trophy, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "./ThemeProvider";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
+  const { isAuthenticated } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b backdrop-blur-md bg-background/80">
@@ -54,12 +56,27 @@ export default function Header() {
               <Sun className="h-4 w-4" />
             )}
           </Button>
-          <Button variant="outline" size="sm" data-testid="button-login">
-            Sign In
-          </Button>
-          <Button size="sm" data-testid="button-get-started">
-            Get Started
-          </Button>
+          {isAuthenticated ? (
+            <Button asChild size="sm" data-testid="button-dashboard">
+              <Link href="/dashboard">
+                <User className="h-4 w-4 mr-2" />
+                Dashboard
+              </Link>
+            </Button>
+          ) : (
+            <>
+              <Button asChild variant="outline" size="sm" data-testid="button-login">
+                <Link href="/signin">
+                  Sign In
+                </Link>
+              </Button>
+              <Button asChild size="sm" data-testid="button-get-started">
+                <Link href="/signup/player">
+                  Get Started
+                </Link>
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>

@@ -13,29 +13,21 @@ import {
 import Footer from "@/components/Footer";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { signupPlayerSchema, type SignupPlayer } from "@shared/schema";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
-import { Link } from "wouter";
-
-const playerSignupSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  fullName: z.string().min(2, "Please enter your full name"),
-  location: z.string().min(2, "Please enter your location"),
-  ranking: z.string().optional(),
-  specialization: z.string().min(2, "Please select your specialization"),
-  bio: z.string().min(50, "Please provide at least 50 characters about yourself"),
-});
-
-type PlayerSignupForm = z.infer<typeof playerSignupSchema>;
+import { Link, useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PlayerSignup() {
   const [step, setStep] = useState(1);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
-  const form = useForm<PlayerSignupForm>({
-    resolver: zodResolver(playerSignupSchema),
+  const form = useForm<SignupPlayer>({
+    resolver: zodResolver(signupPlayerSchema),
     defaultValues: {
       email: "",
       password: "",
@@ -47,13 +39,44 @@ export default function PlayerSignup() {
     },
   });
 
-  const onSubmit = async (data: PlayerSignupForm) => {
-    console.log("Player signup data:", data);
-    setIsSubmitted(true);
+  const signupMutation = useMutation({
+    mutationFn: async (data: SignupPlayer) => {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Signup failed");
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({
+        title: "Success",
+        description: "Welcome to Matchpoint! You can now complete your profile.",
+      });
+      setLocation("/dashboard");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Signup Failed",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = async (data: SignupPlayer) => {
+    signupMutation.mutate(data);
   };
 
   const nextStep = async () => {
-    let fieldsToValidate: (keyof PlayerSignupForm)[] = [];
+    let fieldsToValidate: (keyof SignupPlayer)[] = [];
     
     if (step === 1) {
       fieldsToValidate = ["email", "password", "fullName"];
@@ -66,39 +89,6 @@ export default function PlayerSignup() {
       setStep(step + 1);
     }
   };
-
-  if (isSubmitted) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <div className="flex-1 flex items-center justify-center py-20">
-          <Card className="max-w-2xl w-full mx-6 p-12 text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-6">
-              <CheckCircle2 className="h-10 w-10 text-primary" />
-            </div>
-            <h1 className="text-3xl font-bold text-card-foreground mb-4">
-              Application Submitted!
-            </h1>
-            <p className="text-lg text-muted-foreground mb-8">
-              Thank you for applying to Matchpoint. We'll review your application and send you an email within 2-3 business days with next steps.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild variant="outline" data-testid="button-home">
-                <Link href="/">
-                  Back to Home
-                </Link>
-              </Button>
-              <Button asChild data-testid="button-browse-players">
-                <Link href="/players">
-                  Browse Other Players
-                </Link>
-              </Button>
-            </div>
-          </Card>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -233,10 +223,10 @@ export default function PlayerSignup() {
                           <FormLabel>Current Ranking (Optional)</FormLabel>
                           <FormControl>
                             <Input
-                              type="number"
                               placeholder="e.g., 234"
                               data-testid="input-ranking"
                               {...field}
+                              value={field.value || ""}
                             />
                           </FormControl>
                           <FormMessage />
