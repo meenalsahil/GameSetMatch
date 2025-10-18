@@ -238,7 +238,69 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased text-foreground;
+    position: relative;
+  }
+
+  /* Subtle tennis court-inspired background */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    background: 
+      /* Subtle noise texture for depth */
+      linear-gradient(transparent 0%, transparent 100%),
+      /* Subtle diagonal lines mimicking court texture */
+      repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 80px,
+        hsl(var(--background)) 80px,
+        hsl(var(--background)) 81px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 80px,
+        hsl(var(--background)) 80px,
+        hsl(var(--background)) 81px
+      ),
+      /* Main gradient - subtle court-inspired */
+      radial-gradient(
+        ellipse at 50% 30%,
+        hsl(142 20% 97%),
+        hsl(0 0% 98%)
+      );
+    opacity: 1;
+  }
+
+  .dark body::before {
+    background: 
+      /* Subtle diagonal lines for dark mode */
+      repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 80px,
+        hsl(var(--background)) 80px,
+        hsl(var(--background)) 81px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 80px,
+        hsl(var(--background)) 80px,
+        hsl(var(--background)) 81px
+      ),
+      /* Dark mode gradient */
+      radial-gradient(
+        ellipse at 50% 30%,
+        hsl(142 15% 12%),
+        hsl(220 13% 10%)
+      );
   }
 }
 
