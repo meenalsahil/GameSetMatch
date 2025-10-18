@@ -31,18 +31,18 @@ const playerSteps = [
 const sponsorSteps = [
   {
     icon: Users,
-    title: "Join the Platform",
-    description: "Sign up to discover tennis players at all competitive levels who need your support.",
+    title: "Browse Players",
+    description: "Discover tennis players at all competitive levels who need your support. No signup required to browse.",
   },
   {
     icon: DollarSign,
-    title: "Choose How to Help",
-    description: "Contribute with airline miles, hotel points, direct payment, or equipment donations.",
+    title: "Choose a Player",
+    description: "Review player profiles, tournament schedules, and sponsorship needs to find the right fit.",
   },
   {
     icon: Shield,
     title: "Make an Impact",
-    description: "Track your contributions and receive community service recognition for your support.",
+    description: "Contribute with travel support, gear, or stipends. Help players compete and achieve their goals.",
   },
 ];
 
@@ -60,8 +60,8 @@ const faqs = [
     answer: "Sponsors can contribute travel funds, hotel accommodations (using points), training gear, tournament entry fees, or monthly stipends to support ongoing expenses.",
   },
   {
-    question: "How do sponsors benefit?",
-    answer: "Sponsors receive community service recognition, tax benefits where applicable, and the satisfaction of directly supporting athletes pursuing their professional tennis careers.",
+    question: "Do sponsors need to sign up?",
+    answer: "No signup is required to browse player profiles. When you're ready to sponsor a player, you'll be guided through a simple process to make your contribution.",
   },
   {
     question: "Is my payment information secure?",
@@ -144,9 +144,9 @@ export default function HowItWorks() {
               ))}
             </div>
             <div className="text-center">
-              <Button asChild size="lg" variant="outline" data-testid="button-sponsor-signup-how-it-works">
-                <Link href="/signup/sponsor">
-                  Become a Sponsor
+              <Button asChild size="lg" variant="outline" data-testid="button-browse-players-how-it-works">
+                <Link href="/players">
+                  Browse Players to Sponsor
                 </Link>
               </Button>
             </div>

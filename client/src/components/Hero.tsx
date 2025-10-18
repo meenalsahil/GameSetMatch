@@ -32,10 +32,10 @@ export default function Hero() {
               size="lg" 
               variant="outline"
               className="text-lg h-12 px-8"
-              data-testid="button-sponsor-signup"
+              data-testid="button-browse-players"
             >
-              <Link href="/signup/sponsor">
-                Become a Sponsor
+              <Link href="/players">
+                Browse Players
               </Link>
             </Button>
           </div>

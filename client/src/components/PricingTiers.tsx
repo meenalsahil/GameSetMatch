@@ -57,10 +57,10 @@ export default function PricingTiers() {
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Choose Your Plan
+            Player Pricing Plans
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Start with 3 months free, then select the plan that fits your ambitions
+            Start with 3 months free, then select the plan that fits your ambitions. Sponsors can browse players for free.
           </p>
         </div>
 

@@ -38,13 +38,10 @@ Matchpoint is a sponsorship platform connecting tennis players at all competitiv
 3. **Confirmation:** Application submitted → Review pending
 4. **Profile:** Once approved, profile visible to sponsors
 
-#### Sponsor Journey
-1. **Discovery:** Land on homepage → Browse featured players
-2. **Signup:** Click "Become a Sponsor" → Multi-step form:
-   - Step 1: Account (email, password, name, organization)
-   - Step 2: Preferences (contribution types, player preferences)
-3. **Confirmation:** Account created → Can browse and sponsor players
-4. **Sponsorship:** View player profiles → Choose sponsorship type → Complete payment
+#### Sponsor Journey (Simplified MVP)
+1. **Discovery:** Land on homepage → Browse featured players (no signup required)
+2. **Browse:** Click "Browse Players" → View all player profiles freely
+3. **Sponsorship:** (Phase 2) When ready to sponsor, complete simple sponsorship form and payment
 
 ### Navigation Structure
 **Header Links:**
@@ -56,9 +53,9 @@ Matchpoint is a sponsorship platform connecting tennis players at all competitiv
 
 **CTA Buttons:**
 - Hero: "I'm a Player" → /signup/player
-- Hero: "Become a Sponsor" → /signup/sponsor
+- Hero: "Browse Players" → /players
 - How It Works: "Sign Up as a Player" → /signup/player
-- How It Works: "Become a Sponsor" → /signup/sponsor
+- How It Works: "Browse Players to Sponsor" → /players
 
 ## Key Design Decisions
 
@@ -80,17 +77,43 @@ Matchpoint is a sponsorship platform connecting tennis players at all competitiv
 - **Accurate representation:** No misleading metrics or fake success stories
 - **Clear value prop:** Focus on actual benefits (travel, gear, stipends) not vague promises
 
-## Phase 2 Features (Not Yet Implemented)
-- User authentication system
+## MVP Limitations & Phase 2 Features
+
+### Current MVP State
+**Players:**
+- Multi-step signup form (account, profile, bio)
+- Form validation with Zod
+- Basic profile information collection
+
+**Sponsors:**
+- Free browsing of all player profiles
+- No signup required to view players
+- Sponsorship transactions planned for Phase 2
+
+### Phase 2 Features (Not Yet Implemented)
+**Authentication & Storage:**
+- User authentication system for players
 - Database integration (replacing in-memory storage)
-- Real player data and profiles
+- Session management and login functionality
+
+**Player Profiles:**
+- Photo/image upload capabilities
+- Profile publishing/approval workflow
+- Tournament results integration
+- Video highlights gallery
+
+**Sponsorship System:**
+- Sponsor account creation (when ready to contribute)
 - Actual Stripe payment processing
 - Sponsorship tracking and management
+- Multiple contribution types (miles, points, direct payment)
+
+**Platform Features:**
 - Player/sponsor dashboards
 - Admin panel for featured player curation
 - Email notifications
-- Tournament results integration
 - Analytics and metrics
+- Real player data and profiles
 
 ## Color Scheme (Tennis-Themed)
 - **Primary:** Tennis court green (#16A34A, #22C55E)
