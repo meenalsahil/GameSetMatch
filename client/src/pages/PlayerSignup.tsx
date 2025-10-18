@@ -58,7 +58,7 @@ export default function PlayerSignup() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Success",
-        description: "Welcome to Matchpoint! You can now complete your profile.",
+        description: "Welcome to GameSetMatch! You can now complete your profile.",
       });
       setLocation("/dashboard");
     },
@@ -105,7 +105,7 @@ export default function PlayerSignup() {
               Player Application
             </h1>
             <p className="text-lg text-muted-foreground">
-              Join Matchpoint and connect with sponsors for your tennis journey
+              Join GameSetMatch and connect with sponsors for your tennis journey
             </p>
           </div>
         </div>

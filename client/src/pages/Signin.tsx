@@ -82,7 +82,7 @@ export default function Signin() {
               Player Sign In
             </h1>
             <p className="text-muted-foreground">
-              Sign in to your Matchpoint account
+              Sign in to your GameSetMatch account
             </p>
           </div>
 

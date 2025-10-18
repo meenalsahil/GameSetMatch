@@ -83,7 +83,7 @@ export default function HowItWorks() {
               How It Works
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Matchpoint connects tennis players at all levels with sponsors who want to support their journey.
+              GameSetMatch connects tennis players at all levels with sponsors who want to support their journey.
               Here's how our platform works for both players and sponsors.
             </p>
           </div>
