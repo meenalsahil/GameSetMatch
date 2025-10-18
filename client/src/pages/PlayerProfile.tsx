@@ -1,77 +1,73 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import SponsorshipNeedCard from "@/components/SponsorshipNeedCard";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Footer from "@/components/Footer";
-import { MapPin, Calendar, Plane, Shirt, DollarSign, Hotel, User } from "lucide-react";
+import { MapPin, User } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { Player } from "@shared/schema";
 
-const tournaments = [
-  { date: "Mar 2025", event: "ATP Challenger Barcelona", result: "Semifinal" },
-  { date: "Feb 2025", event: "ITF Women's Circuit Madrid", result: "Winner" },
-  { date: "Jan 2025", event: "ATP Challenger Valencia", result: "Quarterfinal" },
-];
+interface PlayerProfileProps {
+  params: {
+    id: string;
+  };
+}
 
-const upcomingEvents = [
-  { date: "Apr 15-21, 2025", event: "French Open Qualifiers", location: "Paris, France" },
-  { date: "May 5-12, 2025", event: "ATP Challenger Rome", location: "Rome, Italy" },
-];
+export default function PlayerProfile({ params }: PlayerProfileProps) {
+  const { data: player, isLoading } = useQuery<Player>({
+    queryKey: ["/api/players", params.id],
+  });
 
-const sponsorshipNeeds = [
-  {
-    icon: Plane,
-    title: "Tournament Travel",
-    description: "Support travel costs for ATP Challenger events across Europe",
-    amount: 2500,
-    type: "one-time" as const,
-  },
-  {
-    icon: Hotel,
-    title: "Accommodation",
-    description: "Hotel stays during tournament weeks",
-    amount: 1200,
-    type: "one-time" as const,
-  },
-  {
-    icon: Shirt,
-    title: "Training Gear",
-    description: "Professional equipment and apparel for training and competition",
-    amount: 800,
-    type: "one-time" as const,
-  },
-  {
-    icon: DollarSign,
-    title: "Monthly Stipend",
-    description: "Ongoing support for training, nutrition, and recovery",
-    amount: 1500,
-    type: "monthly" as const,
-  },
-];
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Loading player profile...</p>
+      </div>
+    );
+  }
 
-export default function PlayerProfile() {
+  if (!player) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Player Not Found</h1>
+          <p className="text-muted-foreground">The player you're looking for doesn't exist.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const ranking = player.ranking ? parseInt(player.ranking, 10) : null;
+
   return (
     <div className="min-h-screen">
       <div className="relative bg-gradient-to-b from-primary/20 to-background py-16">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row gap-6 items-start">
             <Avatar className="h-32 w-32">
+              <AvatarImage src={player.photoUrl || undefined} />
               <AvatarFallback className="bg-primary/10 text-primary text-3xl">
                 <User className="h-16 w-16" />
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3 mb-2">
-                <h1 className="text-4xl font-bold text-foreground">Player A</h1>
-                <Badge className="bg-primary text-primary-foreground">Rank #234</Badge>
+                <h1 className="text-4xl font-bold text-foreground">{player.fullName}</h1>
+                {ranking && (
+                  <Badge className="bg-primary text-primary-foreground">Rank #{ranking}</Badge>
+                )}
               </div>
               <div className="flex items-center gap-4 text-muted-foreground mb-4">
                 <div className="flex items-center gap-1">
                   <MapPin className="h-4 w-4" />
-                  <span>Barcelona, Spain</span>
+                  <span>{player.location}</span>
                 </div>
               </div>
-              <Button size="lg" data-testid="button-sponsor-player">
-                Sponsor Player
+              <div className="text-sm text-muted-foreground mb-4">
+                <span className="font-medium">Specialization:</span> {player.specialization}
+              </div>
+              <Button size="lg" data-testid="button-sponsor-player" disabled>
+                Sponsor Player (Coming Soon)
               </Button>
             </div>
           </div>
@@ -79,66 +75,20 @@ export default function PlayerProfile() {
       </div>
 
       <div className="container mx-auto px-6 py-12">
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <Card className="p-6">
-              <h2 className="text-2xl font-bold text-card-foreground mb-4">About</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Tennis player specializing in clay court competitions. Currently competing
-                in ATP Challenger and ITF circuits across Europe. Seeking sponsorship support
-                for tournament travel, training, and equipment to continue competing at the
-                professional level.
-              </p>
-            </Card>
+        <div className="max-w-4xl mx-auto space-y-8">
+          <Card className="p-6">
+            <h2 className="text-2xl font-bold text-card-foreground mb-4">About</h2>
+            <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+              {player.bio}
+            </p>
+          </Card>
 
-            <div>
-              <h2 className="text-2xl font-bold text-foreground mb-4">Sponsorship Needs</h2>
-              <div className="grid md:grid-cols-2 gap-4">
-                {sponsorshipNeeds.map((need, index) => (
-                  <SponsorshipNeedCard key={index} {...need} />
-                ))}
-              </div>
-            </div>
-
-            <Card className="p-6">
-              <h2 className="text-2xl font-bold text-card-foreground mb-4">Recent Results</h2>
-              <div className="space-y-3">
-                {tournaments.map((tournament, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between py-3 border-b last:border-b-0"
-                  >
-                    <div>
-                      <p className="font-medium text-card-foreground">{tournament.event}</p>
-                      <p className="text-sm text-muted-foreground">{tournament.date}</p>
-                    </div>
-                    <Badge variant="secondary">{tournament.result}</Badge>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-
-          <div>
-            <Card className="p-6 sticky top-24">
-              <h2 className="text-xl font-bold text-card-foreground mb-4 flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                Upcoming Events
-              </h2>
-              <div className="space-y-4">
-                {upcomingEvents.map((event, index) => (
-                  <div key={index} className="pb-4 border-b last:border-b-0">
-                    <p className="font-semibold text-card-foreground mb-1">{event.event}</p>
-                    <p className="text-sm text-muted-foreground mb-1">{event.date}</p>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {event.location}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
+          <Card className="p-6">
+            <h2 className="text-2xl font-bold text-card-foreground mb-4">Sponsorship Opportunities</h2>
+            <p className="text-muted-foreground">
+              Sponsorship features will be available soon. Stay tuned for updates on how you can support this player's tennis journey.
+            </p>
+          </Card>
         </div>
       </div>
 

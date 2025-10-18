@@ -25,6 +25,7 @@ export const insertPlayerSchema = createInsertSchema(players).omit({
 });
 
 export const signupPlayerSchema = insertPlayerSchema.omit({
+  passwordHash: true,
   published: true,
   featured: true,
   priority: true,

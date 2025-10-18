@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, User } from "lucide-react";
 import { Link } from "wouter";
 
@@ -9,8 +9,9 @@ interface PlayerCardProps {
   id: string;
   name: string;
   location: string;
-  ranking: number;
+  ranking?: number;
   specialization: string;
+  photoUrl?: string | null;
 }
 
 export default function PlayerCard({
@@ -19,6 +20,7 @@ export default function PlayerCard({
   ranking,
   specialization,
   id,
+  photoUrl,
 }: PlayerCardProps) {
   const initials = name
     .split(' ')
@@ -31,6 +33,7 @@ export default function PlayerCard({
       <div className="p-6 space-y-4">
         <div className="flex items-start gap-4">
           <Avatar className="h-16 w-16">
+            <AvatarImage src={photoUrl || undefined} />
             <AvatarFallback className="bg-primary/10 text-primary text-lg">
               <User className="h-8 w-8" />
             </AvatarFallback>
@@ -38,9 +41,11 @@ export default function PlayerCard({
           <div className="flex-1">
             <h3 className="text-xl font-bold text-card-foreground mb-1">{name}</h3>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="text-xs">
-                Rank #{ranking}
-              </Badge>
+              {ranking && (
+                <Badge variant="secondary" className="text-xs">
+                  Rank #{ranking}
+                </Badge>
+              )}
               <div className="flex items-center gap-1 text-muted-foreground text-sm">
                 <MapPin className="h-3 w-3" />
                 <span>{location}</span>

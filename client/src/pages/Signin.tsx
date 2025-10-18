@@ -139,11 +139,9 @@ export default function Signin() {
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Don't have an account?{" "}
-              <Button asChild variant="link" className="p-0 h-auto" data-testid="link-signup">
-                <Link href="/signup/player">
-                  Sign up here
-                </Link>
-              </Button>
+              <Link href="/signup/player" className="text-primary hover:underline" data-testid="link-signup">
+                Sign up here
+              </Link>
             </p>
           </div>
         </Card>

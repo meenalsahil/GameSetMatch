@@ -1,99 +1,40 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import PlayerCard from "@/components/PlayerCard";
 import Footer from "@/components/Footer";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, SlidersHorizontal } from "lucide-react";
-
-const allPlayers = [
-  {
-    id: "1",
-    name: "Player A",
-    location: "Barcelona, Spain",
-    ranking: 234,
-    specialization: "Clay Court",
-  },
-  {
-    id: "2",
-    name: "Player B",
-    location: "Singapore",
-    ranking: 187,
-    specialization: "Hard Court",
-  },
-  {
-    id: "3",
-    name: "Player C",
-    location: "London, UK",
-    ranking: 156,
-    specialization: "Grass Court",
-  },
-  {
-    id: "4",
-    name: "Player D",
-    location: "Buenos Aires, Argentina",
-    ranking: 298,
-    specialization: "All Surface",
-  },
-  {
-    id: "5",
-    name: "Player E",
-    location: "Paris, France",
-    ranking: 412,
-    specialization: "Clay Court",
-  },
-  {
-    id: "6",
-    name: "Player F",
-    location: "Melbourne, Australia",
-    ranking: 321,
-    specialization: "Hard Court",
-  },
-  {
-    id: "7",
-    name: "Player G",
-    location: "New York, USA",
-    ranking: 267,
-    specialization: "Hard Court",
-  },
-  {
-    id: "8",
-    name: "Player H",
-    location: "Rome, Italy",
-    ranking: 189,
-    specialization: "Clay Court",
-  },
-  {
-    id: "9",
-    name: "Player I",
-    location: "Tokyo, Japan",
-    ranking: 445,
-    specialization: "Hard Court",
-  },
-  {
-    id: "10",
-    name: "Player J",
-    location: "Stockholm, Sweden",
-    ranking: 356,
-    specialization: "Hard Court",
-  },
-  {
-    id: "11",
-    name: "Player K",
-    location: "São Paulo, Brazil",
-    ranking: 523,
-    specialization: "Clay Court",
-  },
-  {
-    id: "12",
-    name: "Player L",
-    location: "Berlin, Germany",
-    ranking: 278,
-    specialization: "Grass Court",
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import type { Player } from "@shared/schema";
 
 export default function Players() {
   const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: players, isLoading } = useQuery<Player[]>({
+    queryKey: ["/api/players"],
+  });
+
+  const filteredPlayers = useMemo(() => {
+    if (!players) return [];
+    
+    const query = searchQuery.toLowerCase();
+    if (!query) return players;
+    
+    return players.filter(
+      (player) =>
+        player.fullName.toLowerCase().includes(query) ||
+        player.location.toLowerCase().includes(query) ||
+        player.specialization.toLowerCase().includes(query)
+    );
+  }, [players, searchQuery]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Loading players...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -127,11 +68,28 @@ export default function Players() {
             </Button>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {allPlayers.map((player) => (
-              <PlayerCard key={player.id} {...player} />
-            ))}
-          </div>
+          {filteredPlayers.length === 0 ? (
+            <p className="text-center text-muted-foreground py-12">
+              {searchQuery ? "No players found matching your search." : "No players available yet."}
+            </p>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredPlayers.map((player) => {
+                const ranking = player.ranking ? parseInt(player.ranking, 10) : undefined;
+                return (
+                  <PlayerCard 
+                    key={player.id}
+                    id={player.id}
+                    name={player.fullName}
+                    location={player.location}
+                    ranking={!isNaN(ranking || 0) ? ranking : undefined}
+                    specialization={player.specialization}
+                    photoUrl={player.photoUrl}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
       <Footer />
