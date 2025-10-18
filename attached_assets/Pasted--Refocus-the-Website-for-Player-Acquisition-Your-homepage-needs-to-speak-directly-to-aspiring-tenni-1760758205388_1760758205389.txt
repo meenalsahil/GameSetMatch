@@ -1,0 +1,53 @@
+ Refocus the Website for Player Acquisition
+Your homepage needs to speak directly to aspiring tennis players, not sponsors. The "Featured Players" section should be removed or completely repurposed for now.
+
+1. Change the Core Messaging
+Current Headline: "Empowering Tennis Players"
+
+New Headline Idea: "Get Sponsored. Fuel Your Tennis Career." or "Your Journey to the Pro Tour Starts Here. Find Your Sponsors."
+
+Why: This speaks directly to the player's ambition and offers a solution.
+
+Current Sub-headline: "We connect passionate fans with promising tennis players to help them succeed."
+
+New Sub-headline Idea: "GameSetMatch is a new platform dedicated to connecting you with a global network of fans and sponsors. Create your profile for free and get ready for our official launch."
+
+Why: This clearly states what the platform is, who it's for (you, the player), and what the immediate action is (create a profile). It also manages expectations by mentioning a future launch.
+
+2. Redesign the Main Call-to-Action (CTA)
+Remove the "Featured Players" Section: Since you have no players, this section is counterproductive. Replace it with content that explains the benefits for players.
+
+Create a "For Players" Benefits Section: Use icons and short text to highlight the value proposition:
+
+✓ Create Your Profile for Free: No upfront cost to join.
+
+✓ Reach a Global Audience: Connect with supporters from all over the world.
+
+✓ Set Your Own Funding Goals: Raise money for travel, coaching, equipment, and more.
+
+✓ We're Almost Ready: "Sign up now to be one of our first featured players at launch!"
+
+Change the Primary Button: The most prominent button on the page should no longer be for sponsoring.
+
+New Button Text: "Create Your Player Profile" or "Apply to Join"
+
+3. Create a Player Sign-Up / Application Form
+When a player clicks "Create Your Player Profile," it should take them to a dedicated sign-up page or a well-designed form. This is your most important new feature.
+
+The form should collect key information to build their future profile:
+
+Full Name
+
+Age & Country (with flag)
+
+Current Ranking (UTR, ITF, WTA/ATP, or National)
+
+A Short Bio: "Tell us your story."
+
+Your Goals: "What are you raising funds for?" (e.g., travel to a specific tournament series, new equipment, coaching).
+
+Link to a video of you playing (YouTube, Vimeo, etc.). This is crucial for vetting.
+
+Email Address (for communication).
+
+Crucial Step: After they submit the form, direct them to a "Thank You & What's Next" page. This page must manage their expectations.

@@ -8,10 +8,10 @@ export default function Hero() {
       <div className="relative z-10 container mx-auto px-6 text-center">
         <div className="max-w-4xl mx-auto space-y-8">
           <h1 className="text-5xl md:text-7xl font-bold text-foreground leading-tight">
-            Support Tennis Players at Every Level
+            Get Sponsored. Fuel Your Tennis Career.
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-            Connect players with sponsors to fund their tennis journey. From ATP to Challenger and ITF tournaments.
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
+            GameSetMatch is a new platform dedicated to connecting you with a global network of fans and sponsors. Create your profile for free and get ready for our official launch.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -23,7 +23,7 @@ export default function Hero() {
               data-testid="button-player-signup"
             >
               <Link href="/signup/player">
-                I'm a Player
+                Create Your Player Profile
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
@@ -32,10 +32,10 @@ export default function Hero() {
               size="lg" 
               variant="outline"
               className="text-lg h-12 px-8"
-              data-testid="button-browse-players"
+              data-testid="button-how-it-works"
             >
-              <Link href="/players">
-                Browse Players
+              <Link href="/how-it-works">
+                Learn More
               </Link>
             </Button>
           </div>
