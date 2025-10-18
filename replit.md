@@ -1,7 +1,7 @@
-# AceSponsors - Tennis Player Sponsorship Platform
+# Matchpoint - Tennis Player Sponsorship Platform
 
 ## Project Overview
-AceSponsors is a sponsorship platform connecting tennis players at all competitive levels (ATP, Challenger, ITF) with sponsors. Players can showcase their profiles with tournament results and upcoming events while requesting sponsorships for travel, hotel, gear, and monthly stipends.
+Matchpoint is a sponsorship platform connecting tennis players at all competitive levels (ATP, Challenger, ITF) with sponsors. Players can showcase their profiles with tournament results and upcoming events while requesting sponsorships for travel, hotel, gear, and monthly stipends.
 
 **Business Model:**
 - **Players:** 3-month free trial, then paid subscription

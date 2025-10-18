@@ -79,7 +79,7 @@ export default function PlayerSignup() {
               Application Submitted!
             </h1>
             <p className="text-lg text-muted-foreground mb-8">
-              Thank you for applying to AceSponsors. We'll review your application and send you an email within 2-3 business days with next steps.
+              Thank you for applying to Matchpoint. We'll review your application and send you an email within 2-3 business days with next steps.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild variant="outline" data-testid="button-home">
@@ -115,7 +115,7 @@ export default function PlayerSignup() {
               Player Application
             </h1>
             <p className="text-lg text-muted-foreground">
-              Join AceSponsors and connect with sponsors for your tennis journey
+              Join Matchpoint and connect with sponsors for your tennis journey
             </p>
           </div>
         </div>

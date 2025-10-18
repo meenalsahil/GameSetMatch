@@ -82,7 +82,7 @@ export default function SponsorSignup() {
               <CheckCircle2 className="h-10 w-10 text-accent" />
             </div>
             <h1 className="text-3xl font-bold text-card-foreground mb-4">
-              Welcome to AceSponsors!
+              Welcome to Matchpoint!
             </h1>
             <p className="text-lg text-muted-foreground mb-8">
               Your account has been created. You can now browse players and start making a difference in their tennis careers.

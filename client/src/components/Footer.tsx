@@ -9,7 +9,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Trophy className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold text-card-foreground">AceSponsors</span>
+              <span className="text-lg font-bold text-card-foreground">Matchpoint</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Connecting tennis players with sponsors at all competitive levels
@@ -76,7 +76,7 @@ export default function Footer() {
         </div>
 
         <div className="pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>&copy; 2025 AceSponsors. All rights reserved.</p>
+          <p>&copy; 2025 Matchpoint. All rights reserved.</p>
         </div>
       </div>
     </footer>

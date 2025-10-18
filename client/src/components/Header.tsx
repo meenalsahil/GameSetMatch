@@ -12,7 +12,7 @@ export default function Header() {
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer hover-elevate active-elevate-2 rounded-md px-3 py-2">
             <Trophy className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold text-foreground">AceSponsors</span>
+            <span className="text-xl font-bold text-foreground">Matchpoint</span>
           </div>
         </Link>
 
