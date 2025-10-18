@@ -1,38 +1,55 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { type Player, type InsertPlayer, players } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getPlayer(id: string): Promise<Player | undefined>;
+  getPlayerByEmail(email: string): Promise<Player | undefined>;
+  createPlayer(player: InsertPlayer): Promise<Player>;
+  getAllPlayers(): Promise<Player[]>;
+  getPublishedPlayers(): Promise<Player[]>;
+  getFeaturedPlayers(): Promise<Player[]>;
+  updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player | undefined>;
+  publishPlayer(id: string): Promise<Player | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DbStorage implements IStorage {
+  async getPlayer(id: string): Promise<Player | undefined> {
+    const result = await db.select().from(players).where(eq(players.id, id)).limit(1);
+    return result[0];
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getPlayerByEmail(email: string): Promise<Player | undefined> {
+    const result = await db.select().from(players).where(eq(players.email, email)).limit(1);
+    return result[0];
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createPlayer(player: InsertPlayer): Promise<Player> {
+    const result = await db.insert(players).values(player).returning();
+    return result[0];
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async getAllPlayers(): Promise<Player[]> {
+    return db.select().from(players);
+  }
+
+  async getPublishedPlayers(): Promise<Player[]> {
+    return db.select().from(players).where(eq(players.published, true));
+  }
+
+  async getFeaturedPlayers(): Promise<Player[]> {
+    return db.select().from(players).where(eq(players.featured, true)).limit(4);
+  }
+
+  async updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player | undefined> {
+    const result = await db.update(players).set(player).where(eq(players.id, id)).returning();
+    return result[0];
+  }
+
+  async publishPlayer(id: string): Promise<Player | undefined> {
+    const result = await db.update(players).set({ published: true }).where(eq(players.id, id)).returning();
+    return result[0];
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DbStorage();
