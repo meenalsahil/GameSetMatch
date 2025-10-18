@@ -90,7 +90,7 @@ export default function HowItWorks() {
         </div>
 
         <div className="container mx-auto px-6 py-16">
-          <div className="mb-20">
+          <div id="for-players" className="mb-20">
             <h2 className="text-4xl font-bold text-foreground text-center mb-4">
               For Players
             </h2>
@@ -121,7 +121,7 @@ export default function HowItWorks() {
             </div>
           </div>
 
-          <div className="mb-20">
+          <div id="for-sponsors" className="mb-20">
             <h2 className="text-4xl font-bold text-foreground text-center mb-4">
               For Sponsors
             </h2>
@@ -152,7 +152,7 @@ export default function HowItWorks() {
             </div>
           </div>
 
-          <div className="max-w-3xl mx-auto">
+          <div id="faq" className="max-w-3xl mx-auto">
             <h2 className="text-4xl font-bold text-foreground text-center mb-12">
               Frequently Asked Questions
             </h2>

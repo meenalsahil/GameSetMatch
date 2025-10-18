@@ -36,19 +36,19 @@ export default function Footer() {
             <h4 className="font-semibold text-card-foreground mb-4">Support</h4>
             <ul className="space-y-2 text-muted-foreground">
               <li>
-                <Link href="/how-it-works" className="text-sm hover:text-primary transition-colors">
+                <a href="/how-it-works#for-players" className="text-sm hover:text-primary transition-colors">
                   Help Center
-                </Link>
+                </a>
               </li>
               <li>
-                <Link href="/how-it-works" className="text-sm hover:text-primary transition-colors">
+                <a href="/how-it-works#for-sponsors" className="text-sm hover:text-primary transition-colors">
                   Contact Us
-                </Link>
+                </a>
               </li>
               <li>
-                <Link href="/how-it-works" className="text-sm hover:text-primary transition-colors" data-testid="link-faq">
+                <a href="/how-it-works#faq" className="text-sm hover:text-primary transition-colors" data-testid="link-faq">
                   FAQ
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
@@ -57,14 +57,14 @@ export default function Footer() {
             <h4 className="font-semibold text-card-foreground mb-4">Legal</h4>
             <ul className="space-y-2 text-muted-foreground">
               <li>
-                <Link href="/how-it-works" className="text-sm hover:text-primary transition-colors">
+                <a href="/how-it-works#faq" className="text-sm hover:text-primary transition-colors">
                   Privacy Policy
-                </Link>
+                </a>
               </li>
               <li>
-                <Link href="/how-it-works" className="text-sm hover:text-primary transition-colors">
+                <a href="/how-it-works#faq" className="text-sm hover:text-primary transition-colors">
                   Terms of Service
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
