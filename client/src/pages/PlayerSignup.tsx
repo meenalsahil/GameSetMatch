@@ -32,10 +32,14 @@ export default function PlayerSignup() {
       email: "",
       password: "",
       fullName: "",
+      age: undefined as any,
+      country: "",
       location: "",
       ranking: "",
       specialization: "",
       bio: "",
+      fundingGoals: "",
+      videoUrl: "",
     },
   });
 
@@ -56,11 +60,7 @@ export default function PlayerSignup() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      toast({
-        title: "Success",
-        description: "Welcome to GameSetMatch! You can now complete your profile.",
-      });
-      setLocation("/dashboard");
+      setLocation("/thank-you");
     },
     onError: (error: Error) => {
       toast({
@@ -79,7 +79,7 @@ export default function PlayerSignup() {
     let fieldsToValidate: (keyof SignupPlayer)[] = [];
     
     if (step === 1) {
-      fieldsToValidate = ["email", "password", "fullName"];
+      fieldsToValidate = ["email", "password", "fullName", "age", "country"];
     } else if (step === 2) {
       fieldsToValidate = ["location", "ranking", "specialization"];
     }
@@ -188,6 +188,43 @@ export default function PlayerSignup() {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={form.control}
+                      name="age"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Age</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="Your age"
+                              data-testid="input-age"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="country"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Country</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="e.g., United States, Spain, Australia"
+                              data-testid="input-country"
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value || undefined)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </Card>
               )}
@@ -259,24 +296,63 @@ export default function PlayerSignup() {
                   <h2 className="text-2xl font-bold text-card-foreground mb-6">
                     About You
                   </h2>
-                  <FormField
-                    control={form.control}
-                    name="bio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Your Story</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Tell sponsors about your tennis journey, goals, and why you need support..."
-                            className="min-h-[200px]"
-                            data-testid="input-bio"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="bio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Your Story</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Tell sponsors about your tennis journey, goals, and why you need support..."
+                              className="min-h-[150px]"
+                              data-testid="input-bio"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="fundingGoals"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>What are you raising funds for?</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="e.g., Travel to ATP Challenger series, new equipment, coaching, tournament entry fees..."
+                              className="min-h-[100px]"
+                              data-testid="input-funding-goals"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="videoUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Video Link (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="url"
+                              placeholder="YouTube or Vimeo link of you playing"
+                              data-testid="input-video-url"
+                              {...field}
+                              value={field.value || ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </Card>
               )}
 

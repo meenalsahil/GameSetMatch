@@ -12,6 +12,7 @@ import HowItWorks from "@/pages/HowItWorks";
 import PlayerSignup from "@/pages/PlayerSignup";
 import Signin from "@/pages/Signin";
 import Dashboard from "@/pages/Dashboard";
+import ThankYou from "@/pages/ThankYou";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/signup/player" component={PlayerSignup} />
       <Route path="/signin" component={Signin} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/thank-you" component={ThankYou} />
       <Route component={NotFound} />
     </Switch>
   );
