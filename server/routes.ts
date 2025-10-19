@@ -307,6 +307,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/players/:id/approve", isAdmin, async (req, res) => {
+    try {
+      const adminId = req.session!.playerId!;
+      const player = await storage.approvePlayer(req.params.id, adminId);
+      
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      // Send approval email
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        try {
+          const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASS,
+            },
+          });
+
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: player.email,
+            subject: 'Your GameSetMatch Application Has Been Approved!',
+            html: `
+              <h2>Congratulations, ${player.fullName}!</h2>
+              <p>Your application to join GameSetMatch has been approved!</p>
+              <p>You can now complete your profile and publish it to start connecting with sponsors.</p>
+              <p><a href="${req.protocol}://${req.get('host')}/signin">Sign in to your dashboard</a></p>
+              <br>
+              <p>Best regards,<br>The GameSetMatch Team</p>
+            `,
+          });
+        } catch (emailError) {
+          console.error("Failed to send approval email:", emailError);
+          // Don't fail the approval if email fails
+        }
+      }
+
+      res.json({ player: { ...player, passwordHash: undefined } });
+    } catch (error) {
+      console.error("Approve player error:", error);
+      res.status(500).json({ message: "Failed to approve player" });
+    }
+  });
+
+  app.post("/api/admin/players/:id/reject", isAdmin, async (req, res) => {
+    try {
+      const adminId = req.session!.playerId!;
+      const player = await storage.rejectPlayer(req.params.id, adminId);
+      
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      // Send rejection email
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        try {
+          const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASS,
+            },
+          });
+
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: player.email,
+            subject: 'Update on Your GameSetMatch Application',
+            html: `
+              <h2>Hello ${player.fullName},</h2>
+              <p>Thank you for your interest in GameSetMatch.</p>
+              <p>After reviewing your application, we're unable to approve it at this time.</p>
+              <p>If you have questions or would like to reapply in the future, please contact us.</p>
+              <br>
+              <p>Best regards,<br>The GameSetMatch Team</p>
+            `,
+          });
+        } catch (emailError) {
+          console.error("Failed to send rejection email:", emailError);
+          // Don't fail the rejection if email fails
+        }
+      }
+
+      res.json({ player: { ...player, passwordHash: undefined } });
+    } catch (error) {
+      console.error("Reject player error:", error);
+      res.status(500).json({ message: "Failed to reject player" });
+    }
+  });
+
   // Password recovery routes
   app.post("/api/auth/forgot-password", async (req, res) => {
     try {
