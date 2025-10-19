@@ -210,10 +210,40 @@ export default function Dashboard() {
                 </div>
 
                 <div className="pt-4 border-t space-y-4">
-                  {!player.published && (
+                  {player.approvalStatus === 'pending' && (
+                    <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-md border border-orange-200 dark:border-orange-800">
+                      <div className="flex items-start gap-3">
+                        <XCircle className="h-5 w-5 text-orange-600 dark:text-orange-500 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h3 className="font-semibold text-orange-900 dark:text-orange-100 mb-1">
+                            Application Under Review
+                          </h3>
+                          <p className="text-sm text-orange-800 dark:text-orange-200">
+                            Your application is being reviewed by our team. You'll receive an email once your profile has been approved and you can publish it to sponsors.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {player.approvalStatus === 'rejected' && (
+                    <div className="bg-destructive/10 p-4 rounded-md border border-destructive/20">
+                      <div className="flex items-start gap-3">
+                        <XCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h3 className="font-semibold text-destructive mb-1">
+                            Application Not Approved
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Unfortunately, your application was not approved at this time. If you have questions or would like to reapply, please contact our support team.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {player.approvalStatus === 'approved' && !player.published && (
                     <div className="bg-muted/50 p-4 rounded-md">
                       <p className="text-sm text-muted-foreground mb-4">
-                        Your profile is currently not visible to sponsors. Once you're ready, publish your profile to start receiving sponsorship opportunities.
+                        Your profile has been approved! Publish it now to make it visible to sponsors and start receiving sponsorship opportunities.
                       </p>
                       <Button
                         onClick={() => publishMutation.mutate()}
