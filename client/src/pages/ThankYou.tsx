@@ -61,9 +61,9 @@ export default function ThankYou() {
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-card-foreground mb-1">Platform Launch</h3>
+                  <h3 className="font-semibold text-card-foreground mb-1">Publish Your Profile</h3>
                   <p className="text-sm text-muted-foreground">
-                    As one of our first players, you'll be featured prominently when we officially launch to sponsors in the coming weeks.
+                    After approval, you'll be able to publish your profile from your dashboard to make it visible to sponsors seeking players to support.
                   </p>
                 </div>
               </div>
@@ -75,7 +75,7 @@ export default function ThankYou() {
               In the Meantime
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              You can access your dashboard to view and edit your profile. We recommend preparing high-quality photos and videos of you playing to add later.
+              You can access your dashboard to view your profile status and information while we review your application.
             </p>
           </div>
 
