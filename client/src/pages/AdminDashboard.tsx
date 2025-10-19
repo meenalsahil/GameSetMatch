@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Trash2, CheckCircle, XCircle, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
@@ -69,6 +69,46 @@ export default function AdminDashboard() {
     },
   });
 
+  const approveMutation = useMutation({
+    mutationFn: async (playerId: string) => {
+      return apiRequest("POST", `/api/admin/players/${playerId}/approve`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/players"] });
+      toast({
+        title: "Success",
+        description: "Player application approved successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve player",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (playerId: string) => {
+      return apiRequest("POST", `/api/admin/players/${playerId}/reject`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/players"] });
+      toast({
+        title: "Success",
+        description: "Player application rejected",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reject player",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -99,7 +139,8 @@ export default function AdminDashboard() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Location</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Approval</TableHead>
+                  <TableHead>Published</TableHead>
                   <TableHead>Admin</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Actions</TableHead>
@@ -112,16 +153,31 @@ export default function AdminDashboard() {
                     <TableCell>{player.email}</TableCell>
                     <TableCell>{player.location}</TableCell>
                     <TableCell>
-                      {player.published ? (
+                      {player.approvalStatus === 'approved' ? (
                         <Badge variant="default" className="gap-1">
                           <CheckCircle className="h-3 w-3" />
-                          Published
+                          Approved
+                        </Badge>
+                      ) : player.approvalStatus === 'rejected' ? (
+                        <Badge variant="destructive" className="gap-1">
+                          <XCircle className="h-3 w-3" />
+                          Rejected
                         </Badge>
                       ) : (
                         <Badge variant="secondary" className="gap-1">
                           <XCircle className="h-3 w-3" />
                           Pending
                         </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {player.published ? (
+                        <Badge variant="default" className="gap-1">
+                          <CheckCircle className="h-3 w-3" />
+                          Yes
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">No</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -138,21 +194,45 @@ export default function AdminDashboard() {
                       {player.id === (window as any).__currentPlayerId ? (
                         <span className="text-xs text-muted-foreground">You</span>
                       ) : (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setPlayerToDelete(player.id)}
-                          data-testid={`button-delete-${player.id}`}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex gap-1">
+                          {player.approvalStatus === 'pending' && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => approveMutation.mutate(player.id)}
+                                data-testid={`button-approve-${player.id}`}
+                                disabled={approveMutation.isPending}
+                              >
+                                <ThumbsUp className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => rejectMutation.mutate(player.id)}
+                                data-testid={`button-reject-${player.id}`}
+                                disabled={rejectMutation.isPending}
+                              >
+                                <ThumbsDown className="h-4 w-4 text-orange-600" />
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setPlayerToDelete(player.id)}
+                            data-testid={`button-delete-${player.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
                 ))}
                 {!players || players.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
                       No players found
                     </TableCell>
                   </TableRow>
