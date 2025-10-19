@@ -1,11 +1,9 @@
-import { Moon, Sun, Trophy, User } from "lucide-react";
+import { Trophy, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "./ThemeProvider";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Header() {
-  const { theme, toggleTheme } = useTheme();
   const { isAuthenticated } = useAuth();
 
   return (
@@ -43,19 +41,6 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={toggleTheme}
-            data-testid="button-theme-toggle"
-            className="h-9 w-9"
-          >
-            {theme === "light" ? (
-              <Moon className="h-4 w-4" />
-            ) : (
-              <Sun className="h-4 w-4" />
-            )}
-          </Button>
           {isAuthenticated ? (
             <Button asChild size="sm" data-testid="button-dashboard">
               <Link href="/dashboard">

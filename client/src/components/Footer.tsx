@@ -36,14 +36,9 @@ export default function Footer() {
             <h4 className="font-semibold text-card-foreground mb-4">Support</h4>
             <ul className="space-y-2 text-muted-foreground">
               <li>
-                <a href="/how-it-works#for-players" className="text-sm hover:text-primary transition-colors">
-                  Help Center
-                </a>
-              </li>
-              <li>
-                <a href="/how-it-works#for-sponsors" className="text-sm hover:text-primary transition-colors">
+                <Link href="/contact" className="text-sm hover:text-primary transition-colors">
                   Contact Us
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="/how-it-works#faq" className="text-sm hover:text-primary transition-colors" data-testid="link-faq">

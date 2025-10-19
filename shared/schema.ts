@@ -39,7 +39,7 @@ export const signupPlayerSchema = insertPlayerSchema.omit({
   age: z.number().int().positive().min(13, "You must be at least 13 years old"),
   country: z.string().min(1, "Country is required"),
   fundingGoals: z.string().min(10, "Please describe your funding goals (at least 10 characters)"),
-  videoUrl: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+  videoUrl: z.union([z.string().url("Please enter a valid URL"), z.literal("")]).optional(),
 });
 
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
