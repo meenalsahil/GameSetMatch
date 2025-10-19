@@ -218,7 +218,6 @@ export default function PlayerSignup() {
                               placeholder="e.g., United States, Spain, Australia"
                               data-testid="input-country"
                               {...field}
-                              onChange={(e) => field.onChange(e.target.value || undefined)}
                             />
                           </FormControl>
                           <FormMessage />
