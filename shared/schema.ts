@@ -21,6 +21,9 @@ export const players = pgTable("players", {
   featured: boolean("featured").notNull().default(false),
   priority: text("priority").default('normal'),
   isAdmin: boolean("is_admin").notNull().default(false),
+  approvalStatus: text("approval_status").notNull().default('pending'),
+  approvedBy: varchar("approved_by"),
+  approvedAt: timestamp("approved_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -44,6 +47,9 @@ export const signupPlayerSchema = insertPlayerSchema.omit({
   priority: true,
   photoUrl: true,
   isAdmin: true,
+  approvalStatus: true,
+  approvedBy: true,
+  approvedAt: true,
 }).extend({
   password: z.string().min(8, "Password must be at least 8 characters"),
   age: z.number().int().positive().min(13, "You must be at least 13 years old"),
