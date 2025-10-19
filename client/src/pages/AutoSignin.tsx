@@ -8,6 +8,7 @@ export default function AutoSignin() {
   useEffect(() => {
     async function signin() {
       try {
+        console.log("Attempting signin...");
         const res = await fetch("/api/auth/signin", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -17,14 +18,19 @@ export default function AutoSignin() {
           }),
         });
 
+        console.log("Response status:", res.status);
+        
         if (res.ok) {
+          console.log("Signin successful!");
           await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
           setLocation("/dashboard");
         } else {
           const error = await res.json();
-          alert("Signin failed: " + error.message);
+          console.error("Signin failed:", error);
+          alert("Signin failed: " + JSON.stringify(error));
         }
       } catch (error) {
+        console.error("Exception:", error);
         alert("Error: " + error);
       }
     }
