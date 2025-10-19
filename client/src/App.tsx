@@ -13,6 +13,7 @@ import PlayerSignup from "@/pages/PlayerSignup";
 import Signin from "@/pages/Signin";
 import Dashboard from "@/pages/Dashboard";
 import ThankYou from "@/pages/ThankYou";
+import Contact from "@/pages/Contact";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/signin" component={Signin} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/thank-you" component={ThankYou} />
+      <Route path="/contact" component={Contact} />
       <Route component={NotFound} />
     </Switch>
   );

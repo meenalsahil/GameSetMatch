@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
+import nodemailer from "nodemailer";
 
 // Middleware to check authentication
 function isAuthenticated(req: Request, res: Response, next: NextFunction) {
@@ -208,6 +209,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Upload photo error:", error);
       res.status(500).json({ message: "Failed to upload photo" });
+    }
+  });
+
+  // Contact form endpoint
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const { name, email, phone, message } = req.body;
+
+      if (!name || !email || !message) {
+        return res.status(400).json({ message: "Name, email, and message are required" });
+      }
+
+      // Check if email credentials are configured
+      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.error("Email credentials not configured");
+        return res.status(500).json({ 
+          message: "Email service is not configured. Please contact the administrator." 
+        });
+      }
+
+      // Create email transporter
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+
+      // Email content
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: 'suvirabeer@gmail.com',
+        subject: `GameSetMatch Contact Form: ${name}`,
+        html: `
+          <h2>New Contact Form Submission</h2>
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Phone:</strong> ${phone || 'Not provided'}</p>
+          <p><strong>Message:</strong></p>
+          <p>${message}</p>
+          <hr>
+          <p><em>Reply to: ${email}</em></p>
+        `,
+      };
+
+      // Send email
+      await transporter.sendMail(mailOptions);
+
+      res.json({ message: "Message sent successfully" });
+    } catch (error) {
+      console.error("Contact form error:", error);
+      res.status(500).json({ message: "Failed to send message" });
     }
   });
 
