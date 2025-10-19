@@ -11,6 +11,8 @@ export interface IStorage {
   getFeaturedPlayers(): Promise<Player[]>;
   updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player | undefined>;
   publishPlayer(id: string): Promise<Player | undefined>;
+  approvePlayer(id: string, adminId: string): Promise<Player | undefined>;
+  rejectPlayer(id: string, adminId: string): Promise<Player | undefined>;
   deletePlayer(id: string): Promise<void>;
   createPasswordResetToken(playerId: string, token: string, expiresAt: Date): Promise<void>;
   getPasswordResetToken(token: string): Promise<{ id: string; playerId: string; expiresAt: Date } | undefined>;
@@ -52,6 +54,30 @@ export class DbStorage implements IStorage {
 
   async publishPlayer(id: string): Promise<Player | undefined> {
     const result = await db.update(players).set({ published: true }).where(eq(players.id, id)).returning();
+    return result[0];
+  }
+
+  async approvePlayer(id: string, adminId: string): Promise<Player | undefined> {
+    const result = await db.update(players)
+      .set({ 
+        approvalStatus: 'approved',
+        approvedBy: adminId,
+        approvedAt: new Date()
+      })
+      .where(eq(players.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async rejectPlayer(id: string, adminId: string): Promise<Player | undefined> {
+    const result = await db.update(players)
+      .set({ 
+        approvalStatus: 'rejected',
+        approvedBy: adminId,
+        approvedAt: new Date()
+      })
+      .where(eq(players.id, id))
+      .returning();
     return result[0];
   }
 
