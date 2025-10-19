@@ -42,12 +42,14 @@ export default function Header() {
 
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
-            <Button asChild size="sm" data-testid="button-dashboard">
-              <Link href="/dashboard">
-                <User className="h-4 w-4 mr-2" />
-                Dashboard
-              </Link>
-            </Button>
+            <>
+              <Button asChild size="sm" variant="outline" data-testid="button-dashboard">
+                <Link href="/dashboard">
+                  <User className="h-4 w-4 mr-2" />
+                  Dashboard
+                </Link>
+              </Button>
+            </>
           ) : (
             <>
               <Button asChild variant="outline" size="sm" data-testid="button-login">

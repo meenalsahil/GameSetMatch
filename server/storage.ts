@@ -1,4 +1,4 @@
-import { type Player, type InsertPlayer, players } from "@shared/schema";
+import { type Player, type InsertPlayer, players, passwordResetTokens } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -11,6 +11,10 @@ export interface IStorage {
   getFeaturedPlayers(): Promise<Player[]>;
   updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player | undefined>;
   publishPlayer(id: string): Promise<Player | undefined>;
+  deletePlayer(id: string): Promise<void>;
+  createPasswordResetToken(playerId: string, token: string, expiresAt: Date): Promise<void>;
+  getPasswordResetToken(token: string): Promise<{ id: string; playerId: string; expiresAt: Date } | undefined>;
+  deletePasswordResetToken(token: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -49,6 +53,27 @@ export class DbStorage implements IStorage {
   async publishPlayer(id: string): Promise<Player | undefined> {
     const result = await db.update(players).set({ published: true }).where(eq(players.id, id)).returning();
     return result[0];
+  }
+
+  async deletePlayer(id: string): Promise<void> {
+    await db.delete(players).where(eq(players.id, id));
+  }
+
+  async createPasswordResetToken(playerId: string, token: string, expiresAt: Date): Promise<void> {
+    await db.insert(passwordResetTokens).values({
+      playerId,
+      token,
+      expiresAt,
+    });
+  }
+
+  async getPasswordResetToken(token: string): Promise<{ id: string; playerId: string; expiresAt: Date } | undefined> {
+    const result = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, token)).limit(1);
+    return result[0];
+  }
+
+  async deletePasswordResetToken(token: string): Promise<void> {
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.token, token));
   }
 }
 

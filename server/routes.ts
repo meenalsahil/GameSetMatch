@@ -16,6 +16,20 @@ function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   res.status(401).json({ message: "Unauthorized" });
 }
 
+// Middleware to check admin authentication
+async function isAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.session?.playerId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
+  const player = await storage.getPlayer(req.session.playerId);
+  if (!player || !player.isAdmin) {
+    return res.status(403).json({ message: "Forbidden - Admin access required" });
+  }
+  
+  next();
+}
+
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.diskStorage({
@@ -262,6 +276,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Contact form error:", error);
       res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Admin routes
+  app.get("/api/admin/players", isAdmin, async (req, res) => {
+    try {
+      const players = await storage.getAllPlayers();
+      // Remove password hashes from response
+      const sanitizedPlayers = players.map(p => ({ ...p, passwordHash: undefined }));
+      res.json(sanitizedPlayers);
+    } catch (error) {
+      console.error("Get all players error:", error);
+      res.status(500).json({ message: "Failed to get players" });
+    }
+  });
+
+  app.delete("/api/admin/players/:id", isAdmin, async (req, res) => {
+    try {
+      // Prevent admins from deleting themselves
+      if (req.params.id === req.session!.playerId) {
+        return res.status(403).json({ message: "You cannot delete your own account" });
+      }
+
+      await storage.deletePlayer(req.params.id);
+      res.json({ message: "Player deleted successfully" });
+    } catch (error) {
+      console.error("Delete player error:", error);
+      res.status(500).json({ message: "Failed to delete player" });
+    }
+  });
+
+  // Password recovery routes
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const player = await storage.getPlayerByEmail(email);
+      if (!player) {
+        // Don't reveal if email exists
+        return res.json({ message: "If an account with that email exists, a password reset link has been sent." });
+      }
+
+      // Generate reset token
+      const resetToken = randomUUID();
+      const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
+
+      await storage.createPasswordResetToken(player.id, resetToken, expiresAt);
+
+      // Send email
+      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.error("Email credentials not configured");
+        return res.status(500).json({ message: "Email service is not configured" });
+      }
+
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+
+      const resetUrl = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
+
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'GameSetMatch - Password Reset Request',
+        html: `
+          <h2>Password Reset Request</h2>
+          <p>Hi ${player.fullName},</p>
+          <p>You requested to reset your password. Click the link below to reset it:</p>
+          <p><a href="${resetUrl}">${resetUrl}</a></p>
+          <p>This link will expire in 1 hour.</p>
+          <p>If you didn't request this, please ignore this email.</p>
+          <hr>
+          <p><em>GameSetMatch Team</em></p>
+        `,
+      });
+
+      res.json({ message: "If an account with that email exists, a password reset link has been sent." });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Failed to process password reset request" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body;
+
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token and password are required" });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      }
+
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+      }
+
+      if (new Date() > resetToken.expiresAt) {
+        await storage.deletePasswordResetToken(token);
+        return res.status(400).json({ message: "Reset token has expired" });
+      }
+
+      // Hash new password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Update player password
+      await storage.updatePlayer(resetToken.playerId, { passwordHash });
+
+      // Delete used token
+      await storage.deletePasswordResetToken(token);
+
+      res.json({ message: "Password reset successful" });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Failed to reset password" });
     }
   });
 

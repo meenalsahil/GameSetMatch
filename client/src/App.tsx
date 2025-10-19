@@ -14,6 +14,9 @@ import Signin from "@/pages/Signin";
 import Dashboard from "@/pages/Dashboard";
 import ThankYou from "@/pages/ThankYou";
 import Contact from "@/pages/Contact";
+import AdminDashboard from "@/pages/AdminDashboard";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -26,8 +29,11 @@ function Router() {
       <Route path="/signup/player" component={PlayerSignup} />
       <Route path="/signin" component={Signin} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route path="/thank-you" component={ThankYou} />
       <Route path="/contact" component={Contact} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route component={NotFound} />
     </Switch>
   );

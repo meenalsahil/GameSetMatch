@@ -4,9 +4,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useEffect } from "react";
-import { User, MapPin, Trophy, CheckCircle2, XCircle, LogOut } from "lucide-react";
+import { User, MapPin, Trophy, CheckCircle2, XCircle, LogOut, Shield } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -110,18 +110,31 @@ export default function Dashboard() {
       <div className="flex-1">
         <div className="bg-gradient-to-b from-primary/10 to-background py-12">
           <div className="container mx-auto px-6">
-            <div className="flex justify-between items-center">
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-                Player Dashboard
-              </h1>
-              <Button
-                variant="outline"
-                onClick={() => logoutMutation.mutate()}
-                data-testid="button-logout"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
+            <div className="flex justify-between items-center flex-wrap gap-4">
+              <div>
+                <h1 className="text-4xl md:text-5xl font-bold text-foreground">
+                  Player Dashboard
+                </h1>
+                <p className="text-muted-foreground">Welcome back, {player.fullName}!</p>
+              </div>
+              <div className="flex gap-2">
+                {player.isAdmin && (
+                  <Button asChild variant="destructive" data-testid="button-admin-dashboard">
+                    <Link href="/admin">
+                      <Shield className="h-4 w-4 mr-2" />
+                      Admin
+                    </Link>
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => logoutMutation.mutate()}
+                  data-testid="button-logout"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
             </div>
           </div>
         </div>

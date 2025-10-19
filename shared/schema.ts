@@ -20,6 +20,15 @@ export const players = pgTable("players", {
   published: boolean("published").notNull().default(false),
   featured: boolean("featured").notNull().default(false),
   priority: text("priority").default('normal'),
+  isAdmin: boolean("is_admin").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => players.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -34,6 +43,7 @@ export const signupPlayerSchema = insertPlayerSchema.omit({
   featured: true,
   priority: true,
   photoUrl: true,
+  isAdmin: true,
 }).extend({
   password: z.string().min(8, "Password must be at least 8 characters"),
   age: z.number().int().positive().min(13, "You must be at least 13 years old"),
