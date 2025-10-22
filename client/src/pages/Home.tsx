@@ -1,10 +1,22 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import { Trophy, Target, Users, ArrowRight, CheckCircle2 } from "lucide-react";
 import Footer from "@/components/Footer";
 
-export default function HomePage() {
+export default function HomePage() { useEffect(() => {
+    // Smooth scroll to section if hash exists
+    const hash = window.location.hash;
+    if (hash) {
+      const element = document.querySelector(hash);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, []);
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -76,7 +88,7 @@ export default function HomePage() {
       </div>
 
       {/* How It Works - For Players */}
-      <div className="py-24 bg-white dark:bg-gray-900">
+      <div id="how-it-works" className="py-24 bg-white dark:bg-gray-900">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">How It Works</h2>

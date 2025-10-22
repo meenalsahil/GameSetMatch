@@ -12,38 +12,45 @@ export default function Header() {
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer hover-elevate active-elevate-2 rounded-md px-3 py-2">
             <Trophy className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold text-foreground">GameSetMatch</span>
+            <span className="text-xl font-bold text-foreground">
+              GameSetMatch
+            </span>
           </div>
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">
-          <Link 
-            href="/" 
-            className="text-sm font-medium text-foreground hover:text-primary transition-colors" 
+          <Link
+            href="/"
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors"
             data-testid="link-home"
           >
             Home
           </Link>
-          <Link 
-            href="/players" 
-            className="text-sm font-medium text-foreground hover:text-primary transition-colors" 
+          <Link
+            href="/players"
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors"
             data-testid="link-players"
           >
             Browse Players
           </Link>
-          <Link 
-            href="/how-it-works" 
-            className="text-sm font-medium text-foreground hover:text-primary transition-colors" 
+          <a
+            href="/#how-it-works"
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors"
             data-testid="link-how-it-works"
           >
             How It Works
-          </Link>
+          </a>
         </nav>
 
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
             <>
-              <Button asChild size="sm" variant="outline" data-testid="button-dashboard">
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                data-testid="button-dashboard"
+              >
                 <Link href="/dashboard">
                   <User className="h-4 w-4 mr-2" />
                   Dashboard
@@ -52,15 +59,16 @@ export default function Header() {
             </>
           ) : (
             <>
-              <Button asChild variant="outline" size="sm" data-testid="button-login">
-                <Link href="/signin">
-                  Sign In
-                </Link>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                data-testid="button-login"
+              >
+                <Link href="/signin">Sign In</Link>
               </Button>
               <Button asChild size="sm" data-testid="button-get-started">
-                <Link href="/signup/player">
-                  Get Started
-                </Link>
+                <Link href="/signup/player">Get Started</Link>
               </Button>
             </>
           )}
