@@ -222,18 +222,6 @@ export default function HomePage() {
                 </CardContent>
               </Card>
             </div>
-
-            <div className="text-center mt-12">
-              <Button
-                size="lg"
-                className="text-lg px-12 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
-                asChild
-              >
-                <Link href="/browse-players">
-                  🏆 Browse Players & Start Sponsoring
-                </Link>
-              </Button>
-            </div>
           </div>
         </div>
       </div>
