@@ -114,7 +114,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // FIX: Use snake_case for database column
       const passwordHash = player.password_hash || player.passwordHash;
 
       if (!passwordHash) {
@@ -128,43 +127,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      // Set session and wait for it to save
       req.session!.playerId = player.id;
 
-      req.session.save((err) => {
-        if (err) {
-          console.error("/api/auth/signin - Session save error:", err);
-          return res.status(500).json({ message: "Failed to save session" });
-        }
-
-        console.log(
-          "/api/auth/signin - Session after setting playerId:",
-          req.session,
-        );
-
-        // Return player with camelCase for frontend
-        res.json({
-          player: {
-            id: player.id,
-            email: player.email,
-            fullName: player.full_name,
-            age: player.age,
-            country: player.country,
-            location: player.location,
-            ranking: player.ranking,
-            specialization: player.specialization,
-            bio: player.bio,
-            fundingGoals: player.funding_goals,
-            videoUrl: player.video_url,
-            photoUrl: player.photo_url,
-            published: player.published,
-            featured: player.featured,
-            priority: player.priority,
-            isAdmin: player.is_admin,
-            approvalStatus: player.approval_status,
-            createdAt: player.created_at,
-          },
+      try {
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err) => {
+            if (err) {
+              console.error("Session save error:", err);
+              reject(err);
+            } else {
+              console.log("Session saved successfully, ID:", req.sessionID);
+              resolve();
+            }
+          });
         });
-      });
+      } catch (saveError) {
+        console.error("Failed to save session:", saveError);
+        return res.status(500).json({ message: "Failed to create session" });
+      }
+
+      // Wait a tiny bit for database to commit
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Return player data with camelCase for frontend
+      const playerData = {
+        id: player.id,
+        email: player.email,
+        fullName: player.full_name,
+        age: player.age,
+        country: player.country,
+        location: player.location,
+        ranking: player.ranking,
+        specialization: player.specialization,
+        bio: player.bio,
+        fundingGoals: player.funding_goals,
+        videoUrl: player.video_url,
+        photoUrl: player.photo_url,
+        published: player.published,
+        featured: player.featured,
+        priority: player.priority,
+        isAdmin: player.is_admin,
+        approvalStatus: player.approval_status,
+        approvedBy: player.approved_by,
+        approvedAt: player.approved_at,
+        createdAt: player.created_at,
+      };
+
+      console.log("Sending response with player data");
+      res.json({ player: playerData });
     } catch (error) {
       console.error("Signin error:", error);
       res.status(500).json({ message: "Failed to sign in" });
