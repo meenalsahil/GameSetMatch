@@ -101,19 +101,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/signin", async (req, res) => {
     try {
       const { email, password } = req.body;
-
       const player = await storage.getPlayerByEmail(email);
+
+      console.log("/api/auth/signin - Player data:", player);
+
       if (!player) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      const validPassword = await bcrypt.compare(password, player.passwordHash);
+      // FIX: Use snake_case for database column
+      const passwordHash = player.password_hash || player.passwordHash;
+
+      if (!passwordHash) {
+        console.error("No password hash found for player");
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      const validPassword = await bcrypt.compare(password, passwordHash);
+
       if (!validPassword) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       req.session!.playerId = player.id;
-      res.json({ player: { ...player, passwordHash: undefined } });
+
+      req.session.save((err) => {
+        if (err) {
+          console.error("/api/auth/signin - Session save error:", err);
+          return res.status(500).json({ message: "Failed to save session" });
+        }
+
+        console.log(
+          "/api/auth/signin - Session after setting playerId:",
+          req.session,
+        );
+
+        // Return player with camelCase for frontend
+        res.json({
+          player: {
+            id: player.id,
+            email: player.email,
+            fullName: player.full_name,
+            age: player.age,
+            country: player.country,
+            location: player.location,
+            ranking: player.ranking,
+            specialization: player.specialization,
+            bio: player.bio,
+            fundingGoals: player.funding_goals,
+            videoUrl: player.video_url,
+            photoUrl: player.photo_url,
+            published: player.published,
+            featured: player.featured,
+            priority: player.priority,
+            isAdmin: player.is_admin,
+            approvalStatus: player.approval_status,
+            createdAt: player.created_at,
+          },
+        });
+      });
     } catch (error) {
       console.error("Signin error:", error);
       res.status(500).json({ message: "Failed to sign in" });
@@ -132,13 +178,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/auth/me", isAuthenticated, async (req, res) => {
     try {
+      console.log("/api/auth/me - Session:", req.session); // Check the session
       const player = await storage.getPlayer(req.session!.playerId!);
+      console.log("/api/auth/me - Player data:", player); // Check the player data
       if (!player) {
+        console.log("/api/auth/me - Player not found");
         return res.status(404).json({ message: "Player not found" });
       }
+      console.log("/api/auth/me - isAdmin:", player.isAdmin); // Check the isAdmin flag
       res.json({ ...player, passwordHash: undefined });
     } catch (error) {
-      console.error("Get current player error:", error);
+      console.error("/api/auth/me - Get current player error:", error);
       res.status(500).json({ message: "Failed to get player" });
     }
   });

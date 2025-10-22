@@ -1,5 +1,10 @@
-import { type Player, type InsertPlayer, players, passwordResetTokens } from "@shared/schema";
-import { db } from "./db";
+import {
+  type Player,
+  type InsertPlayer,
+  players,
+  passwordResetTokens,
+} from "@shared/schema";
+import { pool } from "./db";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
@@ -9,97 +14,217 @@ export interface IStorage {
   getAllPlayers(): Promise<Player[]>;
   getPublishedPlayers(): Promise<Player[]>;
   getFeaturedPlayers(): Promise<Player[]>;
-  updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player | undefined>;
+  updatePlayer(
+    id: string,
+    player: Partial<InsertPlayer>,
+  ): Promise<Player | undefined>;
   publishPlayer(id: string): Promise<Player | undefined>;
   approvePlayer(id: string, adminId: string): Promise<Player | undefined>;
   rejectPlayer(id: string, adminId: string): Promise<Player | undefined>;
   deletePlayer(id: string): Promise<void>;
-  createPasswordResetToken(playerId: string, token: string, expiresAt: Date): Promise<void>;
-  getPasswordResetToken(token: string): Promise<{ id: string; playerId: string; expiresAt: Date } | undefined>;
+  createPasswordResetToken(
+    playerId: string,
+    token: string,
+    expiresAt: Date,
+  ): Promise<void>;
+  getPasswordResetToken(
+    token: string,
+  ): Promise<{ id: string; playerId: string; expiresAt: Date } | undefined>;
   deletePasswordResetToken(token: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
   async getPlayer(id: string): Promise<Player | undefined> {
-    const result = await db.select().from(players).where(eq(players.id, id)).limit(1);
-    return result[0];
+    const result = await pool.query("SELECT * FROM players WHERE id = $1", [
+      id,
+    ]);
+    return result.rows[0];
   }
 
   async getPlayerByEmail(email: string): Promise<Player | undefined> {
-    const result = await db.select().from(players).where(eq(players.email, email)).limit(1);
-    return result[0];
+    try {
+      const result = await pool.query(
+        "SELECT * FROM players WHERE email = $1",
+        [email],
+      );
+      console.log("storage.getPlayerByEmail - Result:", result);
+      if (result && result.rows.length > 0) {
+        console.log("storage.getPlayerByEmail - Player data:", result.rows[0]);
+        return result.rows[0];
+      } else {
+        console.log("storage.getPlayerByEmail - Player not found");
+        return undefined;
+      }
+    } catch (error) {
+      console.error("storage.getPlayerByEmail - Error:", error);
+      return undefined;
+    }
   }
 
   async createPlayer(player: InsertPlayer): Promise<Player> {
-    const result = await db.insert(players).values(player).returning();
-    return result[0];
+    const result = await pool.query(
+      `INSERT INTO players (
+        email, password_hash, full_name, age, country, location, 
+        ranking, specialization, bio, funding_goals, video_url, 
+        published, featured, priority, is_admin, approval_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) 
+      RETURNING *`,
+      [
+        player.email,
+        player.passwordHash,
+        player.fullName,
+        player.age,
+        player.country,
+        player.location,
+        player.ranking || null,
+        player.specialization,
+        player.bio,
+        player.fundingGoals,
+        player.videoUrl || null,
+        player.published || false,
+        player.featured || false,
+        player.priority || "normal",
+        player.isAdmin || false,
+        player.approvalStatus || "pending",
+      ],
+    );
+    return result.rows[0];
   }
 
   async getAllPlayers(): Promise<Player[]> {
-    return db.select().from(players);
+    const result = await pool.query(
+      "SELECT * FROM players ORDER BY created_at DESC",
+    );
+    return result.rows;
   }
 
   async getPublishedPlayers(): Promise<Player[]> {
-    return db.select().from(players).where(eq(players.published, true));
+    const result = await pool.query(
+      "SELECT * FROM players WHERE published = true ORDER BY created_at DESC",
+    );
+    return result.rows;
   }
 
   async getFeaturedPlayers(): Promise<Player[]> {
-    return db.select().from(players).where(eq(players.featured, true)).limit(4);
+    const result = await pool.query(
+      "SELECT * FROM players WHERE featured = true ORDER BY created_at DESC LIMIT 4",
+    );
+    return result.rows;
   }
 
-  async updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player | undefined> {
-    const result = await db.update(players).set(player).where(eq(players.id, id)).returning();
-    return result[0];
+  async updatePlayer(
+    id: string,
+    player: Partial<InsertPlayer>,
+  ): Promise<Player | undefined> {
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    if (player.email !== undefined) {
+      fields.push(`email = $${paramCount++}`);
+      values.push(player.email);
+    }
+    if (player.fullName !== undefined) {
+      fields.push(`full_name = $${paramCount++}`);
+      values.push(player.fullName);
+    }
+    if (player.location !== undefined) {
+      fields.push(`location = $${paramCount++}`);
+      values.push(player.location);
+    }
+    if (player.ranking !== undefined) {
+      fields.push(`ranking = $${paramCount++}`);
+      values.push(player.ranking);
+    }
+    if (player.specialization !== undefined) {
+      fields.push(`specialization = $${paramCount++}`);
+      values.push(player.specialization);
+    }
+    if (player.bio !== undefined) {
+      fields.push(`bio = $${paramCount++}`);
+      values.push(player.bio);
+    }
+    if (player.fundingGoals !== undefined) {
+      fields.push(`funding_goals = $${paramCount++}`);
+      values.push(player.fundingGoals);
+    }
+    if (player.videoUrl !== undefined) {
+      fields.push(`video_url = $${paramCount++}`);
+      values.push(player.videoUrl);
+    }
+    if (player.photoUrl !== undefined) {
+      fields.push(`photo_url = $${paramCount++}`);
+      values.push(player.photoUrl);
+    }
+
+    if (fields.length === 0) {
+      return this.getPlayer(id);
+    }
+
+    values.push(id);
+    const result = await pool.query(
+      `UPDATE players SET ${fields.join(", ")} WHERE id = $${paramCount} RETURNING *`,
+      values,
+    );
+    return result.rows[0];
   }
 
   async publishPlayer(id: string): Promise<Player | undefined> {
-    const result = await db.update(players).set({ published: true }).where(eq(players.id, id)).returning();
-    return result[0];
+    const result = await pool.query(
+      "UPDATE players SET published = true WHERE id = $1 RETURNING *",
+      [id],
+    );
+    return result.rows[0];
   }
 
-  async approvePlayer(id: string, adminId: string): Promise<Player | undefined> {
-    const result = await db.update(players)
-      .set({ 
-        approvalStatus: 'approved',
-        approvedBy: adminId,
-        approvedAt: new Date()
-      })
-      .where(eq(players.id, id))
-      .returning();
-    return result[0];
+  async approvePlayer(
+    id: string,
+    adminId: string,
+  ): Promise<Player | undefined> {
+    const result = await pool.query(
+      "UPDATE players SET approval_status = 'approved', approved_by = $2, approved_at = NOW() WHERE id = $1 RETURNING *",
+      [id, adminId],
+    );
+    return result.rows[0];
   }
 
   async rejectPlayer(id: string, adminId: string): Promise<Player | undefined> {
-    const result = await db.update(players)
-      .set({ 
-        approvalStatus: 'rejected',
-        approvedBy: adminId,
-        approvedAt: new Date()
-      })
-      .where(eq(players.id, id))
-      .returning();
-    return result[0];
+    const result = await pool.query(
+      "UPDATE players SET approval_status = 'rejected', approved_by = $2, approved_at = NOW() WHERE id = $1 RETURNING *",
+      [id, adminId],
+    );
+    return result.rows[0];
   }
 
   async deletePlayer(id: string): Promise<void> {
-    await db.delete(players).where(eq(players.id, id));
+    await pool.query("DELETE FROM players WHERE id = $1", [id]);
   }
 
-  async createPasswordResetToken(playerId: string, token: string, expiresAt: Date): Promise<void> {
-    await db.insert(passwordResetTokens).values({
-      playerId,
-      token,
-      expiresAt,
-    });
+  async createPasswordResetToken(
+    playerId: string,
+    token: string,
+    expiresAt: Date,
+  ): Promise<void> {
+    await pool.query(
+      "INSERT INTO password_reset_tokens (player_id, token, expires_at) VALUES ($1, $2, $3)",
+      [playerId, token, expiresAt],
+    );
   }
 
-  async getPasswordResetToken(token: string): Promise<{ id: string; playerId: string; expiresAt: Date } | undefined> {
-    const result = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, token)).limit(1);
-    return result[0];
+  async getPasswordResetToken(
+    token: string,
+  ): Promise<{ id: string; playerId: string; expiresAt: Date } | undefined> {
+    const result = await pool.query(
+      "SELECT * FROM password_reset_tokens WHERE token = $1",
+      [token],
+    );
+    return result.rows[0];
   }
 
   async deletePasswordResetToken(token: string): Promise<void> {
-    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.token, token));
+    await pool.query("DELETE FROM password_reset_tokens WHERE token = $1", [
+      token,
+    ]);
   }
 }
 
