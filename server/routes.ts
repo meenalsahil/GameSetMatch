@@ -205,6 +205,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/auth/me", isAuthenticated, async (req, res) => {
     try {
+      // ADD THESE HEADERS to prevent caching
+      res.setHeader(
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, private",
+      );
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+
       console.log("/api/auth/me - Session:", req.session);
       const player = await storage.getPlayer(req.session!.playerId!);
       console.log("/api/auth/me - Player data:", player);
@@ -214,7 +222,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Player not found" });
       }
 
-      // FIX: Convert snake_case to camelCase
       const playerData = {
         id: player.id,
         email: player.email,
