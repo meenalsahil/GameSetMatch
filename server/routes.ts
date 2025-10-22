@@ -16,19 +16,24 @@ function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   res.status(401).json({ message: "Unauthorized" });
 }
 
-// Middleware to check admin authentication
 async function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.playerId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   const player = await storage.getPlayer(req.session.playerId);
-  if (!player || !player.isAdmin) {
+
+  // FIX: Check both snake_case and camelCase
+  const isAdminUser = player?.is_admin || player?.isAdmin;
+
+  if (!player || !isAdminUser) {
     return res
       .status(403)
       .json({ message: "Forbidden - Admin access required" });
   }
 
+  // Add user to request for later use
+  req.user = player;
   next();
 }
 
@@ -178,15 +183,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/auth/me", isAuthenticated, async (req, res) => {
     try {
-      console.log("/api/auth/me - Session:", req.session); // Check the session
+      console.log("/api/auth/me - Session:", req.session);
       const player = await storage.getPlayer(req.session!.playerId!);
-      console.log("/api/auth/me - Player data:", player); // Check the player data
+      console.log("/api/auth/me - Player data:", player);
+
       if (!player) {
         console.log("/api/auth/me - Player not found");
         return res.status(404).json({ message: "Player not found" });
       }
-      console.log("/api/auth/me - isAdmin:", player.isAdmin); // Check the isAdmin flag
-      res.json({ ...player, passwordHash: undefined });
+
+      // FIX: Convert snake_case to camelCase
+      const playerData = {
+        id: player.id,
+        email: player.email,
+        fullName: player.full_name,
+        age: player.age,
+        country: player.country,
+        location: player.location,
+        ranking: player.ranking,
+        specialization: player.specialization,
+        bio: player.bio,
+        fundingGoals: player.funding_goals,
+        videoUrl: player.video_url,
+        photoUrl: player.photo_url,
+        published: player.published,
+        featured: player.featured,
+        priority: player.priority,
+        isAdmin: player.is_admin,
+        approvalStatus: player.approval_status,
+        approvedBy: player.approved_by,
+        approvedAt: player.approved_at,
+        createdAt: player.created_at,
+      };
+
+      console.log("/api/auth/me - isAdmin:", playerData.isAdmin);
+      res.json(playerData);
     } catch (error) {
       console.error("/api/auth/me - Get current player error:", error);
       res.status(500).json({ message: "Failed to get player" });
