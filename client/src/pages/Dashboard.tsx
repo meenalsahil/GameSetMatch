@@ -1,12 +1,26 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
 import { useEffect } from "react";
-import { User, MapPin, Trophy, CheckCircle2, XCircle, LogOut, Shield } from "lucide-react";
+import {
+  User,
+  MapPin,
+  Trophy,
+  CheckCircle2,
+  XCircle,
+  LogOut,
+  Shield,
+} from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -31,22 +45,18 @@ export default function Dashboard() {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-      
-      if (!res.ok) {
-        throw new Error("Logout failed");
-      }
-      
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+      if (!res.ok) throw new Error("Logout failed");
       return res.json();
     },
     onSuccess: () => {
+      // CRITICAL: Set the auth data to null BEFORE invalidating
+      queryClient.setQueryData(["/api/auth/me"], null);
+
+      // Then invalidate to trigger refetch
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      toast({
-        title: "Signed out",
-        description: "You have been signed out successfully.",
-      });
+
+      toast({ title: "Signed out successfully" });
       setLocation("/");
     },
     onError: () => {
@@ -63,12 +73,12 @@ export default function Dashboard() {
       const res = await fetch(`/api/players/${player?.id}/publish`, {
         method: "POST",
       });
-      
+
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to publish profile");
       }
-      
+
       return res.json();
     },
     onSuccess: () => {
@@ -101,7 +111,7 @@ export default function Dashboard() {
 
   const initials = player.fullName
     .split(" ")
-    .map(n => n[0])
+    .map((n) => n[0])
     .join("")
     .toUpperCase();
 
@@ -115,11 +125,17 @@ export default function Dashboard() {
                 <h1 className="text-4xl md:text-5xl font-bold text-foreground">
                   Player Dashboard
                 </h1>
-                <p className="text-muted-foreground">Welcome back, {player.fullName}!</p>
+                <p className="text-muted-foreground">
+                  Welcome back, {player.fullName}!
+                </p>
               </div>
               <div className="flex gap-2">
                 {player.isAdmin && (
-                  <Button asChild variant="destructive" data-testid="button-admin-dashboard">
+                  <Button
+                    asChild
+                    variant="destructive"
+                    data-testid="button-admin-dashboard"
+                  >
                     <Link href="/admin">
                       <Shield className="h-4 w-4 mr-2" />
                       Admin
@@ -161,7 +177,10 @@ export default function Dashboard() {
                       Published
                     </Badge>
                   ) : (
-                    <Badge className="w-full justify-center" variant="secondary">
+                    <Badge
+                      className="w-full justify-center"
+                      variant="secondary"
+                    >
                       <XCircle className="h-4 w-4 mr-2" />
                       Not Published
                     </Badge>
@@ -173,9 +192,7 @@ export default function Dashboard() {
             <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle>Player Information</CardTitle>
-                <CardDescription>
-                  Your tennis profile details
-                </CardDescription>
+                <CardDescription>Your tennis profile details</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
@@ -210,7 +227,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="pt-4 border-t space-y-4">
-                  {player.approvalStatus === 'pending' && (
+                  {player.approvalStatus === "pending" && (
                     <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-md border border-orange-200 dark:border-orange-800">
                       <div className="flex items-start gap-3">
                         <XCircle className="h-5 w-5 text-orange-600 dark:text-orange-500 mt-0.5 flex-shrink-0" />
@@ -219,13 +236,15 @@ export default function Dashboard() {
                             Application Under Review
                           </h3>
                           <p className="text-sm text-orange-800 dark:text-orange-200">
-                            Your application is being reviewed by our team. You'll receive an email once your profile has been approved and you can publish it to sponsors.
+                            Your application is being reviewed by our team.
+                            You'll receive an email once your profile has been
+                            approved and you can publish it to sponsors.
                           </p>
                         </div>
                       </div>
                     </div>
                   )}
-                  {player.approvalStatus === 'rejected' && (
+                  {player.approvalStatus === "rejected" && (
                     <div className="bg-destructive/10 p-4 rounded-md border border-destructive/20">
                       <div className="flex items-start gap-3">
                         <XCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
@@ -234,30 +253,37 @@ export default function Dashboard() {
                             Application Not Approved
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            Unfortunately, your application was not approved at this time. If you have questions or would like to reapply, please contact our support team.
+                            Unfortunately, your application was not approved at
+                            this time. If you have questions or would like to
+                            reapply, please contact our support team.
                           </p>
                         </div>
                       </div>
                     </div>
                   )}
-                  {player.approvalStatus === 'approved' && !player.published && (
-                    <div className="bg-muted/50 p-4 rounded-md">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Your profile has been approved! Publish it now to make it visible to sponsors and start receiving sponsorship opportunities.
-                      </p>
-                      <Button
-                        onClick={() => publishMutation.mutate()}
-                        disabled={publishMutation.isPending}
-                        data-testid="button-publish"
-                      >
-                        {publishMutation.isPending ? "Publishing..." : "Publish Profile"}
-                      </Button>
-                    </div>
-                  )}
+                  {player.approvalStatus === "approved" &&
+                    !player.published && (
+                      <div className="bg-muted/50 p-4 rounded-md">
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Your profile has been approved! Publish it now to make
+                          it visible to sponsors and start receiving sponsorship
+                          opportunities.
+                        </p>
+                        <Button
+                          onClick={() => publishMutation.mutate()}
+                          disabled={publishMutation.isPending}
+                          data-testid="button-publish"
+                        >
+                          {publishMutation.isPending
+                            ? "Publishing..."
+                            : "Publish Profile"}
+                        </Button>
+                      </div>
+                    )}
                   {player.published && (
                     <div className="bg-primary/5 p-4 rounded-md border border-primary/20">
                       <p className="text-sm text-foreground">
-                        Your profile is live and visible to sponsors! 
+                        Your profile is live and visible to sponsors!
                       </p>
                     </div>
                   )}

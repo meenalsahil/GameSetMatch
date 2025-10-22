@@ -7,7 +7,15 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { Shield, CheckCircle, XCircle, Mail, MapPin, Trophy, LogOut } from "lucide-react";
+import {
+  Shield,
+  CheckCircle,
+  XCircle,
+  Mail,
+  MapPin,
+  Trophy,
+  LogOut,
+} from "lucide-react";
 import { Link } from "wouter";
 import Footer from "@/components/Footer";
 
@@ -21,7 +29,7 @@ interface Player {
   ranking?: string;
   specialization: string;
   bio: string;
-  approvalStatus: 'pending' | 'approved' | 'rejected';
+  approvalStatus: "pending" | "approved" | "rejected";
   published: boolean;
   createdAt: string;
 }
@@ -43,10 +51,10 @@ export default function AdminDashboard() {
   }, [isLoading, isAuthenticated, player, setLocation, toast]);
 
   const { data: players, isLoading: playersLoading } = useQuery<Player[]>({
-    queryKey: ['/api/admin/players'],
+    queryKey: ["/api/admin/players"],
     queryFn: async () => {
-      const res = await fetch('/api/admin/players');
-      if (!res.ok) throw new Error('Failed to fetch players');
+      const res = await fetch("/api/admin/players");
+      if (!res.ok) throw new Error("Failed to fetch players");
       return res.json();
     },
     enabled: !!player?.isAdmin,
@@ -55,13 +63,13 @@ export default function AdminDashboard() {
   const approveMutation = useMutation({
     mutationFn: async (playerId: string) => {
       const res = await fetch(`/api/admin/players/${playerId}/approve`, {
-        method: 'POST',
+        method: "POST",
       });
-      if (!res.ok) throw new Error('Failed to approve player');
+      if (!res.ok) throw new Error("Failed to approve player");
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/players'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/players"] });
       toast({
         title: "Player Approved",
         description: "Player has been approved successfully.",
@@ -72,13 +80,13 @@ export default function AdminDashboard() {
   const rejectMutation = useMutation({
     mutationFn: async (playerId: string) => {
       const res = await fetch(`/api/admin/players/${playerId}/reject`, {
-        method: 'POST',
+        method: "POST",
       });
-      if (!res.ok) throw new Error('Failed to reject player');
+      if (!res.ok) throw new Error("Failed to reject player");
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/players'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/players"] });
       toast({
         title: "Player Rejected",
         description: "Player has been rejected.",
@@ -93,7 +101,12 @@ export default function AdminDashboard() {
       return res.json();
     },
     onSuccess: () => {
+      // Set to null first
+      queryClient.setQueryData(["/api/auth/me"], null);
+
+      // Then invalidate
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+
       toast({ title: "Signed out successfully" });
       setLocation("/");
     },
@@ -107,9 +120,12 @@ export default function AdminDashboard() {
     );
   }
 
-  const pendingPlayers = players?.filter(p => p.approvalStatus === 'pending') || [];
-  const approvedPlayers = players?.filter(p => p.approvalStatus === 'approved') || [];
-  const rejectedPlayers = players?.filter(p => p.approvalStatus === 'rejected') || [];
+  const pendingPlayers =
+    players?.filter((p) => p.approvalStatus === "pending") || [];
+  const approvedPlayers =
+    players?.filter((p) => p.approvalStatus === "approved") || [];
+  const rejectedPlayers =
+    players?.filter((p) => p.approvalStatus === "rejected") || [];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -120,15 +136,22 @@ export default function AdminDashboard() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="h-8 w-8 text-red-600" />
-                  <h1 className="text-4xl font-bold text-foreground">Admin Dashboard</h1>
+                  <h1 className="text-4xl font-bold text-foreground">
+                    Admin Dashboard
+                  </h1>
                 </div>
-                <p className="text-muted-foreground">Manage player applications and approvals</p>
+                <p className="text-muted-foreground">
+                  Manage player applications and approvals
+                </p>
               </div>
               <div className="flex gap-2">
                 <Button asChild variant="outline">
                   <Link href="/dashboard">My Dashboard</Link>
                 </Button>
-                <Button variant="outline" onClick={() => logoutMutation.mutate()}>
+                <Button
+                  variant="outline"
+                  onClick={() => logoutMutation.mutate()}
+                >
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
                 </Button>
@@ -143,7 +166,9 @@ export default function AdminDashboard() {
             <Card>
               <CardContent className="p-6">
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-foreground">{players?.length || 0}</p>
+                  <p className="text-4xl font-bold text-foreground">
+                    {players?.length || 0}
+                  </p>
                   <p className="text-sm text-muted-foreground">Total Players</p>
                 </div>
               </CardContent>
@@ -151,7 +176,9 @@ export default function AdminDashboard() {
             <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
               <CardContent className="p-6">
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-orange-600">{pendingPlayers.length}</p>
+                  <p className="text-4xl font-bold text-orange-600">
+                    {pendingPlayers.length}
+                  </p>
                   <p className="text-sm text-orange-600">Pending Approval</p>
                 </div>
               </CardContent>
@@ -159,7 +186,9 @@ export default function AdminDashboard() {
             <Card className="border-green-200 bg-green-50 dark:bg-green-950/20">
               <CardContent className="p-6">
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-green-600">{approvedPlayers.length}</p>
+                  <p className="text-4xl font-bold text-green-600">
+                    {approvedPlayers.length}
+                  </p>
                   <p className="text-sm text-green-600">Approved</p>
                 </div>
               </CardContent>
@@ -167,7 +196,9 @@ export default function AdminDashboard() {
             <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
               <CardContent className="p-6">
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-red-600">{rejectedPlayers.length}</p>
+                  <p className="text-4xl font-bold text-red-600">
+                    {rejectedPlayers.length}
+                  </p>
                   <p className="text-sm text-red-600">Rejected</p>
                 </div>
               </CardContent>
@@ -192,7 +223,9 @@ export default function AdminDashboard() {
                           <div className="flex-1">
                             <div className="flex items-start gap-4">
                               <div className="flex-1">
-                                <h3 className="text-xl font-bold mb-2">{p.fullName}</h3>
+                                <h3 className="text-xl font-bold mb-2">
+                                  {p.fullName}
+                                </h3>
                                 <div className="grid md:grid-cols-2 gap-2 text-sm text-muted-foreground mb-3">
                                   <div className="flex items-center gap-2">
                                     <Mail className="h-4 w-4" />
@@ -250,17 +283,24 @@ export default function AdminDashboard() {
           {approvedPlayers.length > 0 && (
             <Card className="mb-8">
               <CardHeader>
-                <CardTitle className="text-2xl">Approved Players ({approvedPlayers.length})</CardTitle>
+                <CardTitle className="text-2xl">
+                  Approved Players ({approvedPlayers.length})
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {approvedPlayers.map((p) => (
-                    <Card key={p.id} className="border-green-200 bg-green-50/50 dark:bg-green-950/10">
+                    <Card
+                      key={p.id}
+                      className="border-green-200 bg-green-50/50 dark:bg-green-950/10"
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="font-bold">{p.fullName}</h4>
-                            <p className="text-sm text-muted-foreground">{p.email}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {p.email}
+                            </p>
                           </div>
                           <Badge className="bg-green-600">
                             <CheckCircle className="h-3 w-3 mr-1" />
@@ -279,17 +319,24 @@ export default function AdminDashboard() {
           {rejectedPlayers.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl">Rejected Players ({rejectedPlayers.length})</CardTitle>
+                <CardTitle className="text-2xl">
+                  Rejected Players ({rejectedPlayers.length})
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {rejectedPlayers.map((p) => (
-                    <Card key={p.id} className="border-red-200 bg-red-50/50 dark:bg-red-950/10">
+                    <Card
+                      key={p.id}
+                      className="border-red-200 bg-red-50/50 dark:bg-red-950/10"
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="font-bold">{p.fullName}</h4>
-                            <p className="text-sm text-muted-foreground">{p.email}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {p.email}
+                            </p>
                           </div>
                           <Badge variant="destructive">
                             <XCircle className="h-3 w-3 mr-1" />
