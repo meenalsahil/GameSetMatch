@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
 import { Mail, Phone, MapPin } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
