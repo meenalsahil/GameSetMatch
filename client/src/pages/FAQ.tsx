@@ -2,11 +2,13 @@ import { Button } from "@/components/ui/button";
 import Footer from "@/components/Footer";
 import { Link } from "wouter";
 import { ArrowLeft, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
-
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const faqs = [
     {
       question: "Who can join as a player?",
