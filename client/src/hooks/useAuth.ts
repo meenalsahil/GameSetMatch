@@ -6,12 +6,14 @@ export function useAuth() {
     data: player,
     isLoading,
     error,
+    refetch,
   } = useQuery<Player | null>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/me");
+      const res = await fetch("/api/auth/me", {
+        credentials: "include", // ADDED: Ensure cookies are sent
+      });
 
-      // If not authenticated, return null instead of throwing error
       if (res.status === 401) {
         return null;
       }
@@ -22,8 +24,9 @@ export function useAuth() {
 
       return res.json();
     },
-    retry: false,
-    staleTime: 0, // Always check for fresh data
+    retry: 1, // CHANGED: Retry once if it fails
+    retryDelay: 300, // ADDED: Wait 300ms before retry
+    staleTime: 0,
   });
 
   return {
@@ -31,5 +34,6 @@ export function useAuth() {
     isLoading,
     isAuthenticated: !!player,
     error,
+    refetch,
   };
 }

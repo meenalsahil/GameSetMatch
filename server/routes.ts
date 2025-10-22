@@ -148,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Wait a tiny bit for database to commit
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Return player data with camelCase for frontend
       const playerData = {
