@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,12 +51,12 @@ export default function PlayerSignup() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      
+
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Signup failed");
       }
-      
+
       return res.json();
     },
     onSuccess: () => {
@@ -77,7 +78,7 @@ export default function PlayerSignup() {
 
   const nextStep = async () => {
     let fieldsToValidate: (keyof SignupPlayer)[] = [];
-    
+
     if (step === 1) {
       fieldsToValidate = ["email", "password", "fullName", "age", "country"];
     } else if (step === 2) {
@@ -95,17 +96,24 @@ export default function PlayerSignup() {
       <div className="flex-1">
         <div className="bg-gradient-to-b from-primary/10 to-background py-12">
           <div className="container mx-auto px-6">
-            <Button asChild variant="ghost" size="sm" className="mb-4" data-testid="button-back">
-              <Link href="/how-it-works">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="mb-4"
+              data-testid="button-back"
+            >
+              <Link href="/">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+                Back to Home
               </Link>
             </Button>
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               Player Application
             </h1>
             <p className="text-lg text-muted-foreground">
-              Join GameSetMatch and connect with sponsors for your tennis journey
+              Join GameSetMatch and connect with sponsors for your tennis
+              journey
             </p>
           </div>
         </div>
@@ -200,7 +208,11 @@ export default function PlayerSignup() {
                               placeholder="Your age"
                               data-testid="input-age"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                              onChange={(e) =>
+                                field.onChange(
+                                  parseInt(e.target.value) || undefined,
+                                )
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -378,7 +390,11 @@ export default function PlayerSignup() {
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 ) : (
-                  <Button type="submit" className="ml-auto" data-testid="button-submit">
+                  <Button
+                    type="submit"
+                    className="ml-auto"
+                    data-testid="button-submit"
+                  >
                     Submit Application
                   </Button>
                 )}

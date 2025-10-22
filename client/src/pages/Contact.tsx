@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -57,6 +58,12 @@ export default function Contact() {
       <div className="flex-1">
         <div className="bg-gradient-to-b from-primary/10 to-background py-20">
           <div className="container mx-auto px-6 text-center">
+            <Button asChild variant="ghost" size="sm" className="mb-4">
+              <Link href="/">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Home
+              </Link>
+            </Button>
             <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-6">
               Contact Us
             </h1>
@@ -74,8 +81,9 @@ export default function Contact() {
                 Get in Touch
               </h2>
               <p className="text-muted-foreground mb-8">
-                Whether you're a player looking to get sponsored or a sponsor wanting to support tennis talent,
-                we're here to help answer your questions.
+                Whether you're a player looking to get sponsored or a sponsor
+                wanting to support tennis talent, we're here to help answer your
+                questions.
               </p>
 
               <div className="space-y-6">
@@ -84,8 +92,12 @@ export default function Contact() {
                     <Mail className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground mb-1">Email</h3>
-                    <p className="text-muted-foreground">suvirabeer@gmail.com</p>
+                    <h3 className="font-semibold text-foreground mb-1">
+                      Email
+                    </h3>
+                    <p className="text-muted-foreground">
+                      suvirabeer@gmail.com
+                    </p>
                   </div>
                 </div>
 
@@ -94,7 +106,9 @@ export default function Contact() {
                     <Phone className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground mb-1">Phone</h3>
+                    <h3 className="font-semibold text-foreground mb-1">
+                      Phone
+                    </h3>
                     <p className="text-muted-foreground">We'll add this soon</p>
                   </div>
                 </div>
@@ -104,8 +118,12 @@ export default function Contact() {
                     <MapPin className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground mb-1">Location</h3>
-                    <p className="text-muted-foreground">Serving players worldwide</p>
+                    <h3 className="font-semibold text-foreground mb-1">
+                      Location
+                    </h3>
+                    <p className="text-muted-foreground">
+                      Serving players worldwide
+                    </p>
                   </div>
                 </div>
               </div>
@@ -120,7 +138,9 @@ export default function Contact() {
                     data-testid="input-contact-name"
                     required
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     placeholder="Your full name"
                   />
                 </div>
@@ -133,7 +153,9 @@ export default function Contact() {
                     data-testid="input-contact-email"
                     required
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     placeholder="your.email@example.com"
                   />
                 </div>
@@ -145,7 +167,9 @@ export default function Contact() {
                     type="tel"
                     data-testid="input-contact-phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
                     placeholder="+1 (555) 123-4567"
                   />
                 </div>
@@ -157,7 +181,9 @@ export default function Contact() {
                     data-testid="textarea-contact-message"
                     required
                     value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, message: e.target.value })
+                    }
                     placeholder="Tell us how we can help you..."
                     rows={6}
                   />

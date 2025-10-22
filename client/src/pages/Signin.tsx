@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,12 +45,12 @@ export default function Signin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      
+
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Signin failed");
       }
-      
+
       return res.json();
     },
     onSuccess: () => {
@@ -63,7 +64,8 @@ export default function Signin() {
     onError: (error: Error) => {
       toast({
         title: "Signin Failed",
-        description: error.message || "Please check your credentials and try again.",
+        description:
+          error.message || "Please check your credentials and try again.",
         variant: "destructive",
       });
     },
@@ -77,6 +79,12 @@ export default function Signin() {
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 flex items-center justify-center py-20">
         <Card className="max-w-md w-full mx-6 p-8">
+          <Button asChild variant="ghost" size="sm" className="mb-4">
+            <Link href="/">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Home
+            </Link>
+          </Button>
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-card-foreground mb-2">
               Player Sign In
@@ -113,7 +121,11 @@ export default function Signin() {
                   <FormItem>
                     <div className="flex items-center justify-between">
                       <FormLabel>Password</FormLabel>
-                      <Link href="/forgot-password" className="text-sm text-primary hover:underline" data-testid="link-forgot-password">
+                      <Link
+                        href="/forgot-password"
+                        className="text-sm text-primary hover:underline"
+                        data-testid="link-forgot-password"
+                      >
                         Forgot password?
                       </Link>
                     </div>
@@ -130,9 +142,9 @@ export default function Signin() {
                 )}
               />
 
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 data-testid="button-signin"
                 disabled={signinMutation.isPending}
               >
@@ -144,7 +156,11 @@ export default function Signin() {
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Don't have an account?{" "}
-              <Link href="/signup/player" className="text-primary hover:underline" data-testid="link-signup">
+              <Link
+                href="/signup/player"
+                className="text-primary hover:underline"
+                data-testid="link-signup"
+              >
                 Sign up here
               </Link>
             </p>
