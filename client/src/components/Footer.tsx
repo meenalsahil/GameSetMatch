@@ -9,7 +9,9 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Trophy className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold text-card-foreground">GameSetMatch</span>
+              <span className="text-lg font-bold text-card-foreground">
+                GameSetMatch
+              </span>
             </div>
             <p className="text-sm text-muted-foreground">
               Connecting tennis players with sponsors at all competitive levels
@@ -17,15 +19,23 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-card-foreground mb-4">Platform</h4>
+            <h4 className="font-semibold text-card-foreground mb-4">
+              Platform
+            </h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link href="/players" className="hover:text-primary transition-colors">
+                <Link
+                  href="/players"
+                  className="hover:text-primary transition-colors"
+                >
                   Browse Players
                 </Link>
               </li>
               <li>
-                <Link href="/how-it-works" className="hover:text-primary transition-colors">
+                <Link
+                  href="/how-it-works"
+                  className="hover:text-primary transition-colors"
+                >
                   How It Works
                 </Link>
               </li>
@@ -36,14 +46,21 @@ export default function Footer() {
             <h4 className="font-semibold text-card-foreground mb-4">Support</h4>
             <ul className="space-y-2 text-muted-foreground">
               <li>
-                <Link href="/contact" className="text-sm hover:text-primary transition-colors">
+                <Link
+                  href="/contact"
+                  className="text-sm hover:text-primary transition-colors"
+                >
                   Contact Us
                 </Link>
               </li>
               <li>
-                <a href="/how-it-works#faq" className="text-sm hover:text-primary transition-colors" data-testid="link-faq">
+                <Link
+                  href="/faq"
+                  className="text-sm hover:text-primary transition-colors"
+                  data-testid="link-faq"
+                >
                   FAQ
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -52,12 +69,18 @@ export default function Footer() {
             <h4 className="font-semibold text-card-foreground mb-4">Legal</h4>
             <ul className="space-y-2 text-muted-foreground">
               <li>
-                <a href="/how-it-works#faq" className="text-sm hover:text-primary transition-colors">
+                <a
+                  href="/how-it-works#faq"
+                  className="text-sm hover:text-primary transition-colors"
+                >
                   Privacy Policy
                 </a>
               </li>
               <li>
-                <a href="/how-it-works#faq" className="text-sm hover:text-primary transition-colors">
+                <a
+                  href="/how-it-works#faq"
+                  className="text-sm hover:text-primary transition-colors"
+                >
                   Terms of Service
                 </a>
               </li>
