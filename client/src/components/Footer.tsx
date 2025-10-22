@@ -5,7 +5,7 @@ export default function Footer() {
   return (
     <footer className="bg-card border-t py-12">
       <div className="container mx-auto px-6">
-        <div className="grid md:grid-cols-4 gap-8 mb-8">
+        <div className="grid md:grid-cols-3 gap-8 mb-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Trophy className="h-6 w-6 text-primary" />
@@ -16,30 +16,6 @@ export default function Footer() {
             <p className="text-sm text-muted-foreground">
               Connecting tennis players with sponsors at all competitive levels
             </p>
-          </div>
-
-          <div>
-            <h4 className="font-semibold text-card-foreground mb-4">
-              Platform
-            </h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link
-                  href="/players"
-                  className="hover:text-primary transition-colors"
-                >
-                  Browse Players
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/how-it-works"
-                  className="hover:text-primary transition-colors"
-                >
-                  How It Works
-                </Link>
-              </li>
-            </ul>
           </div>
 
           <div>
