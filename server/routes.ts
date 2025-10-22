@@ -21,12 +21,14 @@ async function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.playerId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-  
+
   const player = await storage.getPlayer(req.session.playerId);
   if (!player || !player.isAdmin) {
-    return res.status(403).json({ message: "Forbidden - Admin access required" });
+    return res
+      .status(403)
+      .json({ message: "Forbidden - Admin access required" });
   }
-  
+
   next();
 }
 
@@ -42,7 +44,9 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase(),
+    );
     const mimetype = allowedTypes.test(file.mimetype);
     if (extname && mimetype) {
       cb(null, true);
@@ -58,7 +62,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const result = signupPlayerSchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ message: "Invalid input", errors: result.error.errors });
+        return res
+          .status(400)
+          .json({ message: "Invalid input", errors: result.error.errors });
       }
 
       const { email, password, ...playerData } = result.data;
@@ -141,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/players", async (req, res) => {
     try {
       const players = await storage.getPublishedPlayers();
-      res.json(players.map(p => ({ ...p, passwordHash: undefined })));
+      res.json(players.map((p) => ({ ...p, passwordHash: undefined })));
     } catch (error) {
       console.error("Get players error:", error);
       res.status(500).json({ message: "Failed to get players" });
@@ -151,7 +157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/players/featured", async (req, res) => {
     try {
       const players = await storage.getFeaturedPlayers();
-      res.json(players.map(p => ({ ...p, passwordHash: undefined })));
+      res.json(players.map((p) => ({ ...p, passwordHash: undefined })));
     } catch (error) {
       console.error("Get featured players error:", error);
       res.status(500).json({ message: "Failed to get featured players" });
@@ -168,6 +174,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get player error:", error);
       res.status(500).json({ message: "Failed to get player" });
+    }
+  });
+  // Admin routes
+  app.get("/api/admin/players", async (req, res) => {
+    try {
+      if (!req.user || !req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const players = await storage.getAllPlayers();
+      res.json(players.map((p) => ({ ...p, passwordHash: undefined })));
+    } catch (error) {
+      console.error("Get admin players error:", error);
+      res.status(500).json({ message: "Failed to get players" });
+    }
+  });
+
+  app.post("/api/admin/players/:id/approve", async (req, res) => {
+    try {
+      if (!req.user || !req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const player = await storage.approvePlayer(req.params.id, req.user.id);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      res.json({ ...player, passwordHash: undefined });
+    } catch (error) {
+      console.error("Approve player error:", error);
+      res.status(500).json({ message: "Failed to approve player" });
+    }
+  });
+
+  app.post("/api/admin/players/:id/reject", async (req, res) => {
+    try {
+      if (!req.user || !req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const player = await storage.rejectPlayer(req.params.id, req.user.id);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      res.json({ ...player, passwordHash: undefined });
+    } catch (error) {
+      console.error("Reject player error:", error);
+      res.status(500).json({ message: "Failed to reject player" });
     }
   });
 
@@ -206,25 +262,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/upload/photo", isAuthenticated, upload.single("photo"), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
+  app.post(
+    "/api/upload/photo",
+    isAuthenticated,
+    upload.single("photo"),
+    async (req, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        const photoUrl = `/uploads/${req.file.filename}`;
+
+        // Update player's photo
+        if (req.session?.playerId) {
+          await storage.updatePlayer(req.session.playerId, { photoUrl });
+        }
+
+        res.json({ photoUrl });
+      } catch (error) {
+        console.error("Upload photo error:", error);
+        res.status(500).json({ message: "Failed to upload photo" });
       }
-      
-      const photoUrl = `/uploads/${req.file.filename}`;
-      
-      // Update player's photo
-      if (req.session?.playerId) {
-        await storage.updatePlayer(req.session.playerId, { photoUrl });
-      }
-      
-      res.json({ photoUrl });
-    } catch (error) {
-      console.error("Upload photo error:", error);
-      res.status(500).json({ message: "Failed to upload photo" });
-    }
-  });
+    },
+  );
 
   // Contact form endpoint
   app.post("/api/contact", async (req, res) => {
@@ -232,20 +293,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { name, email, phone, message } = req.body;
 
       if (!name || !email || !message) {
-        return res.status(400).json({ message: "Name, email, and message are required" });
+        return res
+          .status(400)
+          .json({ message: "Name, email, and message are required" });
       }
 
       // Check if email credentials are configured
       if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
         console.error("Email credentials not configured");
-        return res.status(500).json({ 
-          message: "Email service is not configured. Please contact the administrator." 
+        return res.status(500).json({
+          message:
+            "Email service is not configured. Please contact the administrator.",
         });
       }
 
       // Create email transporter
       const transporter = nodemailer.createTransport({
-        service: 'gmail',
+        service: "gmail",
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
@@ -255,13 +319,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Email content
       const mailOptions = {
         from: process.env.EMAIL_USER,
-        to: 'suvirabeer@gmail.com',
+        to: "suvirabeer@gmail.com",
         subject: `GameSetMatch Contact Form: ${name}`,
         html: `
           <h2>New Contact Form Submission</h2>
           <p><strong>Name:</strong> ${name}</p>
           <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Phone:</strong> ${phone || 'Not provided'}</p>
+          <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
           <p><strong>Message:</strong></p>
           <p>${message}</p>
           <hr>
@@ -284,7 +348,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const players = await storage.getAllPlayers();
       // Remove password hashes from response
-      const sanitizedPlayers = players.map(p => ({ ...p, passwordHash: undefined }));
+      const sanitizedPlayers = players.map((p) => ({
+        ...p,
+        passwordHash: undefined,
+      }));
       res.json(sanitizedPlayers);
     } catch (error) {
       console.error("Get all players error:", error);
@@ -296,7 +363,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Prevent admins from deleting themselves
       if (req.params.id === req.session!.playerId) {
-        return res.status(403).json({ message: "You cannot delete your own account" });
+        return res
+          .status(403)
+          .json({ message: "You cannot delete your own account" });
       }
 
       await storage.deletePlayer(req.params.id);
@@ -311,7 +380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const adminId = req.session!.playerId!;
       const player = await storage.approvePlayer(req.params.id, adminId);
-      
+
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -320,7 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         try {
           const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            service: "gmail",
             auth: {
               user: process.env.EMAIL_USER,
               pass: process.env.EMAIL_PASS,
@@ -330,12 +399,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: player.email,
-            subject: 'Your GameSetMatch Application Has Been Approved!',
+            subject: "Your GameSetMatch Application Has Been Approved!",
             html: `
               <h2>Congratulations, ${player.fullName}!</h2>
               <p>Your application to join GameSetMatch has been approved!</p>
               <p>You can now complete your profile and publish it to start connecting with sponsors.</p>
-              <p><a href="${req.protocol}://${req.get('host')}/signin">Sign in to your dashboard</a></p>
+              <p><a href="${req.protocol}://${req.get("host")}/signin">Sign in to your dashboard</a></p>
               <br>
               <p>Best regards,<br>The GameSetMatch Team</p>
             `,
@@ -357,7 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const adminId = req.session!.playerId!;
       const player = await storage.rejectPlayer(req.params.id, adminId);
-      
+
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -366,7 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         try {
           const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            service: "gmail",
             auth: {
               user: process.env.EMAIL_USER,
               pass: process.env.EMAIL_PASS,
@@ -376,7 +445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: player.email,
-            subject: 'Update on Your GameSetMatch Application',
+            subject: "Update on Your GameSetMatch Application",
             html: `
               <h2>Hello ${player.fullName},</h2>
               <p>Thank you for your interest in GameSetMatch.</p>
@@ -411,7 +480,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const player = await storage.getPlayerByEmail(email);
       if (!player) {
         // Don't reveal if email exists
-        return res.json({ message: "If an account with that email exists, a password reset link has been sent." });
+        return res.json({
+          message:
+            "If an account with that email exists, a password reset link has been sent.",
+        });
       }
 
       // Generate reset token
@@ -423,23 +495,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send email
       if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
         console.error("Email credentials not configured");
-        return res.status(500).json({ message: "Email service is not configured" });
+        return res
+          .status(500)
+          .json({ message: "Email service is not configured" });
       }
 
       const transporter = nodemailer.createTransport({
-        service: 'gmail',
+        service: "gmail",
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
         },
       });
 
-      const resetUrl = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
+      const resetUrl = `${req.protocol}://${req.get("host")}/reset-password?token=${resetToken}`;
 
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
         to: email,
-        subject: 'GameSetMatch - Password Reset Request',
+        subject: "GameSetMatch - Password Reset Request",
         html: `
           <h2>Password Reset Request</h2>
           <p>Hi ${player.fullName},</p>
@@ -452,10 +526,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `,
       });
 
-      res.json({ message: "If an account with that email exists, a password reset link has been sent." });
+      res.json({
+        message:
+          "If an account with that email exists, a password reset link has been sent.",
+      });
     } catch (error) {
       console.error("Forgot password error:", error);
-      res.status(500).json({ message: "Failed to process password reset request" });
+      res
+        .status(500)
+        .json({ message: "Failed to process password reset request" });
     }
   });
 
@@ -464,16 +543,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { token, password } = req.body;
 
       if (!token || !password) {
-        return res.status(400).json({ message: "Token and password are required" });
+        return res
+          .status(400)
+          .json({ message: "Token and password are required" });
       }
 
       if (password.length < 8) {
-        return res.status(400).json({ message: "Password must be at least 8 characters" });
+        return res
+          .status(400)
+          .json({ message: "Password must be at least 8 characters" });
       }
 
       const resetToken = await storage.getPasswordResetToken(token);
       if (!resetToken) {
-        return res.status(400).json({ message: "Invalid or expired reset token" });
+        return res
+          .status(400)
+          .json({ message: "Invalid or expired reset token" });
       }
 
       if (new Date() > resetToken.expiresAt) {

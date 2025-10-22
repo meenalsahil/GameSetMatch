@@ -1,3 +1,5 @@
+import AdminDashboard from "./pages/AdminDashboard"; <Route path="/admin" component={AdminDashboard} />
+
 import FAQ from "./pages/FAQ";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
