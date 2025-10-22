@@ -65,28 +65,6 @@ export default function HomePage() {
       </div>
 
       {/* Stats Section */}
-      <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white py-16">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-5xl font-bold mb-2">250+</div>
-              <div className="text-green-100">Active Players</div>
-            </div>
-            <div>
-              <div className="text-5xl font-bold mb-2">$500K+</div>
-              <div className="text-green-100">Total Funded</div>
-            </div>
-            <div>
-              <div className="text-5xl font-bold mb-2">150+</div>
-              <div className="text-green-100">Sponsors</div>
-            </div>
-            <div>
-              <div className="text-5xl font-bold mb-2">45</div>
-              <div className="text-green-100">Countries</div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* How It Works - For Players */}
       <div id="how-it-works" className="py-24 bg-white dark:bg-gray-900">
