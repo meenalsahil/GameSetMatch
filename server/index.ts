@@ -17,21 +17,21 @@ app.use(
       conString: process.env.DATABASE_URL,
       createTableIfMissing: true,
       onError: (error) => {
-        // Add error handling
         console.error("Session store error:", error);
       },
     }),
     secret: process.env.SESSION_SECRET || "development-secret-key",
     resave: false,
     saveUninitialized: false,
+    name: "sessionId", // Add explicit name
     cookie: {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // CHANGED: Replit needs this to be false even in production
+      sameSite: "lax", // ADDED: Required for cookies to work
     },
   }),
 );
-
 // Serve uploaded files
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 

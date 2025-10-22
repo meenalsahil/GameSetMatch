@@ -181,6 +181,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  app.get("/api/auth/test-session", (req, res) => {
+    console.log("TEST SESSION:", req.session);
+    res.json({
+      hasSession: !!req.session,
+      hasPlayerId: !!req.session?.playerId,
+      playerId: req.session?.playerId,
+      sessionID: req.sessionID,
+      cookies: req.headers.cookie,
+    });
+  });
+
   app.get("/api/auth/me", isAuthenticated, async (req, res) => {
     try {
       console.log("/api/auth/me - Session:", req.session);
