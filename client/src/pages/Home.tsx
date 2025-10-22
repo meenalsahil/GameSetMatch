@@ -5,14 +5,15 @@ import { Link } from "wouter";
 import { Trophy, Target, Users, ArrowRight, CheckCircle2 } from "lucide-react";
 import Footer from "@/components/Footer";
 
-export default function HomePage() { useEffect(() => {
+export default function HomePage() {
+  useEffect(() => {
     // Smooth scroll to section if hash exists
     const hash = window.location.hash;
     if (hash) {
       const element = document.querySelector(hash);
       if (element) {
         setTimeout(() => {
-          element.scrollIntoView({ behavior: 'smooth' });
+          element.scrollIntoView({ behavior: "smooth" });
         }, 100);
       }
     }
@@ -45,7 +46,7 @@ export default function HomePage() { useEffect(() => {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="text-lg px-8 py-6" asChild>
-                <Link href="/browse-players">
+                <Link href="/players">
                   Browse Players
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
@@ -223,9 +224,9 @@ export default function HomePage() { useEffect(() => {
             </div>
 
             <div className="text-center mt-12">
-              <Button 
-                size="lg" 
-                className="text-lg px-12 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all transform hover:scale-105" 
+              <Button
+                size="lg"
+                className="text-lg px-12 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
                 asChild
               >
                 <Link href="/browse-players">
