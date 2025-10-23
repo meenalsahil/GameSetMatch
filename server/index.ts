@@ -16,6 +16,7 @@ app.use(
     store: new pgSession({
       conString: process.env.DATABASE_URL,
       createTableIfMissing: true,
+      tableName: "session", // ADDED
       onError: (error) => {
         console.error("Session store error:", error);
       },
@@ -23,12 +24,14 @@ app.use(
     secret: process.env.SESSION_SECRET || "development-secret-key",
     resave: false,
     saveUninitialized: false,
-    name: "sessionId", // Add explicit name
+    rolling: true, // ADDED: Refresh cookie on every request
+    name: "sessionId",
     cookie: {
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
+      maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: false, // CHANGED: Replit needs this to be false even in production
-      sameSite: "lax", // ADDED: Required for cookies to work
+      secure: false,
+      sameSite: "lax",
+      path: "/", // ADDED: Ensure cookie works on all paths
     },
   }),
 );
