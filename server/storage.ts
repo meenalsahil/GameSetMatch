@@ -182,7 +182,8 @@ export class DbStorage implements IStorage {
     adminId: string,
   ): Promise<Player | undefined> {
     const result = await pool.query(
-      "UPDATE players SET approval_status = 'approved', approved_by = $2, approved_at = NOW() WHERE id = $1 RETURNING *",
+      // set approval_status and also set published = true
+      "UPDATE players SET approval_status = 'approved', published = true, approved_by = $2, approved_at = NOW() WHERE id = $1 RETURNING *",
       [id, adminId],
     );
     return result.rows[0];
