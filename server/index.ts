@@ -16,22 +16,26 @@ app.use(
     store: new pgSession({
       conString: process.env.DATABASE_URL,
       createTableIfMissing: true,
-      tableName: "session", // ADDED
+      tableName: "session",
+      pruneSessionInterval: false, // ADDED: Disable auto-cleanup
       onError: (error) => {
         console.error("Session store error:", error);
       },
     }),
-    secret: process.env.SESSION_SECRET || "development-secret-key",
-    resave: false,
+    secret:
+      process.env.SESSION_SECRET ||
+      "development-secret-key-change-in-production",
+    resave: true, // CHANGED: Force save on every request
     saveUninitialized: false,
-    rolling: true, // ADDED: Refresh cookie on every request
-    name: "sessionId",
+    rolling: true,
+    name: "connect.sid", // CHANGED: Use default cookie name
+    proxy: true, // ADDED: Trust Replit's proxy
     cookie: {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: true,
       secure: false,
       sameSite: "lax",
-      path: "/", // ADDED: Ensure cookie works on all paths
+      path: "/",
     },
   }),
 );
