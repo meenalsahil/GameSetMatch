@@ -39,16 +39,13 @@ export class DbStorage implements IStorage {
       `SELECT id, full_name, email, age, country, location, ranking,
               specialization, bio, funding_goals, video_url, photo_url,
               published, featured, priority, is_admin,
-              approval_status, approved_by, approved_at,
-            
+              approval_status, approved_by, approved_at
          FROM players
          WHERE id = $1`,
       [id],
     );
-
     return result.rows[0];
   }
-
   async getPlayerByEmail(email: string): Promise<Player | undefined> {
     try {
       const result = await pool.query(
