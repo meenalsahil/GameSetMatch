@@ -59,6 +59,11 @@ export default function AdminDashboard() {
     },
     enabled: !!player?.isAdmin,
   });
+  // ADD THIS DEBUG CODE:
+  console.log("Players data:", players);
+  console.log("Pending players:", pendingPlayers);
+  console.log("Approved players:", approvedPlayers);
+  console.log("Rejected players:", rejectedPlayers);
 
   const approveMutation = useMutation({
     mutationFn: async (playerId: string) => {
