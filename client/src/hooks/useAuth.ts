@@ -6,28 +6,13 @@ export function useAuth() {
     data: player,
     isLoading,
     error,
-  } = useQuery<Player | null>({
+  } = useQuery<Player>({
     queryKey: ["/api/auth/me"],
-    queryFn: async () => {
-      const res = await fetch("/api/auth/me", {
-        credentials: "include",
-      });
-
-      if (res.status === 401) {
-        return null;
-      }
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch user");
-      }
-
-      return res.json();
-    },
     retry: false,
   });
 
   return {
-    player: player || null,
+    player,
     isLoading,
     isAuthenticated: !!player,
     error,

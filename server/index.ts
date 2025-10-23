@@ -16,6 +16,9 @@ app.use(
     store: new pgSession({
       conString: process.env.DATABASE_URL,
       createTableIfMissing: true,
+      onError: (error) => {
+        console.error("Session store error:", error);
+      },
     }),
     secret: process.env.SESSION_SECRET || "development-secret-key",
     resave: false,
@@ -23,7 +26,8 @@ app.use(
     cookie: {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false,
+      sameSite: "lax",
     },
   }),
 );
