@@ -408,7 +408,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to deactivate player" });
     }
   });
-
+  app.post("/api/admin/players/:id/activate", isAdmin, async (req, res) => {
+    try {
+      const player = await storage.activatePlayer(req.params.id);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+      res.json({ message: "Player activated", player });
+    } catch (error) {
+      console.error("Activate player error:", error);
+      res.status(500).json({ message: "Failed to activate player" });
+    }
+  });
   app.delete("/api/admin/players/:id", isAdmin, async (req, res) => {
     try {
       await storage.deletePlayer(req.params.id);

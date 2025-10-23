@@ -120,7 +120,19 @@ export default function AdminDashboard() {
       toast({ title: "Player deleted" });
     },
   });
-
+  const activateMutation = useMutation({
+    mutationFn: async (playerId: string) => {
+      const res = await fetch(`/api/admin/players/${playerId}/activate`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to activate");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/players"] });
+      toast({ title: "Player activated" });
+    },
+  });
   const logoutMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/auth/logout", { method: "POST" });
@@ -151,6 +163,12 @@ export default function AdminDashboard() {
     players?.filter((p) => p.approvalStatus === "pending") || [];
   const approvedPlayers =
     players?.filter((p) => p.approvalStatus === "approved") || [];
+  const activeApprovedPlayers = approvedPlayers.filter(
+    (p) => p.active !== false,
+  );
+  const inactiveApprovedPlayers = approvedPlayers.filter(
+    (p) => p.active === false,
+  );
   const rejectedPlayers =
     players?.filter((p) => p.approvalStatus === "rejected") || [];
 
@@ -306,17 +324,17 @@ export default function AdminDashboard() {
             </Card>
           )}
 
-          {/* Approved Players */}
-          {approvedPlayers.length > 0 && (
+          {/* Active Approved Players */}
+          {activeApprovedPlayers.length > 0 && (
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="text-2xl">
-                  Approved Players ({approvedPlayers.length})
+                  Active Players ({activeApprovedPlayers.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {approvedPlayers.map((p) => (
+                  {activeApprovedPlayers.map((p) => (
                     <Card
                       key={p.id}
                       className="border-green-200 bg-green-50/50 dark:bg-green-950/10"
@@ -340,6 +358,63 @@ export default function AdminDashboard() {
                               onClick={() => deactivateMutation.mutate(p.id)}
                             >
                               Deactivate
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => {
+                                if (
+                                  confirm("Delete this player permanently?")
+                                ) {
+                                  deleteMutation.mutate(p.id);
+                                }
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Inactive Players */}
+          {inactiveApprovedPlayers.length > 0 && (
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="text-2xl text-gray-600">
+                  Inactive Players ({inactiveApprovedPlayers.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {inactiveApprovedPlayers.map((p) => (
+                    <Card
+                      key={p.id}
+                      className="border-gray-300 bg-gray-100 dark:bg-gray-800 opacity-60"
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-bold text-gray-600">
+                              {p.fullName}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {p.email}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">Inactive</Badge>
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => activateMutation.mutate(p.id)}
+                            >
+                              Activate
                             </Button>
                             <Button
                               size="sm"
