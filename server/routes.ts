@@ -297,10 +297,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Player not found" });
       }
 
-      // Transform snake_case → camelCase for frontend
       const playerData = {
         id: player.id,
-        email: player.email,
         fullName: player.full_name,
         age: player.age,
         country: player.country,
@@ -313,14 +311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         photoUrl: player.photo_url,
         published: player.published,
         featured: player.featured,
-        priority: player.priority,
-        approvalStatus: player.approval_status,
-        approvedBy: player.approved_by,
-        approvedAt: player.approved_at,
-        story: player.story,
-        fundraisingReason: player.fundraising_reason,
       };
-
       res.json(playerData);
     } catch (error) {
       console.error("Get player error:", error);
