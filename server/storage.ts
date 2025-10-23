@@ -106,7 +106,7 @@ export class DbStorage implements IStorage {
   async getPublishedPlayers(): Promise<Player[]> {
     const result = await pool.query(
       `SELECT id, full_name, location, ranking, specialization, bio,
-              funding_goals, video_url, photo_url, country, age
+              funding_goals, video_url, photo_url, country, age, active
        FROM players
        WHERE published = true AND active = true
        ORDER BY priority DESC, created_at DESC`,
