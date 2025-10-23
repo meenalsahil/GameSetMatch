@@ -35,9 +35,17 @@ export interface IStorage {
 
 export class DbStorage implements IStorage {
   async getPlayer(id: string): Promise<Player | undefined> {
-    const result = await pool.query("SELECT * FROM players WHERE id = $1", [
-      id,
-    ]);
+    const result = await pool.query(
+      `SELECT id, full_name, email, age, country, location, ranking,
+              specialization, bio, funding_goals, video_url, photo_url,
+              published, featured, priority, is_admin,
+              approval_status, approved_by, approved_at,
+              story, fundraising_reason
+         FROM players
+         WHERE id = $1`,
+      [id],
+    );
+
     return result.rows[0];
   }
 
