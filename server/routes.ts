@@ -289,9 +289,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin routes
   app.get("/api/admin/players", isAdmin, async (req, res) => {
     try {
-      // req.user is now populated by isAdmin middleware
       const players = await storage.getAllPlayers();
-      res.json(players.map((p) => ({ ...p, password_hash: undefined })));
+
+      const transformedPlayers = players.map((p) => ({
+        id: p.id,
+        email: p.email,
+        fullName: p.full_name,
+        age: p.age,
+        country: p.country,
+        location: p.location,
+        ranking: p.ranking,
+        specialization: p.specialization,
+        bio: p.bio,
+        fundingGoals: p.funding_goals,
+        videoUrl: p.video_url,
+        photoUrl: p.photo_url,
+        published: p.published,
+        featured: p.featured,
+        priority: p.priority,
+        isAdmin: p.is_admin,
+        approvalStatus: p.approval_status,
+        approvedBy: p.approved_by,
+        approvedAt: p.approved_at,
+        createdAt: p.created_at,
+      }));
+
+      res.json(transformedPlayers);
     } catch (error) {
       console.error("Get admin players error:", error);
       res.status(500).json({ message: "Failed to get players" });
