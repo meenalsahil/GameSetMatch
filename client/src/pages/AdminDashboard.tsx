@@ -93,6 +93,33 @@ export default function AdminDashboard() {
       });
     },
   });
+  const deactivateMutation = useMutation({
+    mutationFn: async (playerId: string) => {
+      const res = await fetch(`/api/admin/players/${playerId}/deactivate`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to deactivate");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/players"] });
+      toast({ title: "Player deactivated" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (playerId: string) => {
+      const res = await fetch(`/api/admin/players/${playerId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/players"] });
+      toast({ title: "Player deleted" });
+    },
+  });
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -302,10 +329,32 @@ export default function AdminDashboard() {
                               {p.email}
                             </p>
                           </div>
-                          <Badge className="bg-green-600">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Approved
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-green-600">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Approved
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => deactivateMutation.mutate(p.id)}
+                            >
+                              Deactivate
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => {
+                                if (
+                                  confirm("Delete this player permanently?")
+                                ) {
+                                  deleteMutation.mutate(p.id);
+                                }
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>

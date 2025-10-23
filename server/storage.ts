@@ -105,7 +105,11 @@ export class DbStorage implements IStorage {
 
   async getPublishedPlayers(): Promise<Player[]> {
     const result = await pool.query(
-      "SELECT * FROM players WHERE published = true ORDER BY created_at DESC",
+      `SELECT id, full_name, location, ranking, specialization, bio,
+              funding_goals, video_url, photo_url, country, age
+       FROM players
+       WHERE published = true AND active = true
+       ORDER BY priority DESC, created_at DESC`,
     );
     return result.rows;
   }
@@ -202,10 +206,25 @@ export class DbStorage implements IStorage {
     return result.rows[0];
   }
 
-  async deletePlayer(id: string): Promise<void> {
-    await pool.query("DELETE FROM players WHERE id = $1", [id]);
+  async deactivatePlayer(id: string): Promise<Player | undefined> {
+    const result = await pool.query(
+      `UPDATE players SET active = false WHERE id = $1 RETURNING *`,
+      [id],
+    );
+    return result.rows[0];
   }
 
+  async activatePlayer(id: string): Promise<Player | undefined> {
+    const result = await pool.query(
+      `UPDATE players SET active = true WHERE id = $1 RETURNING *`,
+      [id],
+    );
+    return result.rows[0];
+  }
+
+  async deletePlayer(id: string): Promise<void> {
+    await pool.query(`DELETE FROM players WHERE id = $1`, [id]);
+  }
   async createPasswordResetToken(
     playerId: string,
     token: string,

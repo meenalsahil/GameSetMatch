@@ -67,7 +67,19 @@ export default function Dashboard() {
       });
     },
   });
-
+  const toggleActiveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/players/toggle-active", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to update");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({
+        title: player?.active ? "Profile deactivated" : "Profile activated",
+      });
+    },
+  });
   const publishMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/players/${player?.id}/publish`, {
@@ -277,6 +289,14 @@ export default function Dashboard() {
                           {publishMutation.isPending
                             ? "Publishing..."
                             : "Publish Profile"}
+                        </Button>
+                        <Button
+                          variant={player?.active ? "outline" : "default"}
+                          onClick={() => toggleActiveMutation.mutate()}
+                        >
+                          {player?.active
+                            ? "Make Profile Inactive"
+                            : "Activate Profile"}
                         </Button>
                       </div>
                     )}

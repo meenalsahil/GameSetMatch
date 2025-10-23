@@ -318,6 +318,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to get player" });
     }
   });
+  app.post("/api/players/toggle-active", isAuthenticated, async (req, res) => {
+    try {
+      const player = await storage.getPlayer(req.session!.playerId!);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      const updatedPlayer = player.active
+        ? await storage.deactivatePlayer(player.id)
+        : await storage.activatePlayer(player.id);
+
+      res.json(updatedPlayer);
+    } catch (error) {
+      console.error("Toggle active error:", error);
+      res.status(500).json({ message: "Failed to update status" });
+    }
+  });
 
   // Admin routes
   app.get("/api/admin/players", isAdmin, async (req, res) => {
@@ -379,7 +396,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to reject player" });
     }
   });
+  app.post("/api/admin/players/:id/deactivate", isAdmin, async (req, res) => {
+    try {
+      const player = await storage.deactivatePlayer(req.params.id);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+      res.json({ message: "Player deactivated", player });
+    } catch (error) {
+      console.error("Deactivate player error:", error);
+      res.status(500).json({ message: "Failed to deactivate player" });
+    }
+  });
 
+  app.delete("/api/admin/players/:id", isAdmin, async (req, res) => {
+    try {
+      await storage.deletePlayer(req.params.id);
+      res.json({ message: "Player deleted" });
+    } catch (error) {
+      console.error("Delete player error:", error);
+      res.status(500).json({ message: "Failed to delete player" });
+    }
+  });
   app.patch("/api/players/:id", isAuthenticated, async (req, res) => {
     try {
       // Ensure player can only update their own profile
