@@ -39,6 +39,12 @@ export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
+  // ADD THIS DEBUG CODE:
+  console.log("AdminDashboard - player:", player);
+  console.log("AdminDashboard - isLoading:", isLoading);
+  console.log("AdminDashboard - isAuthenticated:", isAuthenticated);
+  console.log("AdminDashboard - isAdmin:", player?.isAdmin);
+
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !player?.isAdmin)) {
       toast({
