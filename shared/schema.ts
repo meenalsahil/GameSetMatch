@@ -1,10 +1,19 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, boolean, timestamp, integer } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  varchar,
+  boolean,
+  timestamp,
+  integer,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const players = pgTable("players", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   fullName: text("full_name").notNull(),
@@ -19,17 +28,21 @@ export const players = pgTable("players", {
   photoUrl: text("photo_url"),
   published: boolean("published").notNull().default(false),
   featured: boolean("featured").notNull().default(false),
-  priority: text("priority").default('normal'),
+  priority: text("priority").default("normal"),
   isAdmin: boolean("is_admin").notNull().default(false),
-  approvalStatus: text("approval_status").notNull().default('pending'),
+  approvalStatus: text("approval_status").notNull().default("pending"),
   approvedBy: varchar("approved_by"),
   approvedAt: timestamp("approved_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  playerId: varchar("player_id").notNull().references(() => players.id, { onDelete: "cascade" }),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id")
+    .notNull()
+    .references(() => players.id, { onDelete: "cascade" }),
   token: text("token").notNull().unique(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -40,23 +53,35 @@ export const insertPlayerSchema = createInsertSchema(players).omit({
   createdAt: true,
 });
 
-export const signupPlayerSchema = insertPlayerSchema.omit({
-  passwordHash: true,
-  published: true,
-  featured: true,
-  priority: true,
-  photoUrl: true,
-  isAdmin: true,
-  approvalStatus: true,
-  approvedBy: true,
-  approvedAt: true,
-}).extend({
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  age: z.number().int().positive().min(13, "You must be at least 13 years old"),
-  country: z.string().min(1, "Country is required"),
-  fundingGoals: z.string().min(10, "Please describe your funding goals (at least 10 characters)"),
-  videoUrl: z.union([z.string().url("Please enter a valid URL"), z.literal("")]).optional(),
-});
+export const signupPlayerSchema = insertPlayerSchema
+  .omit({
+    passwordHash: true,
+    published: true,
+    featured: true,
+    priority: true,
+    photoUrl: true,
+    isAdmin: true,
+    approvalStatus: true,
+    approvedBy: true,
+    approvedAt: true,
+  })
+  .extend({
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    age: z
+      .number()
+      .int()
+      .positive()
+      .min(13, "You must be at least 13 years old"),
+    country: z.string().min(1, "Country is required"),
+    fundingGoals: z
+      .string()
+      .min(10, "Please describe your funding goals (at least 10 characters)"),
+    videoUrl: z
+      .union([z.string().url("Please enter a valid URL"), z.literal("")])
+      .optional(),
+    atpProfileUrl: z.string().url().optional(), // ADD THIS
+    photo: z.any().optional(), // ADD THIS (file uploads aren't validated by zod)
+  });
 
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
 export type Player = typeof players.$inferSelect;

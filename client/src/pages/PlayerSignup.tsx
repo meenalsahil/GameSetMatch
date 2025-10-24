@@ -23,56 +23,68 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function PlayerSignup() {
   const [step, setStep] = useState(1);
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
-
   const form = useForm<SignupPlayer>({
     resolver: zodResolver(signupPlayerSchema),
     defaultValues: {
       email: "",
       password: "",
       fullName: "",
-      age: undefined as any,
+      age: 18,
       country: "",
       location: "",
-      ranking: "",
+      ranking: undefined,
       specialization: "",
       bio: "",
       fundingGoals: "",
       videoUrl: "",
+      atpProfileUrl: "",
     },
   });
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
-  const signupMutation = useMutation({
-    mutationFn: async (data: SignupPlayer) => {
-      const res = await fetch("/api/auth/signup", {
+  const onSubmit = async (values: SignupPlayer) => {
+    try {
+      const formData = new FormData();
+
+      // Add all text fields
+      formData.append("email", values.email);
+      formData.append("password", values.password);
+      formData.append("fullName", values.fullName);
+      formData.append("age", values.age.toString());
+      formData.append("country", values.country);
+      formData.append("location", values.location);
+      if (values.ranking) formData.append("ranking", values.ranking.toString());
+      formData.append("specialization", values.specialization);
+      formData.append("bio", values.bio);
+      formData.append("fundingGoals", values.fundingGoals);
+      if (values.videoUrl) formData.append("videoUrl", values.videoUrl);
+      if (values.atpProfileUrl)
+        formData.append("atpProfileUrl", values.atpProfileUrl);
+
+      // Add photo file
+      if (values.photo) {
+        formData.append("photo", values.photo);
+      }
+
+      const response = await fetch("/api/auth/signup", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: formData,
       });
 
-      if (!res.ok) {
-        const error = await res.json();
+      if (!response.ok) {
+        const error = await response.json();
         throw new Error(error.message || "Signup failed");
       }
 
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      setLocation("/thank-you");
-    },
-    onError: (error: Error) => {
+      window.location.href = "/thank-you";
+    } catch (error: any) {
       toast({
-        title: "Signup Failed",
-        description: error.message || "Please try again.",
+        title: "Error",
+        description: error.message || "Failed to sign up",
         variant: "destructive",
       });
-    },
-  });
-
-  const onSubmit = async (data: SignupPlayer) => {
-    signupMutation.mutate(data);
+    }
   };
 
   const nextStep = async () => {
@@ -358,6 +370,60 @@ export default function PlayerSignup() {
                               value={field.value || ""}
                             />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="atpProfileUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>ATP/ITF Profile URL (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="url"
+                              placeholder="https://www.atptour.com/en/players/..."
+                              {...field}
+                              value={field.value || ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Link to your ATP Tour, ITF Tennis, or WTA profile
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="photo"
+                      render={({ field: { value, onChange, ...field } }) => (
+                        <FormItem>
+                          <FormLabel>Profile Photo</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="file"
+                              accept="image/jpeg,image/jpg,image/png,image/gif"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  if (file.size > 5 * 1024 * 1024) {
+                                    alert("File size must be less than 5MB");
+                                    e.target.value = "";
+                                    return;
+                                  }
+                                  onChange(file);
+                                }
+                              }}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Upload a professional photo (JPG, PNG, GIF - max
+                            5MB)
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

@@ -69,10 +69,11 @@ export class DbStorage implements IStorage {
   async createPlayer(player: InsertPlayer): Promise<Player> {
     const result = await pool.query(
       `INSERT INTO players (
-        email, password_hash, full_name, age, country, location, 
-        ranking, specialization, bio, funding_goals, video_url, 
-        published, featured, priority, is_admin, approval_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) 
+        email, password_hash, full_name, age, country, location,
+        ranking, specialization, bio, funding_goals, video_url,
+        atp_profile_url, photo_url, published, featured, priority
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *`,
       [
         player.email,
@@ -81,18 +82,19 @@ export class DbStorage implements IStorage {
         player.age,
         player.country,
         player.location,
-        player.ranking || null,
+        player.ranking,
         player.specialization,
         player.bio,
         player.fundingGoals,
-        player.videoUrl || null,
+        player.videoUrl,
+        player.atpProfileUrl || null,
+        player.photoUrl || null,
         player.published || false,
         player.featured || false,
         player.priority || "normal",
-        player.isAdmin || false,
-        player.approvalStatus || "pending",
       ],
     );
+
     return result.rows[0];
   }
 

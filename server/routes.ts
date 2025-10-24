@@ -1,4 +1,9 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import express, {
+  type Express,
+  type Request,
+  Response,
+  NextFunction,
+} from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { signupPlayerSchema, type Player } from "@shared/schema";
@@ -7,7 +12,40 @@ import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
 import nodemailer from "nodemailer";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
+// Create uploads directory if it doesn't exist
+if (!fs.existsSync("./uploads")) {
+  fs.mkdirSync("./uploads");
+}
+
+// Configure multer for photo uploads
+const storage = multer.diskStorage({
+  destination: "./uploads",
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif/;
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase(),
+    );
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
+  },
+});
 // Middleware to check authentication
 function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   if (req.session?.playerId) {
@@ -38,32 +76,12 @@ async function isAdmin(req: Request, res: Response, next: NextFunction) {
 }
 
 // Configure multer for file uploads
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: "uploads/",
-    filename: (req, file, cb) => {
-      const uniqueName = `${randomUUID()}${path.extname(file.originalname)}`;
-      cb(null, uniqueName);
-    },
-  }),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp/;
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase(),
-    );
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed"));
-    }
-  },
-});
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve uploaded files
+  app.use("/uploads", express.static("uploads"));
   // Auth routes
-  app.post("/api/auth/signup", async (req, res) => {
+  app.post("/api/auth/signup", upload.single("photo"), async (req, res) => {
     try {
       const result = signupPlayerSchema.safeParse(req.body);
       if (!result.success) {
@@ -72,7 +90,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ message: "Invalid input", errors: result.error.errors });
       }
 
-      const { email, password, ...playerData } = result.data;
+      const { email, password, atpProfileUrl, ...playerData } = result.data;
+
+      // Validate ATP URL if provided
+      if (atpProfileUrl) {
+        try {
+          const url = new URL(atpProfileUrl);
+          const validDomains = [
+            "atptour.com",
+            "itftennis.com",
+            "wtatennis.com",
+          ];
+          const isValid = validDomains.some((domain) =>
+            url.hostname.includes(domain),
+          );
+
+          if (!isValid) {
+            return res.status(400).json({
+              message:
+                "ATP Profile URL must be from atptour.com, itftennis.com, or wtatennis.com",
+            });
+          }
+        } catch (urlError) {
+          return res.status(400).json({
+            message: "Invalid ATP Profile URL format",
+          });
+        }
+      }
 
       // Check if player already exists
       const existingPlayer = await storage.getPlayerByEmail(email);
@@ -80,14 +124,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email already registered" });
       }
 
+      // Get photo URL from uploaded file
+      const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // Create player
+      // Create player with photo and ATP URL
       const player = await storage.createPlayer({
         ...playerData,
         email,
         passwordHash,
+        photoUrl,
+        atpProfileUrl: atpProfileUrl || null,
         published: false,
         featured: false,
         priority: "normal",
@@ -95,14 +144,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Set session
       req.session!.playerId = player.id;
-
       res.json({ player: { ...player, passwordHash: undefined } });
     } catch (error) {
       console.error("Signup error:", error);
       res.status(500).json({ message: "Failed to create account" });
     }
   });
-
   app.post("/api/auth/signin", async (req, res) => {
     try {
       const { email, password } = req.body;
