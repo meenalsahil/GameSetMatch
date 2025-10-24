@@ -377,7 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin routes
   app.get("/api/admin/players", isAdmin, async (req, res) => {
     try {
-      const players = await storage.getAllPlayers();
+      const players = await dbStorage.getAllPlayers();
       const transformedPlayers = players.map((p) => ({
         id: p.id,
         email: p.email,
@@ -582,42 +582,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin routes
-  app.get("/api/admin/players", isAdmin, async (req, res) => {
-    try {
-      const players = await storage.getAllPlayers();
-
-      // Transform snake_case to camelCase for frontend
-      const transformedPlayers = players.map((p) => ({
-        id: p.id,
-        email: p.email,
-        fullName: p.full_name,
-        age: p.age,
-        country: p.country,
-        location: p.location,
-        ranking: p.ranking,
-        specialization: p.specialization,
-        bio: p.bio,
-        fundingGoals: p.funding_goals,
-        videoUrl: p.video_url,
-        photoUrl: p.photo_url,
-        published: p.published,
-        featured: p.featured,
-        priority: p.priority,
-        isAdmin: p.is_admin,
-        approvalStatus: p.approval_status,
-        approvedBy: p.approved_by,
-        approvedAt: p.approved_at,
-        createdAt: p.created_at,
-      }));
-
-      res.json(transformedPlayers);
-    } catch (error) {
-      console.error("Get admin players error:", error);
-      res.status(500).json({ message: "Failed to get players" });
-    }
-  });
-
   app.delete("/api/admin/players/:id", isAdmin, async (req, res) => {
     try {
       // Prevent admins from deleting themselves
@@ -749,11 +713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const resetToken = randomUUID();
       const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
 
-      await storage.createPasswordResetToken(
-        player.id,
-        resetToken,
-        expiresAt,
-      );
+      await storage.createPasswordResetToken(player.id, resetToken, expiresAt);
 
       // Send email
       if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
