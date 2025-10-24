@@ -1,210 +1,164 @@
-import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
-import { Trophy, Target, Users, ArrowRight, CheckCircle2 } from "lucide-react";
-import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Trophy, Target, Sparkles } from "lucide-react";
 
-export default function HomePage() {
-  useEffect(() => {
-    // Smooth scroll to section if hash exists
-    const hash = window.location.hash;
-    if (hash) {
-      const element = document.querySelector(hash);
-      if (element) {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-      }
-    }
-  }, []);
+export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-green-50 via-white to-blue-50 dark:from-green-950 dark:via-gray-900 dark:to-blue-950">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-        <div className="container mx-auto px-6 py-24 relative">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-4 py-2 rounded-full text-sm font-medium mb-6">
-              <Trophy className="h-4 w-4" />
-              Supporting Tennis Players Worldwide
-            </div>
+      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-emerald-400/30 to-transparent rounded-full blur-3xl animate-pulse" />
+          <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-cyan-400/30 to-transparent rounded-full blur-3xl animate-pulse delay-1000" />
+        </div>
 
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
-              Connect Tennis Players
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600">
-                with Sponsors
-              </span>
-            </h1>
+        <div className="relative z-10 container mx-auto px-6 text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium mb-8 border border-white/30">
+            <Trophy className="h-4 w-4" />
+            Supporting Tennis Players Worldwide
+          </div>
 
-            <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
-              Support rising tennis stars from ATP to ITF tournaments. Help
-              players achieve their dreams with gear, travel, and training
-              funds.
-            </p>
+          {/* Main Heading */}
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-black text-white mb-6 leading-tight">
+            Connect Tennis Players
+            <br />
+            <span className="bg-gradient-to-r from-yellow-300 via-orange-300 to-pink-300 bg-clip-text text-transparent">
+              with Sponsors
+            </span>
+          </h1>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="text-lg px-8 py-6" asChild>
-                <Link href="/players">
-                  Browse Players
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
+          {/* Subtitle */}
+          <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-12 leading-relaxed">
+            Support rising tennis stars from ATP to ITF tournaments. Help
+            players achieve their dreams with gear, travel, and training funds.
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/players">
+              <Button
+                size="lg"
+                className="bg-white text-emerald-600 hover:bg-gray-100 font-bold text-lg px-8 py-6 rounded-xl shadow-2xl hover:scale-105 transition-transform group"
+              >
+                Browse Players
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
+            </Link>
+            <Link href="/signup/player">
               <Button
                 size="lg"
                 variant="outline"
-                className="text-lg px-8 py-6"
-                asChild
+                className="bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 hover:bg-white/20 font-bold text-lg px-8 py-6 rounded-xl"
               >
-                <Link href="/signup/player">I'm a Player</Link>
+                I'm a Player
               </Button>
-            </div>
+            </Link>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mt-20">
+            {[
+              { value: "500+", label: "Players" },
+              { value: "$2M+", label: "Funding" },
+              { value: "50+", label: "Countries" },
+            ].map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className="text-4xl font-black text-white mb-2">
+                  {stat.value}
+                </div>
+                <div className="text-white/80 font-medium">{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
 
-      {/* Stats Section */}
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+          <div className="w-6 h-10 border-2 border-white/50 rounded-full flex items-start justify-center p-2">
+            <div className="w-1 h-3 bg-white/70 rounded-full" />
+          </div>
+        </div>
+      </section>
 
-      {/* How It Works - For Players */}
-      <div id="how-it-works" className="py-24 bg-white dark:bg-gray-900">
+      {/* Features Section */}
+      <section className="py-24 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">How It Works</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400">
-              Get the support you need to compete at ATP, Challenger, and ITF
-              tournaments
+            <h2 className="text-5xl font-black mb-4">Why Choose Us</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              The premier platform connecting tennis talent with global sponsors
             </p>
           </div>
 
-          <div className="mb-20">
-            <h3 className="text-3xl font-bold text-center mb-12">
-              For Players
-            </h3>
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg">
-                <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="text-3xl font-bold text-green-600">1</span>
-                  </div>
-                  <h3 className="text-2xl font-bold mb-4">Sign Up</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Create your player profile in minutes. It's free to join!
-                  </p>
-                  <ul className="text-left text-sm text-gray-600 dark:text-gray-400 space-y-2">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>Share your tennis journey</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>Upload match videos</span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg">
-                <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="text-3xl font-bold text-blue-600">2</span>
-                  </div>
-                  <h3 className="text-2xl font-bold mb-4">
-                    Build Your Profile
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Showcase your achievements, ranking, and funding goals
-                  </p>
-                  <ul className="text-left text-sm text-gray-600 dark:text-gray-400 space-y-2">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>Tournament results</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>Training needs</span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg">
-                <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="text-3xl font-bold text-purple-600">
-                      3
-                    </span>
-                  </div>
-                  <h3 className="text-2xl font-bold mb-4">Get Sponsored</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Connect with sponsors who want to support your tennis
-                    journey
-                  </p>
-                  <ul className="text-left text-sm text-gray-600 dark:text-gray-400 space-y-2">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>Travel & gear funding</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>Monthly stipends</span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="text-center mt-12">
-              <Button size="lg" className="text-lg" asChild>
-                <Link href="/signup/player">Get Started as Player</Link>
-              </Button>
-            </div>
-          </div>
-
-          {/* For Sponsors */}
-          <div>
-            <h3 className="text-3xl font-bold text-center mb-12">
-              For Sponsors
-            </h3>
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg">
-                <CardContent className="p-8 text-center">
-                  <Users className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold mb-3">Browse Players</h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Discover talented tennis players at all competitive levels
-                    and find the right fit
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg">
-                <CardContent className="p-8 text-center">
-                  <Target className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold mb-3">Choose a Player</h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Review profiles, equipment needs, and sponsorship goals to
-                    find your match
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg">
-                <CardContent className="p-8 text-center">
-                  <Trophy className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold mb-3">Make an Impact</h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Contribute with travel support, gear, or stipends and help
-                    athletes achieve goals
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                icon: Target,
+                title: "Direct Connections",
+                description:
+                  "Connect directly with sponsors who share your passion for tennis excellence",
+                color: "from-emerald-500 to-teal-500",
+              },
+              {
+                icon: Trophy,
+                title: "Verified Athletes",
+                description:
+                  "All players are verified and vetted to ensure quality matches",
+                color: "from-blue-500 to-cyan-500",
+              },
+              {
+                icon: Sparkles,
+                title: "Full Transparency",
+                description:
+                  "Clear funding goals, detailed profiles, and real-time updates",
+                color: "from-purple-500 to-pink-500",
+              },
+            ].map((feature) => (
+              <div
+                key={feature.title}
+                className="group relative bg-white dark:bg-gray-900 rounded-2xl p-8 border border-gray-200 dark:border-gray-800 hover:border-transparent hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
+              >
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-10 rounded-2xl transition-opacity`}
+                />
+                <div
+                  className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${feature.color} mb-6`}
+                >
+                  <feature.icon className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4">{feature.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      <Footer />
+      {/* CTA Section */}
+      <section className="py-24 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCA0LTRzNCAxLjggNCA0LTIgNC00IDQtNC0yLTQtNHptMC0xMGMwLTIgMi00IDQtNHM0IDEuOCA0IDQtMiA0LTQgNC00LTItNC00em0tMTAgMGMwLTIgMi00IDQtNHM0IDEuOCA0IDQtMiA0LTQgNC00LTItNC00em0wIDEwYzAtMiAyLTQgNC00czQgMS44IDQgNC0yIDQtNCA0LTQtMi00LTR6bTAtMTBjMC0yIDItNCA0LTRzNCAxLjggNCA0LTIgNC00IDQtNC0yLTQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20" />
+        <div className="container mx-auto px-6 text-center relative z-10">
+          <h2 className="text-5xl font-black text-white mb-6">
+            Ready to Make an Impact?
+          </h2>
+          <p className="text-xl text-white/90 mb-12 max-w-2xl mx-auto">
+            Join thousands of sponsors and players already making connections
+          </p>
+          <Link href="/players">
+            <Button
+              size="lg"
+              className="bg-white text-emerald-600 hover:bg-gray-100 font-bold text-lg px-12 py-6 rounded-xl shadow-2xl hover:scale-105 transition-transform"
+            >
+              Get Started Today
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
