@@ -340,7 +340,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/players", isAdmin, async (req, res) => {
     try {
       const players = await storage.getAllPlayers();
-
       const transformedPlayers = players.map((p) => ({
         id: p.id,
         email: p.email,
@@ -362,8 +361,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approvedBy: p.approved_by,
         approvedAt: p.approved_at,
         createdAt: p.created_at,
+        active: p.active, // ADD THIS LINE
       }));
-
       res.json(transformedPlayers);
     } catch (error) {
       console.error("Get admin players error:", error);
