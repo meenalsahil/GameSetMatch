@@ -161,14 +161,15 @@ export default function AdminDashboard() {
 
   const pendingPlayers =
     players?.filter((p) => p.approvalStatus === "pending") || [];
-  const approvedPlayers =
-    players?.filter((p) => p.approvalStatus === "approved") || [];
   const activeApprovedPlayers = approvedPlayers.filter(
     (p) => p.active !== false,
   );
   const inactiveApprovedPlayers = approvedPlayers.filter(
     (p) => p.active === false,
   );
+  const approvedPlayers =
+    players?.filter((p) => p.approvalStatus === "approved") || [];
+
   const rejectedPlayers =
     players?.filter((p) => p.approvalStatus === "rejected") || [];
 
@@ -324,7 +325,7 @@ export default function AdminDashboard() {
             </Card>
           )}
 
-          {/* Active Approved Players */}
+          {/* Active Players */}
           {activeApprovedPlayers.length > 0 && (
             <Card className="mb-8">
               <CardHeader>
@@ -337,7 +338,7 @@ export default function AdminDashboard() {
                   {activeApprovedPlayers.map((p) => (
                     <Card
                       key={p.id}
-                      className="border-green-200 bg-green-50/50 dark:bg-green-950/10"
+                      className="border-green-200 bg-green-50/50"
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
@@ -386,7 +387,7 @@ export default function AdminDashboard() {
           {inactiveApprovedPlayers.length > 0 && (
             <Card className="mb-8">
               <CardHeader>
-                <CardTitle className="text-2xl text-gray-600">
+                <CardTitle className="text-2xl text-gray-500">
                   Inactive Players ({inactiveApprovedPlayers.length})
                 </CardTitle>
               </CardHeader>
@@ -395,7 +396,7 @@ export default function AdminDashboard() {
                   {inactiveApprovedPlayers.map((p) => (
                     <Card
                       key={p.id}
-                      className="border-gray-300 bg-gray-100 dark:bg-gray-800 opacity-60"
+                      className="border-gray-300 bg-gray-100 opacity-60"
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
