@@ -1,4 +1,5 @@
 import pg from "pg";
+import { drizzle } from 'drizzle-orm/node-postgres';
 const { Pool } = pg;
 
 const poolInstance = new Pool({
@@ -26,3 +27,4 @@ export const query = async (text: string, params: any[]) => {
 };
 
 export const pool = poolInstance;
+export const db = drizzle(poolInstance);

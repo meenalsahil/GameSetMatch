@@ -156,6 +156,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   app.post("/api/auth/signin", async (req, res) => {
+    console.log("=== SIGNIN ROUTE HIT ===");
+    console.log("Request body:", req.body);
     try {
       const { email, password } = req.body;
       const player = await dbstorage.getPlayerByEmail(email);
