@@ -161,15 +161,14 @@ export default function AdminDashboard() {
 
   const pendingPlayers =
     players?.filter((p) => p.approvalStatus === "pending") || [];
+  const approvedPlayers =
+    players?.filter((p) => p.approvalStatus === "approved") || [];
   const activeApprovedPlayers = approvedPlayers.filter(
     (p) => p.active !== false,
   );
   const inactiveApprovedPlayers = approvedPlayers.filter(
     (p) => p.active === false,
   );
-  const approvedPlayers =
-    players?.filter((p) => p.approvalStatus === "approved") || [];
-
   const rejectedPlayers =
     players?.filter((p) => p.approvalStatus === "rejected") || [];
 
