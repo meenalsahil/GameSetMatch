@@ -5,7 +5,7 @@ import express, {
   NextFunction,
 } from "express";
 import { createServer, type Server } from "http";
-import { storage as dbStorage } from "./storage"; // RENAMED TO AVOID CONFLICT
+import { storage } from "./storage";
 import { signupPlayerSchema, type Player } from "@shared/schema";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -124,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if player already exists
-      const existingPlayer = await dbstorage.getPlayerByEmail(email);
+      const existingPlayer = await storage.getPlayerByEmail(email);
       if (existingPlayer) {
         return res.status(400).json({ message: "Email already registered" });
       }
@@ -136,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordHash = await bcrypt.hash(password, 10);
 
       // Create player with photo and ATP URL
-      const player = await dbstorage.createPlayer({
+      const player = await storage.createPlayer({
         ...playerData,
         email,
         passwordHash,
@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log("Request body:", req.body);
     try {
       const { email, password } = req.body;
-      const player = await dbstorage.getPlayerByEmail(email);
+      const player = await storage.getPlayerByEmail(email);
 
       console.log("/api/auth/signin - Player data:", player);
 
@@ -268,7 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader("Expires", "0");
 
       console.log("/api/auth/me - Session:", req.session);
-      const player = await dbstorage.getPlayer(req.session!.playerId!);
+      const player = await storage.getPlayer(req.session!.playerId!);
       console.log("/api/auth/me - Player data:", player);
 
       if (!player) {
@@ -310,24 +310,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player routes
   app.get("/api/players", async (req, res) => {
     try {
-      const players = await dbstorage.getPublishedPlayers();
-
-      // Transform snake_case to camelCase
-      const transformedPlayers = players.map((p) => ({
-        id: p.id,
-        fullName: p.full_name,
-        location: p.location,
-        ranking: p.ranking,
-        specialization: p.specialization,
-        bio: p.bio,
-        fundingGoals: p.funding_goals,
-        videoUrl: p.video_url,
-        photoUrl: p.photo_url,
-        country: p.country,
-        age: p.age,
-      }));
-
-      res.json(transformedPlayers);
+      const players = await storage.getPublishedPlayers();
+      res.json(players.map((p) => ({ ...p, passwordHash: undefined })));
     } catch (error) {
       console.error("Get players error:", error);
       res.status(500).json({ message: "Failed to get players" });
@@ -336,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/players/featured", async (req, res) => {
     try {
-      const players = await dbstorage.getFeaturedPlayers();
+      const players = await storage.getFeaturedPlayers();
       res.json(players.map((p) => ({ ...p, passwordHash: undefined })));
     } catch (error) {
       console.error("Get featured players error:", error);
@@ -346,7 +330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/players/:id", async (req, res) => {
     try {
-      const player = await dbstorage.getPlayer(req.params.id);
+      const player = await storage.getPlayer(req.params.id);
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -374,14 +358,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   app.post("/api/players/toggle-active", isAuthenticated, async (req, res) => {
     try {
-      const player = await dbstorage.getPlayer(req.session!.playerId!);
+      const player = await storage.getPlayer(req.session!.playerId!);
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
 
       const updatedPlayer = player.active
-        ? await dbstorage.deactivatePlayer(player.id)
-        : await dbstorage.activatePlayer(player.id);
+        ? await storage.deactivatePlayer(player.id)
+        : await storage.activatePlayer(player.id);
 
       res.json(updatedPlayer);
     } catch (error) {
@@ -393,7 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin routes
   app.get("/api/admin/players", isAdmin, async (req, res) => {
     try {
-      const players = await dbstorage.getAllPlayers();
+      const players = await storage.getAllPlayers();
       const transformedPlayers = players.map((p) => ({
         id: p.id,
         email: p.email,
@@ -426,7 +410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/players/:id/approve", isAdmin, async (req, res) => {
     try {
-      const player = await dbstorage.approvePlayer(req.params.id, req.user!.id);
+      const player = await storage.approvePlayer(req.params.id, req.user!.id);
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -439,7 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/players/:id/reject", isAdmin, async (req, res) => {
     try {
-      const player = await dbstorage.rejectPlayer(req.params.id, req.user!.id);
+      const player = await storage.rejectPlayer(req.params.id, req.user!.id);
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -451,7 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   app.post("/api/admin/players/:id/deactivate", isAdmin, async (req, res) => {
     try {
-      const player = await dbstorage.deactivatePlayer(req.params.id);
+      const player = await storage.deactivatePlayer(req.params.id);
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -463,7 +447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   app.post("/api/admin/players/:id/activate", isAdmin, async (req, res) => {
     try {
-      const player = await dbstorage.activatePlayer(req.params.id);
+      const player = await storage.activatePlayer(req.params.id);
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -475,7 +459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   app.delete("/api/admin/players/:id", isAdmin, async (req, res) => {
     try {
-      await dbstorage.deletePlayer(req.params.id);
+      await storage.deletePlayer(req.params.id);
       res.json({ message: "Player deleted" });
     } catch (error) {
       console.error("Delete player error:", error);
@@ -489,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      const player = await dbstorage.updatePlayer(req.params.id, req.body);
+      const player = await storage.updatePlayer(req.params.id, req.body);
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -506,7 +490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      const player = await dbstorage.publishPlayer(req.params.id);
+      const player = await storage.publishPlayer(req.params.id);
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -531,7 +515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Update player's photo
         if (req.session?.playerId) {
-          await dbstorage.updatePlayer(req.session.playerId, { photoUrl });
+          await storage.updatePlayer(req.session.playerId, { photoUrl });
         }
 
         res.json({ photoUrl });
@@ -601,7 +585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin routes
   app.get("/api/admin/players", isAdmin, async (req, res) => {
     try {
-      const players = await dbstorage.getAllPlayers();
+      const players = await storage.getAllPlayers();
 
       // Transform snake_case to camelCase for frontend
       const transformedPlayers = players.map((p) => ({
@@ -643,7 +627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ message: "You cannot delete your own account" });
       }
 
-      await dbstorage.deletePlayer(req.params.id);
+      await storage.deletePlayer(req.params.id);
       res.json({ message: "Player deleted successfully" });
     } catch (error) {
       console.error("Delete player error:", error);
@@ -654,7 +638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/players/:id/approve", isAdmin, async (req, res) => {
     try {
       const adminId = req.session!.playerId!;
-      const player = await dbstorage.approvePlayer(req.params.id, adminId);
+      const player = await storage.approvePlayer(req.params.id, adminId);
 
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
@@ -700,7 +684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/players/:id/reject", isAdmin, async (req, res) => {
     try {
       const adminId = req.session!.playerId!;
-      const player = await dbstorage.rejectPlayer(req.params.id, adminId);
+      const player = await storage.rejectPlayer(req.params.id, adminId);
 
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
@@ -752,7 +736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email is required" });
       }
 
-      const player = await dbstorage.getPlayerByEmail(email);
+      const player = await storage.getPlayerByEmail(email);
       if (!player) {
         // Don't reveal if email exists
         return res.json({
@@ -765,7 +749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const resetToken = randomUUID();
       const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
 
-      await dbstorage.createPasswordResetToken(
+      await storage.createPasswordResetToken(
         player.id,
         resetToken,
         expiresAt,
@@ -833,7 +817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ message: "Password must be at least 8 characters" });
       }
 
-      const resetToken = await dbstorage.getPasswordResetToken(token);
+      const resetToken = await storage.getPasswordResetToken(token);
       if (!resetToken) {
         return res
           .status(400)
@@ -841,7 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (new Date() > resetToken.expiresAt) {
-        await dbstorage.deletePasswordResetToken(token);
+        await storage.deletePasswordResetToken(token);
         return res.status(400).json({ message: "Reset token has expired" });
       }
 
@@ -849,10 +833,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordHash = await bcrypt.hash(password, 10);
 
       // Update player password
-      await dbstorage.updatePlayer(resetToken.playerId, { passwordHash });
+      await storage.updatePlayer(resetToken.playerId, { passwordHash });
 
       // Delete used token
-      await dbstorage.deletePasswordResetToken(token);
+      await storage.deletePasswordResetToken(token);
 
       res.json({ message: "Password reset successful" });
     } catch (error) {

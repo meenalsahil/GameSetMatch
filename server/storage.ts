@@ -4,7 +4,7 @@ import {
   players,
   passwordResetTokens,
 } from "@shared/schema";
-import { pool } from "./db";
+import { pool, db } from "./db";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
@@ -106,14 +106,8 @@ export class DbStorage implements IStorage {
   }
 
   async getPublishedPlayers(): Promise<Player[]> {
-    const result = await pool.query(
-      `SELECT id, full_name, location, ranking, specialization, bio,
-              funding_goals, video_url, photo_url, country, age, active
-       FROM players
-       WHERE published = true AND active = true
-       ORDER BY priority DESC, created_at DESC`,
-    );
-    return result.rows;
+    const result = await db.select().from(players).where(eq(players.published, true));
+    return result;
   }
 
   async getFeaturedPlayers(): Promise<Player[]> {
