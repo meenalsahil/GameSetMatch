@@ -28,6 +28,7 @@ export const players = pgTable("players", {
   photoUrl: text("photo_url"),
   published: boolean("published").notNull().default(false),
   featured: boolean("featured").notNull().default(false),
+  active: boolean("active").notNull().default(true),
   priority: text("priority").default("normal"),
   isAdmin: boolean("is_admin").notNull().default(false),
   approvalStatus: text("approval_status").notNull().default("pending"),

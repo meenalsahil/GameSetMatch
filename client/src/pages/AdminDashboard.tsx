@@ -31,6 +31,7 @@ interface Player {
   bio: string;
   approvalStatus: "pending" | "approved" | "rejected";
   published: boolean;
+  active: boolean;
   createdAt: string;
 }
 
