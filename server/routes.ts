@@ -83,13 +83,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.post("/api/auth/signup", upload.single("photo"), async (req, res) => {
     try {
-      const result = signupPlayerSchema.safeParse(req.body);
+      // Convert FormData strings to proper types
+      const parsedBody = {
+        ...req.body,
+        age: parseInt(req.body.age),
+        ranking: req.body.ranking ? parseInt(req.body.ranking) : undefined,
+      };
+
+      const result = signupPlayerSchema.safeParse(parsedBody);
       if (!result.success) {
+        console.error("Validation errors:", result.error.errors);
         return res
           .status(400)
           .json({ message: "Invalid input", errors: result.error.errors });
       }
-
       const { email, password, atpProfileUrl, ...playerData } = result.data;
 
       // Validate ATP URL if provided
