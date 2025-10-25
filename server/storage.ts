@@ -71,9 +71,10 @@ export class DbStorage implements IStorage {
       `INSERT INTO players (
         email, password_hash, full_name, age, country, location,
         ranking, specialization, bio, funding_goals, video_url,
-        atp_profile_url, photo_url, published, featured, priority
+        atp_profile_url, photo_url, published, featured, priority,
+        approval_status, active
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING *`,
       [
         player.email,
@@ -89,9 +90,11 @@ export class DbStorage implements IStorage {
         player.videoUrl,
         player.atpProfileUrl || null,
         player.photoUrl || null,
-        player.published || false,
-        player.featured || false,
+        false, // published
+        false, // featured
         player.priority || "normal",
+        "pending", // approval_status default
+        true, // active by default
       ],
     );
 
@@ -106,7 +109,10 @@ export class DbStorage implements IStorage {
   }
 
   async getPublishedPlayers(): Promise<Player[]> {
-    const result = await db.select().from(players).where(eq(players.published, true));
+    const result = await db
+      .select()
+      .from(players)
+      .where(eq(players.published, true));
     return result;
   }
 

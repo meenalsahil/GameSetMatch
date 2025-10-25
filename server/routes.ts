@@ -1,265 +1,168 @@
-import express, {
-  type Express,
-  type Request,
-  Response,
-  NextFunction,
-} from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { signupPlayerSchema, type Player } from "@shared/schema";
-import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { randomUUID } from "crypto";
+import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
+import { randomUUID } from "crypto";
+import { storage } from "./storage";
+import { signupPlayerSchema } from "@shared/schema";
 
-// Create uploads directory if it doesn't exist
-if (!fs.existsSync("./uploads")) {
-  fs.mkdirSync("./uploads");
-}
+// ---- Helpers / setup
 
-// Configure multer for photo uploads
+// Ensure uploads folder exists
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+
+// File upload (photo)
 const multerStorage = multer.diskStorage({
-  // RENAMED FROM 'storage' TO 'multerStorage'
-  destination: "./uploads",
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
+  destination: uploadsDir,
+  filename: (_req, file, cb) => {
+    const uniqueName = `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}${path.extname(file.originalname)}`;
     cb(null, uniqueName);
   },
 });
 
 const upload = multer({
-  storage: multerStorage, // USE THE RENAMED VARIABLE
+  storage: multerStorage,
   limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif/;
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase(),
-    );
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed"));
-    }
+  fileFilter: (_req, file, cb) => {
+    const ok = /jpeg|jpg|png|gif/i.test(file.mimetype);
+    if (ok) cb(null, true);
+    else cb(new Error("Only image files are allowed"));
   },
 });
 
-// Middleware to check authentication
+// Auth middlewares
 function isAuthenticated(req: Request, res: Response, next: NextFunction) {
-  if (req.session?.playerId) {
-    return next();
-  }
-  res.status(401).json({ message: "Unauthorized" });
+  if (req.session?.playerId) return next();
+  return res.status(401).json({ message: "Unauthorized" });
 }
 
 async function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.playerId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-
-  const player = await dbStorage.getPlayer(req.session.playerId); // USE dbStorage
-
-  const isAdminUser = player?.is_admin || player?.isAdmin;
-
-  if (!player || !isAdminUser) {
+  const user = await storage.getPlayer(req.session.playerId);
+  const isAdminFlag = user?.is_admin || (user as any)?.isAdmin;
+  if (!user || !isAdminFlag) {
     return res
       .status(403)
       .json({ message: "Forbidden - Admin access required" });
   }
-
-  req.user = player;
+  (req as any).user = user;
   next();
 }
 
-// Configure multer for file uploads
+// ---- Routes
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Serve uploaded files
-  app.use("/uploads", express.static("uploads"));
-  // Auth routes
+  // AUTH
   app.post("/api/auth/signup", upload.single("photo"), async (req, res) => {
     try {
-      // Convert FormData strings to proper types
-      const parsedBody = {
+      // Coerce numeric fields (because FormData sends strings)
+      const parsed = {
         ...req.body,
-        age: parseInt(req.body.age),
-        ranking: req.body.ranking ? parseInt(req.body.ranking) : undefined,
+        age: req.body.age ? parseInt(req.body.age, 10) : undefined,
+        ranking: req.body.ranking ? parseInt(req.body.ranking, 10) : undefined,
       };
-
-      const result = signupPlayerSchema.safeParse(parsedBody);
+      const result = signupPlayerSchema.safeParse(parsed);
       if (!result.success) {
-        console.error("Validation errors:", result.error.errors);
-        return res
-          .status(400)
-          .json({ message: "Invalid input", errors: result.error.errors });
-      }
-      const { email, password, atpProfileUrl, ...playerData } = result.data;
-
-      // Validate ATP URL if provided
-      if (atpProfileUrl) {
-        try {
-          const url = new URL(atpProfileUrl);
-          const validDomains = [
-            "atptour.com",
-            "itftennis.com",
-            "wtatennis.com",
-          ];
-          const isValid = validDomains.some((domain) =>
-            url.hostname.includes(domain),
-          );
-
-          if (!isValid) {
-            return res.status(400).json({
-              message:
-                "ATP Profile URL must be from atptour.com, itftennis.com, or wtatennis.com",
-            });
-          }
-        } catch (urlError) {
-          return res.status(400).json({
-            message: "Invalid ATP Profile URL format",
-          });
-        }
+        return res.status(400).json({
+          message: "Invalid input",
+          errors: result.error.errors,
+        });
       }
 
-      // Check if player already exists
-      const existingPlayer = await dbStorage.getPlayerByEmail(email);
-      if (existingPlayer) {
+      const { email, password, atpProfileUrl, ...rest } = result.data;
+
+      const existing = await storage.getPlayerByEmail(email);
+      if (existing) {
         return res.status(400).json({ message: "Email already registered" });
       }
 
-      // Get photo URL from uploaded file
+      const passwordHash = await bcrypt.hash(password, 10);
       const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-      // Hash password
-      const passwordHash = await bcrypt.hash(password, 10);
-
-      // Create player with photo and ATP URL
-      const player = await dbStorage.createPlayer({
-        ...playerData,
+      const player = await storage.createPlayer({
+        ...rest,
         email,
         passwordHash,
-        photoUrl,
         atpProfileUrl: atpProfileUrl || null,
+        photoUrl: photoUrl || null,
         published: false,
         featured: false,
         priority: "normal",
       });
 
-      // Set session
       req.session!.playerId = player.id;
       res.json({ player: { ...player, passwordHash: undefined } });
-    } catch (error) {
-      console.error("Signup error:", error);
+    } catch (e) {
+      console.error("Signup error:", e);
       res.status(500).json({ message: "Failed to create account" });
     }
   });
+
   app.post("/api/auth/signin", async (req, res) => {
-    console.log("=== SIGNIN ROUTE HIT ===");
-    console.log("Request body:", req.body);
     try {
       const { email, password } = req.body;
-      const player = await dbStorage.getPlayerByEmail(email);
-
-      console.log("/api/auth/signin - Player data:", player);
-
-      if (!player) {
+      const player = await storage.getPlayerByEmail(email);
+      if (!player)
         return res.status(401).json({ message: "Invalid credentials" });
-      }
 
-      const passwordHash = player.password_hash || player.passwordHash;
-
-      if (!passwordHash) {
-        console.error("No password hash found for player");
+      const hash =
+        (player as any).password_hash || (player as any).passwordHash;
+      if (!hash)
         return res.status(401).json({ message: "Invalid credentials" });
-      }
 
-      const validPassword = await bcrypt.compare(password, passwordHash);
+      const ok = await bcrypt.compare(password, hash);
+      if (!ok) return res.status(401).json({ message: "Invalid credentials" });
 
-      if (!validPassword) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      // Set session and wait for it to save
       req.session!.playerId = player.id;
-
-      try {
-        await new Promise<void>((resolve, reject) => {
-          req.session.save((err) => {
-            if (err) {
-              console.error("Session save error:", err);
-              reject(err);
-            } else {
-              console.log("Session saved successfully, ID:", req.sessionID);
-              resolve();
-            }
-          });
-        });
-      } catch (saveError) {
-        console.error("Failed to save session:", saveError);
-        return res.status(500).json({ message: "Failed to create session" });
-      }
-
-      // Wait a tiny bit for database to commit
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      // Return player data with camelCase for frontend
-      const playerData = {
-        id: player.id,
-        email: player.email,
-        fullName: player.full_name,
-        age: player.age,
-        country: player.country,
-        location: player.location,
-        ranking: player.ranking,
-        specialization: player.specialization,
-        bio: player.bio,
-        fundingGoals: player.funding_goals,
-        videoUrl: player.video_url,
-        photoUrl: player.photo_url,
-        published: player.published,
-        featured: player.featured,
-        priority: player.priority,
-        isAdmin: player.is_admin,
-        approvalStatus: player.approval_status,
-        approvedBy: player.approved_by,
-        approvedAt: player.approved_at,
-        createdAt: player.created_at,
-      };
-
-      console.log("Sending response with player data");
-      res.json({ player: playerData });
-    } catch (error) {
-      console.error("Signin error:", error);
+      res.json({
+        player: {
+          id: player.id,
+          email: player.email,
+          fullName: (player as any).full_name,
+          age: player.age,
+          country: player.country,
+          location: player.location,
+          ranking: player.ranking,
+          specialization: player.specialization,
+          bio: player.bio,
+          fundingGoals: (player as any).funding_goals,
+          videoUrl: (player as any).video_url,
+          photoUrl: (player as any).photo_url,
+          published: (player as any).published,
+          featured: (player as any).featured,
+          priority: (player as any).priority,
+          isAdmin: (player as any).is_admin,
+          approvalStatus: (player as any).approval_status,
+          approvedBy: (player as any).approved_by,
+          approvedAt: (player as any).approved_at,
+          createdAt: (player as any).created_at,
+          active: (player as any).active,
+        },
+      });
+    } catch (e) {
+      console.error("Signin error:", e);
       res.status(500).json({ message: "Failed to sign in" });
     }
   });
 
   app.post("/api/auth/logout", (req, res) => {
     req.session?.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Failed to logout" });
-      }
+      if (err) return res.status(500).json({ message: "Failed to logout" });
       res.clearCookie("connect.sid");
       res.json({ message: "Logged out successfully" });
     });
   });
 
-  app.get("/api/auth/test-session", (req, res) => {
-    console.log("TEST SESSION:", req.session);
-    res.json({
-      hasSession: !!req.session,
-      hasPlayerId: !!req.session?.playerId,
-      playerId: req.session?.playerId,
-      sessionID: req.sessionID,
-      cookies: req.headers.cookie,
-    });
-  });
-
   app.get("/api/auth/me", isAuthenticated, async (req, res) => {
     try {
-      // ADD THESE HEADERS to prevent caching
       res.setHeader(
         "Cache-Control",
         "no-store, no-cache, must-revalidate, private",
@@ -267,119 +170,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader("Pragma", "no-cache");
       res.setHeader("Expires", "0");
 
-      console.log("/api/auth/me - Session:", req.session);
-      const player = await dbStorage.getPlayer(req.session!.playerId!);
-      console.log("/api/auth/me - Player data:", player);
+      const p = await storage.getPlayer(req.session!.playerId!);
+      if (!p) return res.status(404).json({ message: "Player not found" });
 
-      if (!player) {
-        console.log("/api/auth/me - Player not found");
-        return res.status(404).json({ message: "Player not found" });
-      }
-
-      const playerData = {
-        id: player.id,
-        email: player.email,
-        fullName: player.full_name,
-        age: player.age,
-        country: player.country,
-        location: player.location,
-        ranking: player.ranking,
-        specialization: player.specialization,
-        bio: player.bio,
-        fundingGoals: player.funding_goals,
-        videoUrl: player.video_url,
-        photoUrl: player.photo_url,
-        published: player.published,
-        featured: player.featured,
-        priority: player.priority,
-        isAdmin: player.is_admin,
-        approvalStatus: player.approval_status,
-        approvedBy: player.approved_by,
-        approvedAt: player.approved_at,
-        createdAt: player.created_at,
-      };
-
-      console.log("/api/auth/me - isAdmin:", playerData.isAdmin);
-      res.json(playerData);
-    } catch (error) {
-      console.error("/api/auth/me - Get current player error:", error);
+      res.json({
+        id: p.id,
+        email: p.email,
+        fullName: (p as any).full_name,
+        age: p.age,
+        country: p.country,
+        location: p.location,
+        ranking: p.ranking,
+        specialization: p.specialization,
+        bio: p.bio,
+        fundingGoals: (p as any).funding_goals,
+        videoUrl: (p as any).video_url,
+        photoUrl: (p as any).photo_url,
+        published: (p as any).published,
+        featured: (p as any).featured,
+        priority: (p as any).priority,
+        isAdmin: (p as any).is_admin,
+        approvalStatus: (p as any).approval_status,
+        approvedBy: (p as any).approved_by,
+        approvedAt: (p as any).approved_at,
+        createdAt: (p as any).created_at,
+        active: (p as any).active,
+      });
+    } catch (e) {
+      console.error("/api/auth/me error:", e);
       res.status(500).json({ message: "Failed to get player" });
     }
   });
 
-  // Player routes
-  app.get("/api/players", async (req, res) => {
+  // PUBLIC: Browse players (published + active only, camelCased)
+  app.get("/api/players", async (_req, res) => {
     try {
-      const players = await dbStorage.getPublishedPlayers();
-      res.json(players.map((p) => ({ ...p, passwordHash: undefined })));
-    } catch (error) {
-      console.error("Get players error:", error);
+      const list = await storage.getPublishedPlayers();
+      const transformed = list
+        .filter((p: any) => p.active !== false) // default true if null
+        .map((p: any) => ({
+          id: p.id,
+          fullName: p.full_name,
+          location: p.location,
+          ranking: p.ranking,
+          specialization: p.specialization,
+          bio: p.bio,
+          fundingGoals: p.funding_goals,
+          videoUrl: p.video_url,
+          photoUrl: p.photo_url,
+          country: p.country,
+          age: p.age,
+        }));
+      res.json(transformed);
+    } catch (e) {
+      console.error("Get players error:", e);
       res.status(500).json({ message: "Failed to get players" });
     }
   });
 
-  app.get("/api/players/featured", async (req, res) => {
-    try {
-      const players = await dbStorage.getFeaturedPlayers();
-      res.json(players.map((p) => ({ ...p, passwordHash: undefined })));
-    } catch (error) {
-      console.error("Get featured players error:", error);
-      res.status(500).json({ message: "Failed to get featured players" });
-    }
-  });
-
-  app.get("/api/players/:id", async (req, res) => {
-    try {
-      const player = await dbStorage.getPlayer(req.params.id);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
-
-      const playerData = {
-        id: player.id,
-        fullName: player.full_name,
-        age: player.age,
-        country: player.country,
-        location: player.location,
-        ranking: player.ranking,
-        specialization: player.specialization,
-        bio: player.bio,
-        fundingGoals: player.funding_goals,
-        videoUrl: player.video_url,
-        photoUrl: player.photo_url,
-        published: player.published,
-        featured: player.featured,
-      };
-      res.json(playerData);
-    } catch (error) {
-      console.error("Get player error:", error);
-      res.status(500).json({ message: "Failed to get player" });
-    }
-  });
+  // Toggle active by the player themselves
   app.post("/api/players/toggle-active", isAuthenticated, async (req, res) => {
     try {
-      const player = await dbStorage.getPlayer(req.session!.playerId!);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
+      const p = await storage.getPlayer(req.session!.playerId!);
+      if (!p) return res.status(404).json({ message: "Player not found" });
 
-      const updatedPlayer = player.active
-        ? await dbStorage.deactivatePlayer(player.id)
-        : await dbStorage.activatePlayer(player.id);
+      const updated =
+        (p as any).active === false
+          ? await storage.activatePlayer(p.id)
+          : await storage.deactivatePlayer(p.id);
 
-      res.json(updatedPlayer);
-    } catch (error) {
-      console.error("Toggle active error:", error);
+      res.json(updated);
+    } catch (e) {
+      console.error("Toggle active error:", e);
       res.status(500).json({ message: "Failed to update status" });
     }
   });
 
-  // Admin routes
-  // Admin routes
-  app.get("/api/admin/players", isAdmin, async (req, res) => {
+  // ADMIN
+  app.get("/api/admin/players", isAdmin, async (_req, res) => {
     try {
-      const players = await dbStorage.getAllPlayers();
-      const transformedPlayers = players.map((p) => ({
+      const list = await storage.getAllPlayers();
+      const transformed = list.map((p: any) => ({
         id: p.id,
         email: p.email,
         fullName: p.full_name,
@@ -402,414 +273,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: p.created_at,
         active: p.active,
       }));
-      res.json(transformedPlayers);
-    } catch (error) {
-      console.error("Get admin players error:", error);
+      res.json(transformed);
+    } catch (e) {
+      console.error("Get admin players error:", e);
       res.status(500).json({ message: "Failed to get players" });
     }
   });
 
   app.post("/api/admin/players/:id/approve", isAdmin, async (req, res) => {
     try {
-      const player = await dbStorage.approvePlayer(req.params.id, req.user!.id);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
-      res.json({ ...player, password_hash: undefined });
-    } catch (error) {
-      console.error("Approve player error:", error);
+      const adminId = (req as any).user.id;
+      const p = await storage.approvePlayer(req.params.id, adminId);
+      if (!p) return res.status(404).json({ message: "Player not found" });
+      res.json({ message: "Approved", player: p });
+    } catch (e) {
+      console.error("Approve player error:", e);
       res.status(500).json({ message: "Failed to approve player" });
     }
   });
 
   app.post("/api/admin/players/:id/reject", isAdmin, async (req, res) => {
     try {
-      const player = await dbStorage.rejectPlayer(req.params.id, req.user!.id);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
-      res.json({ ...player, password_hash: undefined });
-    } catch (error) {
-      console.error("Reject player error:", error);
+      const adminId = (req as any).user.id;
+      const p = await storage.rejectPlayer(req.params.id, adminId);
+      if (!p) return res.status(404).json({ message: "Player not found" });
+      res.json({ message: "Rejected", player: p });
+    } catch (e) {
+      console.error("Reject player error:", e);
       res.status(500).json({ message: "Failed to reject player" });
     }
   });
+
   app.post("/api/admin/players/:id/deactivate", isAdmin, async (req, res) => {
     try {
-      const player = await dbStorage.deactivatePlayer(req.params.id);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
-      res.json({ message: "Player deactivated", player });
-    } catch (error) {
-      console.error("Deactivate player error:", error);
+      const p = await storage.deactivatePlayer(req.params.id);
+      if (!p) return res.status(404).json({ message: "Player not found" });
+      res.json({ message: "Deactivated", player: p });
+    } catch (e) {
+      console.error("Deactivate player error:", e);
       res.status(500).json({ message: "Failed to deactivate player" });
     }
   });
+
   app.post("/api/admin/players/:id/activate", isAdmin, async (req, res) => {
     try {
-      const player = await dbStorage.activatePlayer(req.params.id);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
-      res.json({ message: "Player activated", player });
-    } catch (error) {
-      console.error("Activate player error:", error);
+      const p = await storage.activatePlayer(req.params.id);
+      if (!p) return res.status(404).json({ message: "Player not found" });
+      res.json({ message: "Activated", player: p });
+    } catch (e) {
+      console.error("Activate player error:", e);
       res.status(500).json({ message: "Failed to activate player" });
     }
   });
+
   app.delete("/api/admin/players/:id", isAdmin, async (req, res) => {
     try {
-      await dbStorage.deletePlayer(req.params.id);
+      await storage.deletePlayer(req.params.id);
       res.json({ message: "Player deleted" });
-    } catch (error) {
-      console.error("Delete player error:", error);
+    } catch (e) {
+      console.error("Delete player error:", e);
       res.status(500).json({ message: "Failed to delete player" });
     }
   });
-  app.patch("/api/players/:id", isAuthenticated, async (req, res) => {
-    try {
-      // Ensure player can only update their own profile
-      if (req.session!.playerId !== req.params.id) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
 
-      const player = await dbStorage.updatePlayer(req.params.id, req.body);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
-      res.json({ ...player, passwordHash: undefined });
-    } catch (error) {
-      console.error("Update player error:", error);
-      res.status(500).json({ message: "Failed to update player" });
-    }
-  });
-
-  app.post("/api/players/:id/publish", isAuthenticated, async (req, res) => {
-    try {
-      if (req.session!.playerId !== req.params.id) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
-
-      const player = await dbStorage.publishPlayer(req.params.id);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
-      res.json({ ...player, passwordHash: undefined });
-    } catch (error) {
-      console.error("Publish player error:", error);
-      res.status(500).json({ message: "Failed to publish player" });
-    }
-  });
-
+  // file upload for signed-in player (optional)
   app.post(
     "/api/upload/photo",
     isAuthenticated,
     upload.single("photo"),
     async (req, res) => {
       try {
-        if (!req.file) {
+        if (!req.file)
           return res.status(400).json({ message: "No file uploaded" });
-        }
-
         const photoUrl = `/uploads/${req.file.filename}`;
-
-        // Update player's photo
-        if (req.session?.playerId) {
-          await dbStorage.updatePlayer(req.session.playerId, { photoUrl });
-        }
-
+        await storage.updatePlayer(req.session!.playerId!, { photoUrl });
         res.json({ photoUrl });
-      } catch (error) {
-        console.error("Upload photo error:", error);
+      } catch (e) {
+        console.error("Upload photo error:", e);
         res.status(500).json({ message: "Failed to upload photo" });
       }
     },
   );
 
-  // Contact form endpoint
-  app.post("/api/contact", async (req, res) => {
-    try {
-      const { name, email, phone, message } = req.body;
-
-      if (!name || !email || !message) {
-        return res
-          .status(400)
-          .json({ message: "Name, email, and message are required" });
-      }
-
-      // Check if email credentials are configured
-      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.error("Email credentials not configured");
-        return res.status(500).json({
-          message:
-            "Email service is not configured. Please contact the administrator.",
-        });
-      }
-
-      // Create email transporter
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
-
-      // Email content
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: "suvirabeer@gmail.com",
-        subject: `GameSetMatch Contact Form: ${name}`,
-        html: `
-          <h2>New Contact Form Submission</h2>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
-          <p><strong>Message:</strong></p>
-          <p>${message}</p>
-          <hr>
-          <p><em>Reply to: ${email}</em></p>
-        `,
-      };
-
-      // Send email
-      await transporter.sendMail(mailOptions);
-
-      res.json({ message: "Message sent successfully" });
-    } catch (error) {
-      console.error("Contact form error:", error);
-      res.status(500).json({ message: "Failed to send message" });
-    }
-  });
-
-  app.delete("/api/admin/players/:id", isAdmin, async (req, res) => {
-    try {
-      // Prevent admins from deleting themselves
-      if (req.params.id === req.session!.playerId) {
-        return res
-          .status(403)
-          .json({ message: "You cannot delete your own account" });
-      }
-
-      await dbStorage.deletePlayer(req.params.id);
-      res.json({ message: "Player deleted successfully" });
-    } catch (error) {
-      console.error("Delete player error:", error);
-      res.status(500).json({ message: "Failed to delete player" });
-    }
-  });
-
-  app.post("/api/admin/players/:id/approve", isAdmin, async (req, res) => {
-    try {
-      const adminId = req.session!.playerId!;
-      const player = await dbStorage.approvePlayer(req.params.id, adminId);
-
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
-
-      // Send approval email
-      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-        try {
-          const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-              user: process.env.EMAIL_USER,
-              pass: process.env.EMAIL_PASS,
-            },
-          });
-
-          await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: player.email,
-            subject: "Your GameSetMatch Application Has Been Approved!",
-            html: `
-              <h2>Congratulations, ${player.fullName}!</h2>
-              <p>Your application to join GameSetMatch has been approved!</p>
-              <p>You can now complete your profile and publish it to start connecting with sponsors.</p>
-              <p><a href="${req.protocol}://${req.get("host")}/signin">Sign in to your dashboard</a></p>
-              <br>
-              <p>Best regards,<br>The GameSetMatch Team</p>
-            `,
-          });
-        } catch (emailError) {
-          console.error("Failed to send approval email:", emailError);
-          // Don't fail the approval if email fails
-        }
-      }
-
-      res.json({ player: { ...player, passwordHash: undefined } });
-    } catch (error) {
-      console.error("Approve player error:", error);
-      res.status(500).json({ message: "Failed to approve player" });
-    }
-  });
-
-  app.post("/api/admin/players/:id/reject", isAdmin, async (req, res) => {
-    try {
-      const adminId = req.session!.playerId!;
-      const player = await dbStorage.rejectPlayer(req.params.id, adminId);
-
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
-
-      // Send rejection email
-      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-        try {
-          const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-              user: process.env.EMAIL_USER,
-              pass: process.env.EMAIL_PASS,
-            },
-          });
-
-          await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: player.email,
-            subject: "Update on Your GameSetMatch Application",
-            html: `
-              <h2>Hello ${player.fullName},</h2>
-              <p>Thank you for your interest in GameSetMatch.</p>
-              <p>After reviewing your application, we're unable to approve it at this time.</p>
-              <p>If you have questions or would like to reapply in the future, please contact us.</p>
-              <br>
-              <p>Best regards,<br>The GameSetMatch Team</p>
-            `,
-          });
-        } catch (emailError) {
-          console.error("Failed to send rejection email:", emailError);
-          // Don't fail the rejection if email fails
-        }
-      }
-
-      res.json({ player: { ...player, passwordHash: undefined } });
-    } catch (error) {
-      console.error("Reject player error:", error);
-      res.status(500).json({ message: "Failed to reject player" });
-    }
-  });
-
-  // Password recovery routes
-  app.post("/api/auth/forgot-password", async (req, res) => {
-    try {
-      const { email } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-
-      const player = await dbStorage.getPlayerByEmail(email);
-      if (!player) {
-        // Don't reveal if email exists
-        return res.json({
-          message:
-            "If an account with that email exists, a password reset link has been sent.",
-        });
-      }
-
-      // Generate reset token
-      const resetToken = randomUUID();
-      const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
-
-      await dbStorage.createPasswordResetToken(
-        player.id,
-        resetToken,
-        expiresAt,
-      );
-
-      // Send email
-      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.error("Email credentials not configured");
-        return res
-          .status(500)
-          .json({ message: "Email service is not configured" });
-      }
-
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
-
-      const resetUrl = `${req.protocol}://${req.get("host")}/reset-password?token=${resetToken}`;
-
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "GameSetMatch - Password Reset Request",
-        html: `
-          <h2>Password Reset Request</h2>
-          <p>Hi ${player.fullName},</p>
-          <p>You requested to reset your password. Click the link below to reset it:</p>
-          <p><a href="${resetUrl}">${resetUrl}</a></p>
-          <p>This link will expire in 1 hour.</p>
-          <p>If you didn't request this, please ignore this email.</p>
-          <hr>
-          <p><em>GameSetMatch Team</em></p>
-        `,
-      });
-
-      res.json({
-        message:
-          "If an account with that email exists, a password reset link has been sent.",
-      });
-    } catch (error) {
-      console.error("Forgot password error:", error);
-      res
-        .status(500)
-        .json({ message: "Failed to process password reset request" });
-    }
-  });
-
-  app.post("/api/auth/reset-password", async (req, res) => {
-    try {
-      const { token, password } = req.body;
-
-      if (!token || !password) {
-        return res
-          .status(400)
-          .json({ message: "Token and password are required" });
-      }
-
-      if (password.length < 8) {
-        return res
-          .status(400)
-          .json({ message: "Password must be at least 8 characters" });
-      }
-
-      const resetToken = await dbStorage.getPasswordResetToken(token);
-      if (!resetToken) {
-        return res
-          .status(400)
-          .json({ message: "Invalid or expired reset token" });
-      }
-
-      if (new Date() > resetToken.expiresAt) {
-        await dbStorage.deletePasswordResetToken(token);
-        return res.status(400).json({ message: "Reset token has expired" });
-      }
-
-      // Hash new password
-      const passwordHash = await bcrypt.hash(password, 10);
-
-      // Update player password
-      await dbStorage.updatePlayer(resetToken.playerId, { passwordHash });
-
-      // Delete used token
-      await dbStorage.deletePasswordResetToken(token);
-
-      res.json({ message: "Password reset successful" });
-    } catch (error) {
-      console.error("Reset password error:", error);
-      res.status(500).json({ message: "Failed to reset password" });
-    }
-  });
-
+  // create & return HTTP server
   const httpServer = createServer(app);
   return httpServer;
 }
