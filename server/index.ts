@@ -1,51 +1,48 @@
 import express from "express";
 import path from "path";
-import session from "express-session";
-import connectPg from "connect-pg-simple";
-import { registerRoutes } from "./routes";
 import { fileURLToPath } from "url";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import flash from "connect-flash";
+import { pool } from "./db.js";
+import { registerRoutes } from "./routes.js";
 
+const app = express();
+
+// Path setup for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
+// Middlewares
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 
-// PostgreSQL session store
-const pgSession = connectPg(session);
+// Sessions
+const PgSession = connectPgSimple(session);
 app.use(
   session({
-    store: new pgSession({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: true,
-    }),
-    secret: process.env.SESSION_SECRET || "dev-secret",
+    store: new PgSession({ pool }),
+    secret: process.env.SESSION_SECRET || "dev_secret",
     resave: false,
     saveUninitialized: false,
-    cookie: {
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false,
-    },
+    cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 },
   }),
 );
+app.use(flash());
 
 // API routes
-registerRoutes(app);
+await registerRoutes(app);
 
-// Serve static frontend build
-const distPath = path.join(__dirname, "../dist");
+// Serve static files from Vite build
+const distPath = path.join(__dirname, "../dist/client");
 app.use(express.static(distPath));
 
-// Fallback for React Router
+// Handle all other routes (SPA support)
 app.get("*", (_req, res) => {
   res.sendFile(path.join(distPath, "index.html"));
 });
 
-// Start server
-const port = parseInt(process.env.PORT || "5000", 10);
-app.listen(port, "0.0.0.0", () => {
-  console.log(`[express] Server running on port ${port}`);
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => {
+  console.log(`✅ Server running on http://localhost:${PORT}`);
 });
