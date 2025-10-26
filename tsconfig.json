@@ -10,7 +10,11 @@
     "strict": false,
     "skipLibCheck": true,
     "noEmitOnError": false,
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["shared/*"]
+    }
   },
   "include": ["server", "shared", "vite.config.ts"]
 }

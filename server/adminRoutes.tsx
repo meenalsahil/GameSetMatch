@@ -1,3 +1,8 @@
+declare module "express-session" {
+  interface SessionData {
+    user?: any;
+  }
+}
 import express from "express";
 import { storage } from "./storage";
 
