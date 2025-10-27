@@ -1,0 +1,162 @@
+import { players, } from "../shared/schema.js";
+import { pool, db } from "./db.js";
+import { eq } from "drizzle-orm";
+export class DbStorage {
+    async getPlayer(id) {
+        const result = await pool.query(`SELECT id, full_name, email, age, country, location, ranking,
+              specialization, bio, funding_goals, video_url, photo_url,
+              published, featured, priority, is_admin,
+              approval_status, approved_by, approved_at
+         FROM players
+         WHERE id = $1`, [id]);
+        return result.rows[0];
+    }
+    async getPlayerByEmail(email) {
+        try {
+            const result = await pool.query("SELECT * FROM players WHERE email = $1", [email]);
+            console.log("storage.getPlayerByEmail - Result:", result);
+            if (result && result.rows.length > 0) {
+                console.log("storage.getPlayerByEmail - Player data:", result.rows[0]);
+                return result.rows[0];
+            }
+            else {
+                console.log("storage.getPlayerByEmail - Player not found");
+                return undefined;
+            }
+        }
+        catch (error) {
+            console.error("storage.getPlayerByEmail - Error:", error);
+            return undefined;
+        }
+    }
+    async createPlayer(player) {
+        const result = await pool.query(`INSERT INTO players (
+        email, password_hash, full_name, age, country, location,
+        ranking, specialization, bio, funding_goals, video_url,
+        atp_profile_url, photo_url, published, featured, priority,
+        approval_status, active
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      RETURNING *`, [
+            player.email,
+            player.passwordHash,
+            player.fullName,
+            player.age,
+            player.country,
+            player.location,
+            player.ranking,
+            player.specialization,
+            player.bio,
+            player.fundingGoals,
+            player.videoUrl,
+            player.atpProfileUrl || null,
+            player.photoUrl || null,
+            false, // published
+            false, // featured
+            player.priority || "normal",
+            "pending", // approval_status default
+            true, // active by default
+        ]);
+        return result.rows[0];
+    }
+    async getAllPlayers() {
+        const result = await pool.query("SELECT * FROM players ORDER BY created_at DESC");
+        return result.rows;
+    }
+    async getPublishedPlayers() {
+        const result = await db
+            .select()
+            .from(players)
+            .where(eq(players.published, true));
+        return result;
+    }
+    async getFeaturedPlayers() {
+        const result = await pool.query("SELECT * FROM players WHERE featured = true ORDER BY created_at DESC LIMIT 4");
+        return result.rows;
+    }
+    async updatePlayer(id, player) {
+        const fields = [];
+        const values = [];
+        let paramCount = 1;
+        if (player.email !== undefined) {
+            fields.push(`email = $${paramCount++}`);
+            values.push(player.email);
+        }
+        if (player.fullName !== undefined) {
+            fields.push(`full_name = $${paramCount++}`);
+            values.push(player.fullName);
+        }
+        if (player.location !== undefined) {
+            fields.push(`location = $${paramCount++}`);
+            values.push(player.location);
+        }
+        if (player.ranking !== undefined) {
+            fields.push(`ranking = $${paramCount++}`);
+            values.push(player.ranking);
+        }
+        if (player.specialization !== undefined) {
+            fields.push(`specialization = $${paramCount++}`);
+            values.push(player.specialization);
+        }
+        if (player.bio !== undefined) {
+            fields.push(`bio = $${paramCount++}`);
+            values.push(player.bio);
+        }
+        if (player.fundingGoals !== undefined) {
+            fields.push(`funding_goals = $${paramCount++}`);
+            values.push(player.fundingGoals);
+        }
+        if (player.videoUrl !== undefined) {
+            fields.push(`video_url = $${paramCount++}`);
+            values.push(player.videoUrl);
+        }
+        if (player.photoUrl !== undefined) {
+            fields.push(`photo_url = $${paramCount++}`);
+            values.push(player.photoUrl);
+        }
+        if (fields.length === 0) {
+            return this.getPlayer(id);
+        }
+        values.push(id);
+        const result = await pool.query(`UPDATE players SET ${fields.join(", ")} WHERE id = $${paramCount} RETURNING *`, values);
+        return result.rows[0];
+    }
+    async publishPlayer(id) {
+        const result = await pool.query("UPDATE players SET published = true WHERE id = $1 RETURNING *", [id]);
+        return result.rows[0];
+    }
+    async approvePlayer(id, adminId) {
+        const result = await pool.query(
+        // set approval_status and also set published = true
+        "UPDATE players SET approval_status = 'approved', published = true, approved_by = $2, approved_at = NOW() WHERE id = $1 RETURNING *", [id, adminId]);
+        return result.rows[0];
+    }
+    async rejectPlayer(id, adminId) {
+        const result = await pool.query("UPDATE players SET approval_status = 'rejected', approved_by = $2, approved_at = NOW() WHERE id = $1 RETURNING *", [id, adminId]);
+        return result.rows[0];
+    }
+    async deactivatePlayer(id) {
+        const result = await pool.query(`UPDATE players SET active = false WHERE id = $1 RETURNING *`, [id]);
+        return result.rows[0];
+    }
+    async activatePlayer(id) {
+        const result = await pool.query(`UPDATE players SET active = true WHERE id = $1 RETURNING *`, [id]);
+        return result.rows[0];
+    }
+    async deletePlayer(id) {
+        await pool.query(`DELETE FROM players WHERE id = $1`, [id]);
+    }
+    async createPasswordResetToken(playerId, token, expiresAt) {
+        await pool.query("INSERT INTO password_reset_tokens (player_id, token, expires_at) VALUES ($1, $2, $3)", [playerId, token, expiresAt]);
+    }
+    async getPasswordResetToken(token) {
+        const result = await pool.query("SELECT * FROM password_reset_tokens WHERE token = $1", [token]);
+        return result.rows[0];
+    }
+    async deletePasswordResetToken(token) {
+        await pool.query("DELETE FROM password_reset_tokens WHERE token = $1", [
+            token,
+        ]);
+    }
+}
+export const storage = new DbStorage();
