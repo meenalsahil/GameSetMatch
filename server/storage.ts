@@ -3,8 +3,8 @@ import {
   type InsertPlayer,
   players,
   passwordResetTokens,
-} from "@shared/schema";
-import { pool, db } from "./db";
+} from "../shared/schema.js";
+import { pool, db } from "./db.js";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
