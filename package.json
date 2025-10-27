@@ -57,8 +57,9 @@
     "drizzle-kit": "^0.31.5",
     "esbuild": "^0.21.5",
     "postcss": "^8.5.6",
+    "ts-node": "^10.9.2",
     "tsx": "^4.7.0",
-    "typescript": "^5.6.3",
+    "typescript": "^5.9.3",
     "vite": "^5.4.2"
   }
 }
