@@ -18,7 +18,7 @@ declare module "express-session" {
   }
 }
 
-// ---- Helpers / setup
+// ---- Helpers / setup ----
 
 // Ensure uploads folder exists
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -45,7 +45,7 @@ const upload = multer({
   },
 });
 
-// Auth middlewares
+// ---- Middleware ----
 function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   if (req.session?.playerId) return next();
   return res.status(401).json({ message: "Unauthorized" });
@@ -66,7 +66,7 @@ async function isAdmin(req: Request, res: Response, next: NextFunction) {
 
 // ---- Routes ----
 export async function registerRoutes(app: Express): Promise<Server> {
-  // AUTH
+  // AUTH: Signup
   app.post("/api/auth/signup", upload.single("photo"), async (req: Request, res: Response) => {
     try {
       const parsed = {
@@ -74,6 +74,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         age: req.body.age ? parseInt(req.body.age, 10) : undefined,
         ranking: req.body.ranking ? parseInt(req.body.ranking, 10) : undefined,
       };
+
       const result = signupPlayerSchema.safeParse(parsed);
       if (!result.success) {
         return res.status(400).json({
@@ -83,6 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { email, password, atpProfileUrl, ...rest } = result.data;
+
       const existing = await storage.getPlayerByEmail(email);
       if (existing) {
         return res.status(400).json({ message: "Email already registered" });
@@ -91,16 +93,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordHash = await bcrypt.hash(password, 10);
       const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
+      // âœ… FIXED SECTION (explicit casting)
       const player = await storage.createPlayer({
-        ...rest,
-        email,
-        passwordHash,
-        atpProfileUrl: atpProfileUrl || null,
-        photoUrl: photoUrl || null,
+        ...(rest as any),
+        email: String(email),
+        passwordHash: String(passwordHash),
+        atpProfileUrl: atpProfileUrl ?? null,
+        photoUrl: photoUrl ?? null,
         published: false,
         featured: false,
         priority: "normal",
-      });
+      } as any);
 
       req.session!.playerId = player.id;
       res.json({ player: { ...player, passwordHash: undefined } });
@@ -110,6 +113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AUTH: Signin
   app.post("/api/auth/signin", async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
@@ -154,6 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AUTH: Logout
   app.post("/api/auth/logout", (req: Request, res: Response) => {
     req.session?.destroy((err) => {
       if (err) return res.status(500).json({ message: "Failed to logout" });
@@ -162,6 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // AUTH: Get current player
   app.get("/api/auth/me", isAuthenticated, async (req: Request, res: Response) => {
     try {
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
@@ -226,8 +232,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Other routes below unchanged...
-  // (keep your existing admin and upload routes — they’re fine)
   const httpServer = createServer(app);
   return httpServer;
 }
