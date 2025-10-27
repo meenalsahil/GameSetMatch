@@ -3,8 +3,9 @@ declare module "express-session" {
     user?: any;
   }
 }
+
 import express from "express";
-import { storage } from "./storage";
+import { storage } from "./storage.js"; // 👈 important: add .js here
 
 const router = express.Router();
 

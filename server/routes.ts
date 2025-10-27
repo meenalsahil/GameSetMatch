@@ -7,8 +7,8 @@ import fs from "fs";
 import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
 import { randomUUID } from "crypto";
-import { storage } from "./storage";
-import { signupPlayerSchema } from "@shared/schema";
+import { storage } from "./storage.js";
+import { signupPlayerSchema } from "../shared/schema.js";
 
 // --- Fix missing types ---
 declare module "express-session" {
