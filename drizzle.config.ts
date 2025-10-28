@@ -1,11 +1,13 @@
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-  schema: "./shared/schema.ts", // ✅ correct relative path
+  schema: "./shared/schema.ts",
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
     url: process.env.DATABASE_URL!,
-    ssl: true, // ✅ required for Render PostgreSQL
+    ssl: {
+      rejectUnauthorized: false, // ✅ critical for Render
+    },
   },
 });
