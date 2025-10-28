@@ -5,8 +5,11 @@
  "scripts": {
   "dev": "tsx server/index.ts",
   "build": "tsc && vite build",
-  "start": "NODE_ENV=production node server/index.js"
-}
+  "start": "NODE_ENV=production node server/index.js",
+  "migrate": "npx drizzle-kit push",
+  "postinstall": "npm install --include=dev"
+},
+
 
 ,
   "dependencies": {
