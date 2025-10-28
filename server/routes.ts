@@ -96,6 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const parsed = signupPlayerSchema.safeParse(normalized);
         if (!parsed.success) {
           // Return clear validation errors for the UI
+            console.error("❌ Signup validation failed:", parsed.error.issues);
           return res.status(400).json({
             message: "Invalid input",
             errors: parsed.error.issues.map((i) => ({
