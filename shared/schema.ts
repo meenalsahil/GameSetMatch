@@ -54,8 +54,6 @@ export const insertPlayerSchema = createInsertSchema(players).omit({
   createdAt: true,
 });
 
-import { z } from "zod";
-
 export const signupPlayerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
