@@ -224,28 +224,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!p) return res.status(404).json({ message: "Player not found" });
 
       res.json({
-        id: p.id,
-        email: p.email,
-        fullName: p.full_name,
-        age: p.age,
-        country: p.country,
-        location: p.location,
-        ranking: p.ranking,
-        specialization: p.specialization,
-        bio: p.bio,
-        fundingGoals: p.funding_goals,
-        videoUrl: p.video_url,
-        photoUrl: p.photo_url,
-        published: p.published,
-        featured: p.featured,
-        priority: p.priority,
-        isAdmin: p.is_admin,
-        approvalStatus: p.approval_status,
-        approvedBy: p.approved_by,
-        approvedAt: p.approved_at,
-        createdAt: p.created_at,
-        active: p.active,
-      });
+  id: p.id,
+  email: p.email,
+  fullName: p.full_name,
+  age: p.age,
+  country: p.country,
+  location: p.location,
+  ranking: p.ranking,
+  specialization: p.specialization,
+  bio: p.bio,
+  fundingGoals: p.funding_goals,
+  videoUrl: p.video_url,
+  photoUrl: p.photo_url,
+  published: p.published,
+  featured: p.featured,
+  priority: p.priority,
+  isAdmin: p.is_admin,
+  approvalStatus: p.approval_status,
+  approvedBy: p.approved_by,
+  approvedAt: p.approved_at,
+  createdAt: p.created_at,
+  active: p.active,
+});
+
     } catch (e) {
       console.error("/api/auth/me error:", e);
       res.status(500).json({ message: "Failed to get player" });
@@ -258,19 +259,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const list: any[] = await storage.getPublishedPlayers();
       const transformed = list
         .filter((p: any) => p.active !== false)
-        .map((p: any) => ({
-          id: p.id,
-          fullName: p.full_name,
-          location: p.location,
-          ranking: p.ranking,
-          specialization: p.specialization,
-          bio: p.bio,
-          fundingGoals: p.funding_goals,
-          videoUrl: p.video_url,
-          photoUrl: p.photo_url,
-          country: p.country,
-          age: p.age,
-        }));
+       .map((p: any) => ({
+  id: p.id,
+  fullName: p.full_name,
+  location: p.location,
+  ranking: p.ranking,
+  specialization: p.specialization,
+  bio: p.bio,
+  fundingGoals: p.funding_goals,
+  videoUrl: p.video_url,
+  photoUrl: p.photo_url,
+  country: p.country,
+  age: p.age,
+}));
+
       res.json(transformed);
     } catch (e) {
       console.error("Get players error:", e);

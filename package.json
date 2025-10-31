@@ -26,6 +26,8 @@
     "clsx": "^2.1.1",
     "connect-flash": "^0.1.1",
     "connect-pg-simple": "^9.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.7",
     "drizzle-zod": "^0.8.3",
     "express": "^4.19.2",

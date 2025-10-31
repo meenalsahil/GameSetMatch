@@ -54,37 +54,36 @@ export const insertPlayerSchema = createInsertSchema(players).omit({
   createdAt: true,
 });
 
-export const signupPlayerSchema = insertPlayerSchema
-  .omit({
-    passwordHash: true,
-    published: true,
-    featured: true,
-    priority: true,
-    photoUrl: true,
-    isAdmin: true,
-    approvalStatus: true,
-    approvedBy: true,
-    approvedAt: true,
-  })
-  .extend({
-    email: z.string().email("A valid email is required"), // ✅ Add this back explicitly
-    password: z.string().min(8, "Password must be at least 8 characters"), // ✅ Add password field for signup
-    fullName: z.string().min(2, "Full name is required"), // ✅ Ensure name is required
-    age: z.number().int().positive().min(13, "You must be at least 13 years old"),
-    country: z.string().min(1, "Country is required"),
-    fundingGoals: z
-      .string()
-      .min(10, "Please describe your funding goals (at least 10 characters)"),
-    location: z.string().optional(),
-    ranking: z.string().optional(),
-    specialization: z.string().optional(),
-    bio: z.string().optional(),
-    videoUrl: z
-      .union([z.string().url("Please enter a valid URL"), z.literal("")])
-      .optional(),
-    atpProfileUrl: z.string().url().optional(),
-    photo: z.any().optional(), // file uploads
-  });
+import { z } from "zod";
+
+export const signupPlayerSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  fullName: z.string().min(1, "Full name is required"),
+  age: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .or(z.nan()) // tolerate blank field
+    .transform((v) => (isNaN(v) ? undefined : v)),
+  country: z.string().min(1, "Country is required"),
+  location: z.string().min(1, "Location is required"),
+  ranking: z.string().optional().nullable(),
+  specialization: z.string().min(1, "Specialization is required"),
+  bio: z.string().min(1, "Bio is required"),
+  fundingGoals: z.string().min(1, "Funding goals are required"),
+  videoUrl: z
+    .string()
+    .url("Must be a valid URL")
+    .optional()
+    .or(z.literal(""))
+    .nullable(),
+  atpProfileUrl: z
+    .string()
+    .url("ATP/ITF Profile URL is required and must be valid")
+    .min(1),
+});
 
 
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
