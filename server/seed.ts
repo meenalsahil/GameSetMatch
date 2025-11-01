@@ -28,7 +28,8 @@ async function seed() {
       fundingGoals: 'N/A',
       isAdmin: true,
       approvalStatus: 'approved',
-      published: false
+      published: false,
+      atpProfileUrl: 'https://example.com/admin-profile', // ✅ added line
     });
     
     console.log('✓ Admin account created');
@@ -44,7 +45,8 @@ async function seed() {
         ranking: 'ATP 250',
         specialization: 'Singles - Clay Court',
         bio: 'Professional tennis player specializing in clay court tournaments.',
-        fundingGoals: 'Travel and accommodation for European tour'
+        fundingGoals: 'Travel and accommodation for European tour',
+        atpProfileUrl: 'https://example.com/alex-rodriguez', // ✅ added line
       },
       {
         email: 'player2@example.com',
@@ -55,7 +57,8 @@ async function seed() {
         ranking: 'ITF 500',
         specialization: 'Singles - Hard Court',
         bio: 'Rising star in South American tennis circuit.',
-        fundingGoals: 'Training equipment and tournament fees'
+        fundingGoals: 'Training equipment and tournament fees',
+        atpProfileUrl: 'https://example.com/maria-santos', // ✅ added line
       },
       {
         email: 'player3@example.com',
@@ -66,7 +69,8 @@ async function seed() {
         ranking: 'Challenger 150',
         specialization: 'Doubles',
         bio: 'Experienced doubles player in North American circuit.',
-        fundingGoals: 'Travel costs and coaching fees'
+        fundingGoals: 'Travel costs and coaching fees',
+        atpProfileUrl: 'https://example.com/james-chen', // ✅ added line
       },
       {
         email: 'player4@example.com',
@@ -77,8 +81,9 @@ async function seed() {
         ranking: 'ITF 300',
         specialization: 'Singles - Grass Court',
         bio: 'Young talent focusing on grass court tournaments.',
-        fundingGoals: 'Tennis equipment and tournament travel'
-      }
+        fundingGoals: 'Tennis equipment and tournament travel',
+        atpProfileUrl: 'https://example.com/sophie-martin', // ✅ added line
+      },
     ];
     
     for (const player of samplePlayers) {
@@ -93,7 +98,7 @@ async function seed() {
         published: true,
         featured: true,
         approvalStatus: 'approved',
-        isAdmin: false
+        isAdmin: false,
       });
     }
     
