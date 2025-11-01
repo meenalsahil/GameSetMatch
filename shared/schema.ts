@@ -87,12 +87,9 @@ export const signupPlayerSchema = z.object({
     .or(z.literal(""))
     .nullable(),
 
-  // ✅ ATP/ITF Profile Required
+  // ✅ ATP/ITF Profile Required (older syntax)
   atpProfileUrl: z
-    .string({
-      required_error: "ATP/ITF profile URL is required",
-      invalid_type_error: "ATP/ITF profile URL must be a string",
-    })
+    .string()
     .trim()
     .url("Must be a valid URL")
     .min(1, "ATP/ITF profile URL is required"),
@@ -100,6 +97,7 @@ export const signupPlayerSchema = z.object({
   // ✅ Photo Optional
   photoUrl: z.string().optional().nullable(),
 });
+
 
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
 export type Player = typeof players.$inferSelect;
