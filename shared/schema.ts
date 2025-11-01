@@ -10,6 +10,10 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// =============================
+// 🧱 Database Tables
+// =============================
+
 export const players = pgTable("players", {
   id: varchar("id")
     .primaryKey()
@@ -26,6 +30,7 @@ export const players = pgTable("players", {
   fundingGoals: text("funding_goals").notNull(),
   videoUrl: text("video_url"),
   photoUrl: text("photo_url"),
+  atpProfileUrl: text("atp_profile_url"), // ✅ added to match new field
   published: boolean("published").notNull().default(false),
   featured: boolean("featured").notNull().default(false),
   active: boolean("active").notNull().default(true),
@@ -54,16 +59,20 @@ export const insertPlayerSchema = createInsertSchema(players).omit({
   createdAt: true,
 });
 
+// =============================
+// 🧩 Validation Schema
+// =============================
+
 export const signupPlayerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   fullName: z.string().min(1, "Full name is required"),
   age: z
     .number()
     .int()
     .positive()
     .optional()
-    .or(z.nan()) // tolerate blank field
+    .or(z.nan())
     .transform((v) => (isNaN(v) ? undefined : v)),
   country: z.string().min(1, "Country is required"),
   location: z.string().min(1, "Location is required"),
@@ -77,12 +86,20 @@ export const signupPlayerSchema = z.object({
     .optional()
     .or(z.literal(""))
     .nullable(),
-  atpProfileUrl: z
-    .string()
-    .url("ATP/ITF Profile URL is required and must be valid")
-    .min(1),
-});
 
+  // ✅ ATP/ITF Profile Required
+  atpProfileUrl: z
+    .string({
+      required_error: "ATP/ITF profile URL is required",
+      invalid_type_error: "ATP/ITF profile URL must be a string",
+    })
+    .trim()
+    .url("Must be a valid URL")
+    .min(1, "ATP/ITF profile URL is required"),
+
+  // ✅ Photo Optional
+  photoUrl: z.string().optional().nullable(),
+});
 
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
 export type Player = typeof players.$inferSelect;
