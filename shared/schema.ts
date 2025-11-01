@@ -29,8 +29,9 @@ export const players = pgTable("players", {
   bio: text("bio").notNull(),
   fundingGoals: text("funding_goals").notNull(),
   videoUrl: text("video_url"),
+    atpProfileUrl: text("atp_profile_url").notNull(),
+
   photoUrl: text("photo_url"),
-  atpProfileUrl: text("atp_profile_url"), // ✅ added to match new field
   published: boolean("published").notNull().default(false),
   featured: boolean("featured").notNull().default(false),
   active: boolean("active").notNull().default(true),
