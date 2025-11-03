@@ -29,7 +29,7 @@ export const players = pgTable("players", {
   bio: text("bio").notNull(),
   fundingGoals: text("funding_goals").notNull(),
   videoUrl: text("video_url"),
-    atpProfileUrl: text("atp_profile_url").notNull(),
+atpProfileUrl: text("atp_profile_url"),
 
   photoUrl: text("photo_url"),
   published: boolean("published").notNull().default(false),
@@ -90,10 +90,13 @@ export const signupPlayerSchema = z.object({
 
   // ✅ ATP/ITF Profile Required (older syntax)
   atpProfileUrl: z
-    .string()
-    .trim()
-    .url("Must be a valid URL")
-    .min(1, "ATP/ITF profile URL is required"),
+  .string()
+  .trim()
+  .url("Must be a valid URL")
+  .optional()
+  .or(z.literal(""))
+  .nullable(),
+
 
   // ✅ Photo Optional
   photoUrl: z.string().optional().nullable(),

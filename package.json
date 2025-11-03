@@ -6,7 +6,8 @@
     "dev": "tsx server/index.ts",
     "build": "tsc && vite build",
     "start": "NODE_ENV=production node server/index.js",
-    "migrate": "npx drizzle-kit push"
+    "migrate": "npx drizzle-kit push",
+  "seed": "tsx server/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
