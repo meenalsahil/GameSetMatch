@@ -1,19 +1,27 @@
-import 'dotenv/config';
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import dotenv from "dotenv";
+import path from "path";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 
-// ✅ Make sure DATABASE_URL is read from root .env
+// Load .env only for local development
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config({ path: path.resolve(process.cwd(), "server/.env") });
+}
+
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error("❌ DATABASE_URL is missing from .env file");
+  console.error("❌ DATABASE_URL is missing!");
+  throw new Error("DATABASE_URL not found");
 }
 
-// ✅ Initialize a single Postgres connection pool
+console.log("✅ Connecting to database:", connectionString);
+
 export const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false }, // Required for Railway Postgres
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
-// ✅ Create and export Drizzle instance
 export const db = drizzle(pool);
