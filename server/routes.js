@@ -5,12 +5,10 @@ import fs from "fs";
 import bcrypt from "bcrypt";
 import { storage } from "./storage.js";
 import { signupPlayerSchema } from "../shared/schema.js";
-// ---- Helpers / setup ----
-// Ensure uploads folder exists
+// -------------------- Helpers / setup --------------------
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir))
-    fs.mkdirSync(uploadsDir);
-// File upload (photo)
+    fs.mkdirSync(uploadsDir, { recursive: true });
 const multerStorage = multer.diskStorage({
     destination: uploadsDir,
     filename: (_req, file, cb) => {
@@ -31,7 +29,6 @@ const upload = multer({
             cb(new Error("Only image files are allowed"));
     },
 });
-// ---- Middleware ----
 function isAuthenticated(req, res, next) {
     if (req.session?.playerId)
         return next();
@@ -49,60 +46,102 @@ async function isAdmin(req, res, next) {
     req.user = user;
     next();
 }
-// ---- Routes ----
+// -------------------- Routes --------------------
 export async function registerRoutes(app) {
-    // AUTH: Signup
+    // -------- AUTH: Signup --------
     app.post("/api/auth/signup", upload.single("photo"), async (req, res) => {
         try {
-            const parsed = {
-                ...req.body,
-                age: req.body.age ? parseInt(req.body.age, 10) : undefined,
-                ranking: req.body.ranking ? parseInt(req.body.ranking, 10) : undefined,
+            // Normalize raw form values
+            const raw = req.body ?? {};
+            const normalized = {
+                email: String(raw.email ?? "").trim().toLowerCase(),
+                password: String(raw.password ?? ""),
+                fullName: String(raw.fullName ?? "").trim(),
+                // allow "" -> undefined so zod can show a clean error if truly missing
+                age: raw.age === "" || raw.age === undefined
+                    ? undefined
+                    : Number.parseInt(String(raw.age), 10),
+                country: String(raw.country ?? "").trim(),
+                location: String(raw.location ?? "").trim(),
+                ranking: raw.ranking === undefined || raw.ranking === ""
+                    ? null
+                    : String(raw.ranking), // DB column is text; keep as string
+                specialization: String(raw.specialization ?? "").trim(),
+                bio: String(raw.bio ?? "").trim(),
+                fundingGoals: String(raw.fundingGoals ?? "").trim(),
+                videoUrl: String(raw.videoUrl ?? "").trim(), // schema allows "" or valid URL
+                atpProfileUrl: raw.atpProfileUrl === undefined || raw.atpProfileUrl === ""
+                    ? undefined
+                    : String(raw.atpProfileUrl).trim(),
             };
-            const result = signupPlayerSchema.safeParse(parsed);
-            if (!result.success) {
+            const parsed = signupPlayerSchema.safeParse(normalized);
+            if (!parsed.success) {
+                // Return clear validation errors for the UI
+                console.error("❌ Signup validation failed:", parsed.error.issues);
                 return res.status(400).json({
                     message: "Invalid input",
-                    errors: result.error?.errors || [],
+                    errors: parsed.error.issues.map((i) => ({
+                        path: i.path.join("."),
+                        message: i.message,
+                    })),
                 });
             }
-            const { email, password, atpProfileUrl, ...rest } = result.data;
-            const existing = await storage.getPlayerByEmail(email);
+            const data = parsed.data;
+            // Email already taken?
+            const existing = await storage.getPlayerByEmail(data.email);
             if (existing) {
                 return res.status(400).json({ message: "Email already registered" });
             }
-            const passwordHash = await bcrypt.hash(password, 10);
+            // Hash password
+            const passwordHash = await bcrypt.hash(data.password, 10);
+            // Handle optional file upload
             const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
-            // ✅ FIXED SECTION (explicit casting)
-            const player = await storage.createPlayer({
-                ...rest,
-                email: String(email),
-                passwordHash: String(passwordHash),
-                atpProfileUrl: atpProfileUrl ?? null,
-                photoUrl: photoUrl ?? null,
+            // Build payload for storage.createPlayer (maps camelCase -> DB columns)
+            const toCreate = {
+                email: data.email,
+                passwordHash,
+                fullName: data.fullName,
+                age: data.age, // already a number per schema
+                country: data.country,
+                location: data.location,
+                ranking: data.ranking ?? null, // text column
+                specialization: data.specialization,
+                bio: data.bio,
+                fundingGoals: data.fundingGoals,
+                videoUrl: data.videoUrl ? data.videoUrl : null,
+                atpProfileUrl: data.atpProfileUrl ?? null,
+                photoUrl,
+                // server-side defaults
                 published: false,
                 featured: false,
                 priority: "normal",
-            });
+                // active defaults to true in schema/storage, but pass it to be explicit
+                active: true,
+            };
+            const player = await storage.createPlayer(toCreate);
             req.session.playerId = player.id;
-            res.json({ player: { ...player, passwordHash: undefined } });
+            // never return password hashes
+            res.json({ player: { ...player, password_hash: undefined, passwordHash: undefined } });
         }
         catch (e) {
             console.error("Signup error:", e);
             res.status(500).json({ message: "Failed to create account" });
         }
     });
-    // AUTH: Signin
+    // -------- AUTH: Signin --------
     app.post("/api/auth/signin", async (req, res) => {
         try {
-            const { email, password } = req.body;
-            const player = await storage.getPlayerByEmail(email);
+            const { email, password } = req.body ?? {};
+            if (!email || !password) {
+                return res.status(400).json({ message: "Email and password are required" });
+            }
+            const player = await storage.getPlayerByEmail(String(email).toLowerCase());
             if (!player)
                 return res.status(401).json({ message: "Invalid credentials" });
             const hash = player.password_hash || player.passwordHash;
             if (!hash)
                 return res.status(401).json({ message: "Invalid credentials" });
-            const ok = await bcrypt.compare(password, hash);
+            const ok = await bcrypt.compare(String(password), String(hash));
             if (!ok)
                 return res.status(401).json({ message: "Invalid credentials" });
             req.session.playerId = player.id;
@@ -137,7 +176,7 @@ export async function registerRoutes(app) {
             res.status(500).json({ message: "Failed to sign in" });
         }
     });
-    // AUTH: Logout
+    // -------- AUTH: Logout --------
     app.post("/api/auth/logout", (req, res) => {
         req.session?.destroy((err) => {
             if (err)
@@ -146,7 +185,7 @@ export async function registerRoutes(app) {
             res.json({ message: "Logged out successfully" });
         });
     });
-    // AUTH: Get current player
+    // -------- AUTH: Me --------
     app.get("/api/auth/me", isAuthenticated, async (req, res) => {
         try {
             res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
@@ -184,7 +223,7 @@ export async function registerRoutes(app) {
             res.status(500).json({ message: "Failed to get player" });
         }
     });
-    // PUBLIC: Browse players
+    // -------- PUBLIC: Browse players --------
     app.get("/api/players", async (_req, res) => {
         try {
             const list = await storage.getPublishedPlayers();

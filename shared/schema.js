@@ -2,6 +2,9 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, boolean, timestamp, integer, } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+// =============================
+// 🧱 Database Tables
+// =============================
 export const players = pgTable("players", {
     id: varchar("id")
         .primaryKey()
@@ -17,6 +20,7 @@ export const players = pgTable("players", {
     bio: text("bio").notNull(),
     fundingGoals: text("funding_goals").notNull(),
     videoUrl: text("video_url"),
+    atpProfileUrl: text("atp_profile_url"),
     photoUrl: text("photo_url"),
     published: boolean("published").notNull().default(false),
     featured: boolean("featured").notNull().default(false),
@@ -43,34 +47,46 @@ export const insertPlayerSchema = createInsertSchema(players).omit({
     id: true,
     createdAt: true,
 });
-export const signupPlayerSchema = insertPlayerSchema
-    .omit({
-    passwordHash: true,
-    published: true,
-    featured: true,
-    priority: true,
-    photoUrl: true,
-    isAdmin: true,
-    approvalStatus: true,
-    approvedBy: true,
-    approvedAt: true,
-})
-    .extend({
-    email: z.string().email("A valid email is required"), // ✅ Add this back explicitly
-    password: z.string().min(8, "Password must be at least 8 characters"), // ✅ Add password field for signup
-    fullName: z.string().min(2, "Full name is required"), // ✅ Ensure name is required
-    age: z.number().int().positive().min(13, "You must be at least 13 years old"),
+// =============================
+// 🧩 Validation Schema
+// =============================
+export const signupPlayerSchema = z.object({
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    fullName: z.string().min(1, "Full name is required"),
+    age: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .or(z.nan())
+        .transform((v) => (isNaN(v) ? undefined : v)),
     country: z.string().min(1, "Country is required"),
-    fundingGoals: z
-        .string()
-        .min(10, "Please describe your funding goals (at least 10 characters)"),
-    location: z.string().optional(),
-    ranking: z.string().optional(),
-    specialization: z.string().optional(),
-    bio: z.string().optional(),
+    location: z.string().min(1, "Location is required"),
+    ranking: z.string().optional().nullable(),
+    specialization: z.string().min(1, "Specialization is required"),
+    bio: z.string().min(1, "Bio is required"),
+    fundingGoals: z.string().min(1, "Funding goals are required"),
     videoUrl: z
-        .union([z.string().url("Please enter a valid URL"), z.literal("")])
-        .optional(),
-    atpProfileUrl: z.string().url().optional(),
-    photo: z.any().optional(), // file uploads
+        .string()
+        .url("Must be a valid URL")
+        .optional()
+        .or(z.literal(""))
+        .nullable(),
+    // ✅ ATP/ITF Profile Required (older syntax)
+    atpProfileUrl: z
+        .union([
+        z.string().url("Must be a valid ATP/ITF profile URL"),
+        z.literal(""),
+        z.undefined(),
+    ])
+        .optional()
+        .nullable()
+        .transform((val) => {
+        if (!val || val === "")
+            return null;
+        return val;
+    }),
+    // ✅ Photo Optional
+    photoUrl: z.string().optional().nullable(),
 });
