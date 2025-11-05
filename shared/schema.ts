@@ -90,12 +90,17 @@ export const signupPlayerSchema = z.object({
 
   // ✅ ATP/ITF Profile Required (older syntax)
   atpProfileUrl: z
-  .string()
-  .trim()
-  .url("Must be a valid URL")
+  .union([
+    z.string().url("Must be a valid ATP/ITF profile URL"),
+    z.literal(""),
+    z.undefined(),
+  ])
   .optional()
-  .or(z.literal(""))
-  .nullable(),
+  .nullable()
+  .transform((val) => {
+    if (!val || val === "") return null;
+    return val;
+  }),
 
 
   // ✅ Photo Optional
