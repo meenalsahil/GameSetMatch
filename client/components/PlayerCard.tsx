@@ -22,11 +22,12 @@ export default function PlayerCard({
   id,
   photoUrl,
 }: PlayerCardProps) {
-  const initials = name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase();
+const initials = name
+  ? name.split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+  : '??';
 
   return (
     <Card className="overflow-hidden hover-elevate transition-all" data-testid={`card-player-${id}`}>
