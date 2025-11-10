@@ -261,14 +261,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter((p: any) => p.active !== false)
        .map((p: any) => ({
   id: p.id,
-  fullName: p.full_name,
+  fullName: p.fullname,
   location: p.location,
   ranking: p.ranking,
   specialization: p.specialization,
   bio: p.bio,
-  fundingGoals: p.funding_goals,
-  videoUrl: p.video_url,
-  photoUrl: p.photo_url,
+  fundingGoals: p.fundinggoals,
+  videoUrl: p.videourl,
+  photoUrl: p.photourl,
   country: p.country,
   age: p.age,
 }));
