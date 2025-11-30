@@ -28,13 +28,22 @@ app.use(
 
 // Sessions
 const PgSession = connectPgSimple(session);
+const sessionStore = new PgSession({
+  pool: pool,
+  tableName: "session",
+});
 app.use(
   session({
-    store: new PgSession({ pool }),
-    secret: process.env.SESSION_SECRET || "dev_secret",
+    secret: process.env.SESSION_SECRET || "your-secret-key-change-this",
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 },
+    cookie: {
+      secure: false,  // ✅ Set to false for Railway
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      sameSite: 'lax',  // ✅ Important for Railway
+    },
+    store: sessionStore,
   })
 );
 app.use(flash());
