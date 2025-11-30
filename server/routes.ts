@@ -174,30 +174,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       req.session!.playerId = player.id;
       res.json({
-        player: {
-          id: player.id,
-          email: player.email,
-          fullName: player.full_name,
-          age: player.age,
-          country: player.country,
-          location: player.location,
-          ranking: player.ranking,
-          specialization: player.specialization,
-          bio: player.bio,
-          fundingGoals: player.funding_goals,
-          videoUrl: player.video_url,
-          photoUrl: player.photo_url,
-          published: player.published,
-          featured: player.featured,
-          priority: player.priority,
-          isAdmin: player.is_admin,
-          approvalStatus: player.approval_status,
-          approvedBy: player.approved_by,
-          approvedAt: player.approved_at,
-          createdAt: player.created_at,
-          active: player.active,
-        },
-      });
+  player: {
+    id: player.id,
+    email: player.email,
+    fullName: player.fullName,           // ✅ Changed from player.full_name
+    age: player.age,
+    country: player.country,
+    location: player.location,
+    ranking: player.ranking,
+    specialization: player.specialization,
+    bio: player.bio,
+    fundingGoals: player.fundingGoals,   // ✅ Changed from player.funding_goals
+    videoUrl: player.videoUrl,           // ✅ Changed from player.video_url
+    photoUrl: player.photoUrl,           // ✅ Changed from player.photo_url
+    published: player.published,
+    featured: player.featured,
+    priority: player.priority,
+    isAdmin: player.isAdmin,             // ✅ Changed from player.is_admin
+    approvalStatus: player.approvalStatus, // ✅ Changed from player.approval_status
+    approvedBy: player.approvedBy,       // ✅ Changed from player.approved_by
+    approvedAt: player.approvedAt,       // ✅ Changed from player.approved_at
+    createdAt: player.createdAt,         // ✅ Changed from player.created_at
+    active: player.active,
+  },
+});
     } catch (e) {
       console.error("Signin error:", e);
       res.status(500).json({ message: "Failed to sign in" });
@@ -223,27 +223,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const p: any = await storage.getPlayer(req.session!.playerId!);
       if (!p) return res.status(404).json({ message: "Player not found" });
 
-      res.json({
+ res.json({
   id: p.id,
   email: p.email,
-  fullName: p.full_name,
+  fullName: p.fullName,           // ✅ Changed
   age: p.age,
   country: p.country,
   location: p.location,
   ranking: p.ranking,
   specialization: p.specialization,
   bio: p.bio,
-  fundingGoals: p.funding_goals,
-  videoUrl: p.video_url,
-  photoUrl: p.photo_url,
+  fundingGoals: p.fundingGoals,   // ✅ Changed
+  videoUrl: p.videoUrl,           // ✅ Changed
+  photoUrl: p.photoUrl,           // ✅ Changed
   published: p.published,
   featured: p.featured,
   priority: p.priority,
-  isAdmin: p.is_admin,
-  approvalStatus: p.approval_status,
-  approvedBy: p.approved_by,
-  approvedAt: p.approved_at,
-  createdAt: p.created_at,
+  isAdmin: p.isAdmin,             // ✅ Changed
+  approvalStatus: p.approvalStatus, // ✅ Changed
+  approvedBy: p.approvedBy,       // ✅ Changed
+  approvedAt: p.approvedAt,       // ✅ Changed
+  createdAt: p.createdAt,         // ✅ Changed
   active: p.active,
 });
 
