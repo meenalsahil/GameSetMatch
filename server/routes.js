@@ -281,6 +281,82 @@ export async function registerRoutes(app) {
             res.status(500).json({ message: "Failed to get player" });
         }
     });
+    // -------- ADMIN: Get all players --------
+    app.get("/api/admin/players", isAdmin, async (_req, res) => {
+        try {
+            const players = await storage.getAllPlayers();
+            res.json(players);
+        }
+        catch (e) {
+            console.error("Admin get players error:", e);
+            res.status(500).json({ message: "Failed to get players" });
+        }
+    });
+    // -------- ADMIN: Approve player --------
+    app.post("/api/admin/players/:id/approve", isAdmin, async (req, res) => {
+        try {
+            const adminId = req.session.playerId;
+            const player = await storage.approvePlayer(req.params.id, adminId);
+            if (!player)
+                return res.status(404).json({ message: "Player not found" });
+            res.json(player);
+        }
+        catch (e) {
+            console.error("Approve player error:", e);
+            res.status(500).json({ message: "Failed to approve player" });
+        }
+    });
+    // -------- ADMIN: Reject player --------
+    app.post("/api/admin/players/:id/reject", isAdmin, async (req, res) => {
+        try {
+            const adminId = req.session.playerId;
+            const player = await storage.rejectPlayer(req.params.id, adminId);
+            if (!player)
+                return res.status(404).json({ message: "Player not found" });
+            res.json(player);
+        }
+        catch (e) {
+            console.error("Reject player error:", e);
+            res.status(500).json({ message: "Failed to reject player" });
+        }
+    });
+    // -------- ADMIN: Deactivate player --------
+    app.post("/api/admin/players/:id/deactivate", isAdmin, async (req, res) => {
+        try {
+            const player = await storage.deactivatePlayer(req.params.id);
+            if (!player)
+                return res.status(404).json({ message: "Player not found" });
+            res.json(player);
+        }
+        catch (e) {
+            console.error("Deactivate player error:", e);
+            res.status(500).json({ message: "Failed to deactivate player" });
+        }
+    });
+    // -------- ADMIN: Activate player --------
+    app.post("/api/admin/players/:id/activate", isAdmin, async (req, res) => {
+        try {
+            const player = await storage.activatePlayer(req.params.id);
+            if (!player)
+                return res.status(404).json({ message: "Player not found" });
+            res.json(player);
+        }
+        catch (e) {
+            console.error("Activate player error:", e);
+            res.status(500).json({ message: "Failed to activate player" });
+        }
+    });
+    // -------- ADMIN: Delete player --------
+    app.delete("/api/admin/players/:id", isAdmin, async (req, res) => {
+        try {
+            await storage.deletePlayer(req.params.id);
+            res.json({ message: "Player deleted" });
+        }
+        catch (e) {
+            console.error("Delete player error:", e);
+            res.status(500).json({ message: "Failed to delete player" });
+        }
+    });
     const httpServer = createServer(app);
     return httpServer;
 }
