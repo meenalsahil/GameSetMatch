@@ -231,14 +231,14 @@ export async function registerRoutes(app) {
                 .filter((p) => p.active !== false)
                 .map((p) => ({
                 id: p.id,
-                fullName: p.full_name, // ✅ CORRECT
+                fullName: p.fullName, // ✅ CHANGE BACK
                 location: p.location,
                 ranking: p.ranking,
                 specialization: p.specialization,
                 bio: p.bio,
-                fundingGoals: p.funding_goals, // ✅ CORRECT
-                videoUrl: p.video_url, // ✅ CORRECT
-                photoUrl: p.photo_url, // ✅ CORRECT
+                fundingGoals: p.fundingGoals, // ✅ CHANGE BACK
+                videoUrl: p.videoUrl, // ✅ CHANGE BACK
+                photoUrl: p.photoUrl, // ✅ CHANGE BACK
                 country: p.country,
                 age: p.age,
             }));
