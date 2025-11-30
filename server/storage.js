@@ -3,13 +3,12 @@ import { pool, db } from "./db.js";
 import { eq } from "drizzle-orm";
 export class DbStorage {
     async getPlayer(id) {
-        const result = await pool.query(`SELECT id, full_name, email, age, country, location, ranking,
-              specialization, bio, funding_goals, video_url, photo_url,
-              published, featured, priority, is_admin,
-              approval_status, approved_by, approved_at
-         FROM players
-         WHERE id = $1`, [id]);
-        return result.rows[0];
+        const result = await db
+            .select()
+            .from(players)
+            .where(eq(players.id, id))
+            .limit(1);
+        return result[0];
     }
     async getPlayerByEmail(email) {
         try {
