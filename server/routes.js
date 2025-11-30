@@ -249,6 +249,38 @@ export async function registerRoutes(app) {
             res.status(500).json({ message: "Failed to get players" });
         }
     });
+    // Get single player by ID
+    app.get("/api/players/:id", async (req, res) => {
+        try {
+            const player = await storage.getPlayer(req.params.id);
+            if (!player) {
+                return res.status(404).json({ message: "Player not found" });
+            }
+            // Transform to camelCase if needed
+            const transformed = {
+                id: player.id,
+                fullName: player.fullName,
+                email: player.email,
+                age: player.age,
+                country: player.country,
+                location: player.location,
+                ranking: player.ranking,
+                specialization: player.specialization,
+                bio: player.bio,
+                fundingGoals: player.fundingGoals,
+                videoUrl: player.videoUrl,
+                atpProfileUrl: player.atpProfileUrl,
+                photoUrl: player.photoUrl,
+                published: player.published,
+                featured: player.featured,
+            };
+            res.json(transformed);
+        }
+        catch (e) {
+            console.error("Get player error:", e);
+            res.status(500).json({ message: "Failed to get player" });
+        }
+    });
     const httpServer = createServer(app);
     return httpServer;
 }
