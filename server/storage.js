@@ -12,16 +12,17 @@ export class DbStorage {
     }
     async getPlayerByEmail(email) {
         try {
-            const result = await pool.query("SELECT * FROM players WHERE email = $1", [email]);
-            console.log("storage.getPlayerByEmail - Result:", result);
-            if (result && result.rows.length > 0) {
-                console.log("storage.getPlayerByEmail - Player data:", result.rows[0]);
-                return result.rows[0];
+            const result = await db
+                .select()
+                .from(players)
+                .where(eq(players.email, email))
+                .limit(1);
+            if (result && result.length > 0) {
+                console.log("storage.getPlayerByEmail - Player found");
+                return result[0];
             }
-            else {
-                console.log("storage.getPlayerByEmail - Player not found");
-                return undefined;
-            }
+            console.log("storage.getPlayerByEmail - Player not found");
+            return undefined;
         }
         catch (error) {
             console.error("storage.getPlayerByEmail - Error:", error);

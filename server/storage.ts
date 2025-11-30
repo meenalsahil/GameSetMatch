@@ -34,7 +34,7 @@ export interface IStorage {
 }
 
 export class DbStorage implements IStorage {
-  async getPlayer(id: string): Promise<Player | undefined> {
+ async getPlayer(id: string): Promise<Player | undefined> {
   const result = await db
     .select()
     .from(players)
@@ -42,25 +42,26 @@ export class DbStorage implements IStorage {
     .limit(1);
   return result[0];
 }
-  async getPlayerByEmail(email: string): Promise<Player | undefined> {
-    try {
-      const result = await pool.query(
-        "SELECT * FROM players WHERE email = $1",
-        [email],
-      );
-      console.log("storage.getPlayerByEmail - Result:", result);
-      if (result && result.rows.length > 0) {
-        console.log("storage.getPlayerByEmail - Player data:", result.rows[0]);
-        return result.rows[0];
-      } else {
-        console.log("storage.getPlayerByEmail - Player not found");
-        return undefined;
-      }
-    } catch (error) {
-      console.error("storage.getPlayerByEmail - Error:", error);
-      return undefined;
+ async getPlayerByEmail(email: string): Promise<Player | undefined> {
+  try {
+    const result = await db
+      .select()
+      .from(players)
+      .where(eq(players.email, email))
+      .limit(1);
+    
+    if (result && result.length > 0) {
+      console.log("storage.getPlayerByEmail - Player found");
+      return result[0];
     }
+    
+    console.log("storage.getPlayerByEmail - Player not found");
+    return undefined;
+  } catch (error) {
+    console.error("storage.getPlayerByEmail - Error:", error);
+    return undefined;
   }
+}
 
   async createPlayer(player: InsertPlayer): Promise<Player> {
     const result = await pool.query(
