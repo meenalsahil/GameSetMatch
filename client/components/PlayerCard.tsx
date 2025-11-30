@@ -73,7 +73,7 @@ export default function PlayerCard({
         </div>
 
         {atpProfileUrl && (
-          
+          <a
             href={atpProfileUrl}
             target="_blank"
             rel="noopener noreferrer"
