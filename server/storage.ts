@@ -5,7 +5,7 @@ import {
   passwordResetTokens,
 } from "../shared/schema.js";
 import { pool, db } from "./db.js";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";  // ✅ Add desc here
 
 export interface IStorage {
   getPlayer(id: string): Promise<Player | undefined>;
@@ -99,11 +99,12 @@ export class DbStorage implements IStorage {
   }
 
   async getAllPlayers(): Promise<Player[]> {
-    const result = await pool.query(
-      "SELECT * FROM players ORDER BY created_at DESC",
-    );
-    return result.rows;
-  }
+  const result = await db
+    .select()
+    .from(players)
+    .orderBy(desc(players.createdAt));  // ✅ Use desc()
+  return result;
+}
 
   async getPublishedPlayers(): Promise<Player[]> {
     const result = await db
@@ -113,12 +114,15 @@ export class DbStorage implements IStorage {
     return result;
   }
 
-  async getFeaturedPlayers(): Promise<Player[]> {
-    const result = await pool.query(
-      "SELECT * FROM players WHERE featured = true ORDER BY created_at DESC LIMIT 4",
-    );
-    return result.rows;
-  }
+ async getFeaturedPlayers(): Promise<Player[]> {
+  const result = await db
+    .select()
+    .from(players)
+    .where(eq(players.featured, true))
+    .orderBy(desc(players.createdAt))  // ✅ Use desc()
+    .limit(4);
+  return result;
+}
 
   async updatePlayer(
     id: string,
