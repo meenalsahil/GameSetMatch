@@ -63,7 +63,7 @@ export default function PlayerProfile() {
               <Trophy className="h-4 w-4" /> Rank #{player.ranking || "N/A"}
             </p>
             {player.atpProfileUrl && (
-              
+              <a
                 href={player.atpProfileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
