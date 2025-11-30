@@ -57,24 +57,24 @@ export default function PlayerProfile() {
         {/* Player Header */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle className="text-3xl font-bold">
-              {player.fullName}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-  <MapPin className="h-4 w-4" /> {player.location} •{" "}
-  <Trophy className="h-4 w-4" /> Rank #{player.ranking || "N/A"}
-</p>
-{player.atpProfileUrl && (
-  
-    href={player.atpProfileUrl}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-blue-600 hover:underline text-sm mt-2 inline-block"
-  >
-    View ATP Profile →
-  </a>
-)}
-          </CardHeader>
+  <CardTitle className="text-3xl font-bold">
+    {player.fullName}
+  </CardTitle>
+  <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+    <MapPin className="h-4 w-4" /> {player.location} •{" "}
+    <Trophy className="h-4 w-4" /> Rank #{player.ranking || "N/A"}
+  </p>
+  {player.atpProfileUrl && (
+    
+      href={player.atpProfileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 hover:underline text-sm mt-2 inline-block"
+    >
+      View ATP Profile →
+    </a>
+  )}
+</CardHeader>
           <CardContent>
             <p className="text-lg text-muted-foreground mb-4">
               Specialization:{" "}
