@@ -393,7 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // -------- PUBLIC: Get single player --------
   app.get("/api/players/:id", async (req: Request, res: Response) => {
     try {
-      const player = await storage.getPlayer(req.params.id);
+      const player = await storage.getPlayer(Number(req.params.id));
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
