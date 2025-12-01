@@ -1,4 +1,5 @@
 // --- FULL, FIXED VERSION ---
+import { emailService } from "./email.js";
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
@@ -144,6 +145,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } as const;
 
         const player = await storage.createPlayer(toCreate as any);
+
+// Send notification to admin
+await emailService.notifyAdminNewPlayer({
+  fullName: data.fullName,
+  email: data.email,
+  location: data.location,
+  ranking: data.ranking || undefined,
+  specialization: data.specialization,
+});
+
+req.session!.playerId = player.id;
 
         req.session!.playerId = player.id;
         // never return password hashes
@@ -329,6 +341,11 @@ app.post("/api/admin/players/:id/approve", isAdmin, async (req: Request, res: Re
     const adminId = req.session!.playerId!;
     const player = await storage.approvePlayer(req.params.id, adminId);
     if (!player) return res.status(404).json({ message: "Player not found" });
+    // Send approval email to player
+    await emailService.notifyPlayerApproved({
+      fullName: player.fullName,
+      email: player.email,
+    });
     res.json(player);
   } catch (e) {
     console.error("Approve player error:", e);
@@ -342,6 +359,11 @@ app.post("/api/admin/players/:id/reject", isAdmin, async (req: Request, res: Res
     const adminId = req.session!.playerId!;
     const player = await storage.rejectPlayer(req.params.id, adminId);
     if (!player) return res.status(404).json({ message: "Player not found" });
+    // Send rejection email to player
+    await emailService.notifyPlayerRejected({
+      fullName: player.fullName,
+      email: player.email,
+    });
     res.json(player);
   } catch (e) {
     console.error("Reject player error:", e);
