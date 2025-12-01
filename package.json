@@ -23,7 +23,9 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-query": "^5.90.5",
     "@vitejs/plugin-react": "^4.2.0",
+    "axios": "^1.13.2",
     "bcrypt": "^5.1.1",
+    "cheerio": "^1.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "connect-flash": "^0.1.1",
@@ -51,6 +53,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/cheerio": "^0.22.35",
     "@types/connect-flash": "^0.0.40",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/express": "^5.0.4",

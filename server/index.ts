@@ -14,6 +14,10 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Serve uploads from the SAME folder Multer writes to (process.cwd()/uploads)
+const uploadsPath = path.join(process.cwd(), "uploads");
+app.use("/uploads", express.static(uploadsPath));
+
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -32,20 +36,22 @@ const sessionStore = new PgSession({
   pool: pool,
   tableName: "session",
 });
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your-secret-key-change-this",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false,  // ✅ Set to false for Railway
+      secure: false, // Railway behind proxy; fine for now (use true + trust proxy later)
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      sameSite: 'lax',  // ✅ Important for Railway
+      sameSite: "lax",
     },
     store: sessionStore,
   })
 );
+
 app.use(flash());
 
 // API routes

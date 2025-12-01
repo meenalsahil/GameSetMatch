@@ -1,113 +1,67 @@
-import { sql } from "drizzle-orm";
 import {
   pgTable,
-  text,
+  serial,
   varchar,
-  boolean,
-  timestamp,
   integer,
+  boolean,
+  text,
+  timestamp,
+  jsonb,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
-
-// =============================
-// 🧱 Database Tables
-// =============================
 
 export const players = pgTable("players", {
-  id: varchar("id")
-    .primaryKey()
-    .default(sql`gen_random_uuid()`),
-  email: text("email").notNull().unique(),
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull(),
   passwordHash: text("password_hash").notNull(),
   fullName: text("full_name").notNull(),
-  age: integer("age").notNull(),
-  country: text("country").notNull(),
-  location: text("location").notNull(),
-  ranking: text("ranking"),
-  specialization: text("specialization").notNull(),
-  bio: text("bio").notNull(),
-  fundingGoals: text("funding_goals").notNull(),
-  videoUrl: text("video_url"),
-atpProfileUrl: text("atp_profile_url"),
-
+  age: integer("age"),
+  country: text("country"),
+  location: text("location"),
+  ranking: integer("ranking"),
+  specialization: text("specialization"),
+  bio: text("bio"),
+  fundingGoals: text("funding_goals"),
   photoUrl: text("photo_url"),
-  published: boolean("published").notNull().default(false),
-  featured: boolean("featured").notNull().default(false),
-  active: boolean("active").notNull().default(true),
-  priority: text("priority").default("normal"),
-  isAdmin: boolean("is_admin").notNull().default(false),
-  approvalStatus: text("approval_status").notNull().default("pending"),
-  approvedBy: varchar("approved_by"),
+  videoUrl: text("video_url"), // REUSED for verification video
+  atpProfileUrl: text("atp_profile_url"),
+
+  published: boolean("published").default(false),
+  featured: boolean("featured").default(false),
+  priority: integer("priority").default(0),
+  isAdmin: boolean("is_admin").default(false),
+  approvalStatus: text("approval_status").default("pending"),
+  approvedBy: integer("approved_by"),
   approvedAt: timestamp("approved_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+
+  // ---------------------
+  // ATP AUTO-VERIFICATION
+  // ---------------------
+  atpVerified: boolean("atp_verified").default(false),
+  atpVerificationScore: integer("atp_verification_score"),
+  atpVerificationData: jsonb("atp_verification_data").$type<any>(),
+
+  atpFirstNameMatch: boolean("atp_first_name_match"),
+  atpLastNameMatch: boolean("atp_last_name_match"),
+  atpCountryMatch: boolean("atp_country_match"),
+  atpAgeMatch: boolean("atp_age_match"),
+
+  atpDiscrepancies: text("atp_discrepancies"),
+  atpLastChecked: timestamp("atp_last_checked"),
+  atpCurrentRanking: integer("atp_current_ranking"),
+
+  // ---------------------
+  // MANUAL VERIFICATION
+  // ---------------------
+  verificationMethod: text("verification_method"), // 'video' or 'tournament_doc'
+
+  videoVerified: boolean("video_verified").default(false),
+
+  tournamentDocUrl: text("tournament_doc_url"),
+  tournamentDocVerified: boolean("tournament_doc_verified").default(false),
+
+  verificationStatus: text("verification_status").default("pending"),
+  verifiedAt: timestamp("verified_at"),
+  verificationNotes: text("verification_notes"),
 });
-
-export const passwordResetTokens = pgTable("password_reset_tokens", {
-  id: varchar("id")
-    .primaryKey()
-    .default(sql`gen_random_uuid()`),
-  playerId: varchar("player_id")
-    .notNull()
-    .references(() => players.id, { onDelete: "cascade" }),
-  token: text("token").notNull().unique(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export const insertPlayerSchema = createInsertSchema(players).omit({
-  id: true,
-  createdAt: true,
-});
-
-// =============================
-// 🧩 Validation Schema
-// =============================
-
-export const signupPlayerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  fullName: z.string().min(1, "Full name is required"),
-  age: z
-    .number()
-    .int()
-    .positive()
-    .optional()
-    .or(z.nan())
-    .transform((v) => (isNaN(v) ? undefined : v)),
-  country: z.string().min(1, "Country is required"),
-  location: z.string().min(1, "Location is required"),
-  ranking: z.string().optional().nullable(),
-  specialization: z.string().min(1, "Specialization is required"),
-  bio: z.string().min(1, "Bio is required"),
-  fundingGoals: z.string().min(1, "Funding goals are required"),
-  videoUrl: z
-    .string()
-    .url("Must be a valid URL")
-    .optional()
-    .or(z.literal(""))
-    .nullable(),
-
-  // ✅ ATP/ITF Profile Required (older syntax)
-  atpProfileUrl: z
-  .union([
-    z.string().url("Must be a valid ATP/ITF profile URL"),
-    z.literal(""),
-    z.undefined(),
-  ])
-  .optional()
-  .nullable()
-  .transform((val) => {
-    if (!val || val === "") return null;
-    return val;
-  }),
-
-
-  // ✅ Photo Optional
-  photoUrl: z.string().optional().nullable(),
-});
-
-
-export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
-export type Player = typeof players.$inferSelect;
-export type SignupPlayer = z.infer<typeof signupPlayerSchema>;
