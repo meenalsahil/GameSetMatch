@@ -1,5 +1,4 @@
-// server/atp-verification.ts
-import axios from 'axios';
+// server/atp-verification.ts - Using native fetch (Node 18+)
 import * as cheerio from 'cheerio';
 
 interface ATPProfileData {
@@ -34,14 +33,19 @@ export async function scrapeATPProfile(atpProfileUrl: string): Promise<ATPProfil
       throw new Error('Invalid ATP profile URL');
     }
 
-    const response = await axios.get(atpProfileUrl, {
+    // Use native fetch (available in Node.js 18+)
+    const response = await fetch(atpProfileUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       },
-      timeout: 10000
     });
 
-    const $ = cheerio.load(response.data);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
 
     // Extract name
     const fullName = $('.player-profile-hero-name').first().text().trim();
