@@ -1,9 +1,17 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'sudhirmalini@gmail.com';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'GameSetMatch <noreply@gamesetmatch.com>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'GameSetMatch <onboarding@resend.dev>';
+
+let resend: Resend | null = null;
+
+if (RESEND_API_KEY) {
+  resend = new Resend(RESEND_API_KEY);
+  console.log('✅ Email service enabled');
+} else {
+  console.log('⚠️  Email service disabled - RESEND_API_KEY not set');
+}
 
 export const emailService = {
   async notifyAdminNewPlayer(player: {
@@ -13,6 +21,11 @@ export const emailService = {
     ranking?: string;
     specialization: string;
   }) {
+    if (!resend) {
+      console.log('📧 [SKIPPED] Admin notification for:', player.fullName);
+      return;
+    }
+
     try {
       await resend.emails.send({
         from: FROM_EMAIL,
@@ -40,9 +53,9 @@ export const emailService = {
           </div>
         `,
       });
-      console.log('Admin notification sent for:', player.fullName);
+      console.log('✅ Admin notification sent for:', player.fullName);
     } catch (error) {
-      console.error('Failed to send admin notification:', error);
+      console.error('❌ Failed to send admin notification:', error);
     }
   },
 
@@ -50,6 +63,11 @@ export const emailService = {
     fullName: string;
     email: string;
   }) {
+    if (!resend) {
+      console.log('📧 [SKIPPED] Approval email for:', player.email);
+      return;
+    }
+
     try {
       await resend.emails.send({
         from: FROM_EMAIL,
@@ -81,9 +99,9 @@ export const emailService = {
           </div>
         `,
       });
-      console.log('Approval email sent to:', player.email);
+      console.log('✅ Approval email sent to:', player.email);
     } catch (error) {
-      console.error('Failed to send approval email:', error);
+      console.error('❌ Failed to send approval email:', error);
     }
   },
 
@@ -91,6 +109,11 @@ export const emailService = {
     fullName: string;
     email: string;
   }) {
+    if (!resend) {
+      console.log('📧 [SKIPPED] Rejection email for:', player.email);
+      return;
+    }
+
     try {
       await resend.emails.send({
         from: FROM_EMAIL,
@@ -123,9 +146,9 @@ export const emailService = {
           </div>
         `,
       });
-      console.log('Rejection email sent to:', player.email);
+      console.log('✅ Rejection email sent to:', player.email);
     } catch (error) {
-      console.error('Failed to send rejection email:', error);
+      console.error('❌ Failed to send rejection email:', error);
     }
   },
 };
