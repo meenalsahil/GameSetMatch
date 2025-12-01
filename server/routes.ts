@@ -1,4 +1,4 @@
-// server/routes.ts - Complete file with ATP verification
+// server/routes.ts - FIXED VERSION
 import { emailService } from "./email.js";
 import { Express, Request, Response, NextFunction } from "express";
 import { createServer, Server } from "http";
@@ -6,16 +6,16 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import bcrypt from "bcrypt";
-import { storage, db } from "./storage.js";
-import { signupPlayerSchema } from "../shared/schema.js";
-import { players } from "../shared/schema.js";
+import { storage } from "./storage.js";
+import { db } from "./db.js";
+import { players, signupPlayerSchema } from "../shared/schema.js";
 import { eq } from "drizzle-orm";
 import { verifyPlayerAgainstATP } from "./atp-verification.js";
 
 // -------------------- Session helpers --------------------
 declare module "express-session" {
   interface SessionData {
-    playerId?: number;
+    playerId?: number;  
   }
 }
 
