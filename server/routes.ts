@@ -15,7 +15,7 @@ import { verifyPlayerAgainstATP } from "./atp-verification.js";
 // -------------------- Session helpers --------------------
 declare module "express-session" {
   interface SessionData {
-    playerId?: number;  
+    playerId?: number;
   }
 }
 
@@ -213,20 +213,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Email admin with ATP results
       const atpStatusHtml = atpVerificationResult ? `
-        <h3>ATP Verification Results</h3>
-        <p><strong>Status:</strong> ${atpVerified ? '✅ AUTO-VERIFIED' : '⚠️ NEEDS REVIEW'}</p>
-        <p><strong>Score:</strong> ${atpScore}/100</p>
-        <ul>
-          <li>First Name: ${atpVerificationResult.matches.firstName ? '✅' : '❌'}</li>
-          <li>Last Name: ${atpVerificationResult.matches.lastName ? '✅' : '❌'}</li>
-          <li>Country: ${atpVerificationResult.matches.country ? '✅' : '❌'}</li>
-          <li>Age: ${atpVerificationResult.matches.age ? '✅' : '❌'}</li>
-        </ul>
-        ${atpVerificationResult.discrepancies.length > 0 ? `
-          <p><strong>Issues:</strong></p>
-          <ul>${atpVerificationResult.discrepancies.map(d => `<li>${d}</li>`).join('')}</ul>
-        ` : ''}
-      ` : '<p>No ATP profile provided</p>';
+        <div style="background: white; padding: 20px; margin: 20px 0; border-left: 4px solid ${atpVerified ? '#10b981' : '#f59e0b'};">
+          <h3>ATP Verification Results</h3>
+          <p><strong>Status:</strong> ${atpVerified ? '✅ AUTO-VERIFIED' : '⚠️ NEEDS REVIEW'}</p>
+          <p><strong>Score:</strong> ${atpScore}/100</p>
+          <ul>
+            <li>First Name: ${atpVerificationResult.matches.firstName ? '✅' : '❌'}</li>
+            <li>Last Name: ${atpVerificationResult.matches.lastName ? '✅' : '❌'}</li>
+            <li>Country: ${atpVerificationResult.matches.country ? '✅' : '❌'}</li>
+            <li>Age: ${atpVerificationResult.matches.age ? '✅' : '❌'}</li>
+          </ul>
+          ${atpVerificationResult.discrepancies.length > 0 ? `
+            <p><strong>Issues:</strong></p>
+            <ul>${atpVerificationResult.discrepancies.map((d: string) => `<li>${d}</li>`).join('')}</ul>
+          ` : ''}
+        </div>
+      ` : '';
 
       await emailService.notifyAdminNewPlayer({
         fullName: data.fullName,
