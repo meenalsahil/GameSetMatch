@@ -20,6 +20,7 @@ export const emailService = {
     location: string;
     ranking?: string;
     specialization: string;
+    atpStatusHtml?: string; // ← ALREADY CORRECT
   }) {
     if (!resend) {
       console.log('📧 [SKIPPED] Admin notification for:', player.fullName);
@@ -46,6 +47,9 @@ export const emailService = {
                 <p><strong>Ranking:</strong> #${player.ranking || 'Not specified'}</p>
                 <p><strong>Specialization:</strong> ${player.specialization}</p>
               </div>
+              
+              ${player.atpStatusHtml || ''}
+              
               <p style="text-align: center;">
                 <a href="${process.env.APP_URL || 'https://gamesetmatch-production.up.railway.app'}/admin" style="background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">Review Application</a>
               </p>
