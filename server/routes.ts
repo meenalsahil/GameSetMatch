@@ -1,31 +1,32 @@
-// --- FULL, FIXED VERSION WITH VERIFICATION UPLOAD ---
+// --- GameSetMatch routes with verification upload ---
 
 import { emailService } from "./email.js";
-import type { Express, Request, Response, NextFunction } from "express";
-import { createServer, type Server } from "http";
+import { Express, Request, Response, NextFunction } from "express";
+import { createServer, Server } from "http";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import bcrypt from "bcrypt";
-import { storage } from "./storage.js";
+import { storage, db } from "./storage.js";
 import { signupPlayerSchema } from "../shared/schema.js";
 import { players } from "../shared/schema.js";
 import { eq } from "drizzle-orm";
-import { db } from "./storage.js";
 
-// --- Session type augmentation ---
+// -------------------- Session helpers --------------------
+
 declare module "express-session" {
   interface SessionData {
-    playerId?: string;
-    user?: any;
+    playerId?: number;
   }
 }
 
-// -------------------- Helpers / setup --------------------
+// -------------------- Upload setup --------------------
 
-// Main uploads dir (used for profile photos)
+// Base uploads directory (for both photos and verification files)
 const uploadsDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Profile photo storage (images only)
 const photoStorage = multer.diskStorage({
@@ -40,7 +41,7 @@ const photoStorage = multer.diskStorage({
 
 const uploadPhoto = multer({
   storage: photoStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (_req, file, cb) => {
     const ok = /jpeg|jpg|png|gif/i.test(file.mimetype);
     if (ok) cb(null, true);
@@ -48,7 +49,7 @@ const uploadPhoto = multer({
   },
 });
 
-// --- Verification uploads (video or document) ---
+// Verification uploads (video / document)
 const verificationDir = path.join(uploadsDir, "verification");
 if (!fs.existsSync(verificationDir)) {
   fs.mkdirSync(verificationDir, { recursive: true });
@@ -84,14 +85,15 @@ const uploadVerification = multer({
   },
 });
 
-// --- Auth helpers ---
+// -------------------- Auth middlewares --------------------
+
 function isAuthenticated(req: Request, res: Response, next: NextFunction) {
-  if (req.session?.playerId) return next();
+  if (req.session && req.session.playerId) return next();
   return res.status(401).json({ message: "Unauthorized" });
 }
 
 async function isAdmin(req: Request, res: Response, next: NextFunction) {
-  if (!req.session?.playerId) {
+  if (!req.session || !req.session.playerId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
   const user: any = await storage.getPlayer(req.session.playerId);
@@ -106,6 +108,7 @@ async function isAdmin(req: Request, res: Response, next: NextFunction) {
 }
 
 // -------------------- Routes --------------------
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // -------- AUTH: Signup --------
   app.post(
@@ -113,26 +116,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     uploadPhoto.single("photo"),
     async (req: Request, res: Response) => {
       try {
-        // Normalize raw form values
-        const raw = req.body ?? {};
+        const raw = req.body || {};
         const normalized = {
-          email: String(raw.email ?? "").trim().toLowerCase(),
-          password: String(raw.password ?? ""),
-          fullName: String(raw.fullName ?? "").trim(),
+          email: String(raw.email || "").trim().toLowerCase(),
+          password: String(raw.password || ""),
+          fullName: String(raw.fullName || "").trim(),
           age:
             raw.age === "" || raw.age === undefined
               ? undefined
               : Number.parseInt(String(raw.age), 10),
-          country: String(raw.country ?? "").trim(),
-          location: String(raw.location ?? "").trim(),
+          country: String(raw.country || "").trim(),
+          location: String(raw.location || "").trim(),
           ranking:
             raw.ranking === undefined || raw.ranking === ""
               ? null
               : String(raw.ranking),
-          specialization: String(raw.specialization ?? "").trim(),
-          bio: String(raw.bio ?? "").trim(),
-          fundingGoals: String(raw.fundingGoals ?? "").trim(),
-          videoUrl: String(raw.videoUrl ?? "").trim(),
+          specialization: String(raw.specialization || "").trim(),
+          bio: String(raw.bio || "").trim(),
+          fundingGoals: String(raw.fundingGoals || "").trim(),
+          videoUrl: String(raw.videoUrl || "").trim(),
           atpProfileUrl:
             raw.atpProfileUrl === undefined || raw.atpProfileUrl === ""
               ? undefined
@@ -141,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const parsed = signupPlayerSchema.safeParse(normalized);
         if (!parsed.success) {
-          console.error("❌ Signup validation failed:", parsed.error.issues);
+          console.error("Signup validation failed:", parsed.error.issues);
           return res.status(400).json({
             message: "Invalid input",
             errors: parsed.error.issues.map((i) => ({
@@ -153,19 +155,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const data = parsed.data;
 
-        // Email already taken?
         const existing = await storage.getPlayerByEmail(data.email);
         if (existing) {
           return res.status(400).json({ message: "Email already registered" });
         }
 
-        // Hash password
         const passwordHash = await bcrypt.hash(data.password, 10);
 
-        // Handle optional file upload
         const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-        // Build payload for storage.createPlayer
         const toCreate = {
           email: data.email,
           passwordHash,
@@ -188,7 +186,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const player = await storage.createPlayer(toCreate as any);
 
-        // Send notification to admin
         await emailService.notifyAdminNewPlayer({
           fullName: data.fullName,
           email: data.email,
@@ -200,7 +197,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session!.playerId = player.id;
 
         res.json({
-          player: { ...player, password_hash: undefined, passwordHash: undefined },
+          player: {
+            ...player,
+            password_hash: undefined,
+            passwordHash: undefined,
+          },
         });
       } catch (e) {
         console.error("Signup error:", e);
@@ -212,7 +213,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // -------- AUTH: Signin --------
   app.post("/api/auth/signin", async (req: Request, res: Response) => {
     try {
-      const { email, password } = req.body ?? {};
+      const body = req.body || {};
+      const email = body.email;
+      const password = body.password;
+
       if (!email || !password) {
         return res
           .status(400)
@@ -222,12 +226,350 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const player: any = await storage.getPlayerByEmail(
         String(email).toLowerCase()
       );
-      if (!player)
+      if (!player) {
         return res.status(401).json({ message: "Invalid credentials" });
+      }
 
       const hash = player.password_hash || player.passwordHash;
-      if (!hash)
+      if (!hash) {
         return res.status(401).json({ message: "Invalid credentials" });
+      }
 
       const ok = await bcrypt.compare(String(password), String(hash));
-      if (!ok) return res.status(401).
+      if (!ok) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      req.session!.playerId = player.id;
+      res.json({
+        player: {
+          id: player.id,
+          email: player.email,
+          fullName: player.fullName,
+          age: player.age,
+          country: player.country,
+          location: player.location,
+          ranking: player.ranking,
+          specialization: player.specialization,
+          bio: player.bio,
+          fundingGoals: player.fundingGoals,
+          videoUrl: player.videoUrl,
+          photoUrl: player.photoUrl,
+          published: player.published,
+          featured: player.featured,
+          priority: player.priority,
+          isAdmin: player.isAdmin,
+          approvalStatus: player.approvalStatus,
+          approvedBy: player.approvedBy,
+          approvedAt: player.approvedAt,
+          createdAt: player.createdAt,
+          active: player.active,
+        },
+      });
+    } catch (e) {
+      console.error("Signin error:", e);
+      res.status(500).json({ message: "Failed to sign in" });
+    }
+  });
+
+  // -------- AUTH: Logout --------
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
+    if (!req.session) return res.json({ message: "Logged out" });
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Failed to logout" });
+      }
+      res.clearCookie("connect.sid");
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  // -------- AUTH: Me --------
+  app.get("/api/auth/me", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      res.setHeader(
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, private"
+      );
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+
+      const p: any = await storage.getPlayer(req.session!.playerId!);
+      if (!p) return res.status(404).json({ message: "Player not found" });
+
+      res.json({
+        id: p.id,
+        email: p.email,
+        fullName: p.fullName,
+        age: p.age,
+        country: p.country,
+        location: p.location,
+        ranking: p.ranking,
+        specialization: p.specialization,
+        bio: p.bio,
+        fundingGoals: p.fundingGoals,
+        videoUrl: p.videoUrl,
+        photoUrl: p.photoUrl,
+        published: p.published,
+        featured: p.featured,
+        priority: p.priority,
+        isAdmin: p.isAdmin,
+        approvalStatus: p.approvalStatus,
+        approvedBy: p.approvedBy,
+        approvedAt: p.approvedAt,
+        createdAt: p.createdAt,
+        active: p.active,
+      });
+    } catch (e) {
+      console.error("/api/auth/me error:", e);
+      res.status(500).json({ message: "Failed to get player" });
+    }
+  });
+
+  // -------- PUBLIC: Browse players --------
+  app.get("/api/players", async (_req: Request, res: Response) => {
+    try {
+      const list: any[] = await storage.getPublishedPlayers();
+      const transformed = list
+        .filter((p: any) => p.active !== false)
+        .map((p: any) => ({
+          id: p.id,
+          fullName: p.fullName,
+          location: p.location,
+          ranking: p.ranking,
+          specialization: p.specialization,
+          bio: p.bio,
+          fundingGoals: p.fundingGoals,
+          videoUrl: p.videoUrl,
+          photoUrl: p.photoUrl,
+          country: p.country,
+          age: p.age,
+        }));
+
+      res.json(transformed);
+    } catch (e) {
+      console.error("Get players error:", e);
+      res.status(500).json({ message: "Failed to get players" });
+    }
+  });
+
+  // -------- PUBLIC: Get single player by ID --------
+  app.get("/api/players/:id", async (req: Request, res: Response) => {
+    try {
+      const player = await storage.getPlayer(req.params.id);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      const transformed = {
+        id: player.id,
+        fullName: player.fullName,
+        email: player.email,
+        age: player.age,
+        country: player.country,
+        location: player.location,
+        ranking: player.ranking,
+        specialization: player.specialization,
+        bio: player.bio,
+        fundingGoals: player.fundingGoals,
+        videoUrl: player.videoUrl,
+        atpProfileUrl: player.atpProfileUrl,
+        photoUrl: player.photoUrl,
+        published: player.published,
+        featured: player.featured,
+      };
+
+      res.json(transformed);
+    } catch (e) {
+      console.error("Get player error:", e);
+      res.status(500).json({ message: "Failed to get player" });
+    }
+  });
+
+  // -------- PLAYER: Upload verification (video or document) --------
+  app.post(
+    "/api/verification/upload",
+    isAuthenticated,
+    uploadVerification.single("file"),
+    async (req: any, res: Response) => {
+      try {
+        const playerId = req.session.playerId;
+        const method = req.body.method as "video" | "tournament_doc";
+
+        if (!req.file) {
+          return res.status(400).json({ error: "File is required" });
+        }
+        if (method !== "video" && method !== "tournament_doc") {
+          return res.status(400).json({ error: "Invalid method" });
+        }
+
+        const relativePath = `/uploads/verification/${req.file.filename}`;
+
+        if (method === "video") {
+          await db
+            .update(players)
+            .set({
+              verificationMethod: "video",
+              videoUrl: relativePath,
+              videoVerified: false,
+              verificationStatus: "pending",
+            })
+            .where(eq(players.id, Number(playerId)));
+        } else {
+          await db
+            .update(players)
+            .set({
+              verificationMethod: "tournament_doc",
+              tournamentDocUrl: relativePath,
+              tournamentDocVerified: false,
+              verificationStatus: "pending",
+            })
+            .where(eq(players.id, Number(playerId)));
+        }
+
+        return res.json({
+          ok: true,
+          method,
+          fileUrl: relativePath,
+        });
+      } catch (err) {
+        console.error("verification upload error", err);
+        return res.status(500).json({ error: "Upload failed" });
+      }
+    }
+  );
+
+  // -------- ADMIN: Get all players --------
+  app.get("/api/admin/players", isAdmin, async (_req: Request, res: Response) => {
+    try {
+      const playersList = await storage.getAllPlayers();
+      res.json(playersList);
+    } catch (e) {
+      console.error("Admin get players error:", e);
+      res.status(500).json({ message: "Failed to get players" });
+    }
+  });
+
+  // -------- ADMIN: Approve player --------
+  app.post(
+    "/api/admin/players/:id/approve",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const adminId = req.session!.playerId!;
+        const player = await storage.approvePlayer(req.params.id, adminId);
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+
+        await db
+          .update(players)
+          .set({
+            verificationStatus: "approved",
+            verifiedAt: new Date(),
+          })
+          .where(eq(players.id, Number(req.params.id)));
+
+        await emailService.notifyPlayerApproved({
+          fullName: player.fullName,
+          email: player.email,
+        });
+
+        res.json(player);
+      } catch (e) {
+        console.error("Approve player error:", e);
+        res.status(500).json({ message: "Failed to approve player" });
+      }
+    }
+  );
+
+  // -------- ADMIN: Reject player --------
+  app.post(
+    "/api/admin/players/:id/reject",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const adminId = req.session!.playerId!;
+        const player = await storage.rejectPlayer(req.params.id, adminId);
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+
+        const reason =
+          (req.body && (req.body.reason as string)) || "Not approved";
+
+        await db
+          .update(players)
+          .set({
+            verificationStatus: "rejected",
+            verificationNotes: reason,
+          })
+          .where(eq(players.id, Number(req.params.id)));
+
+        await emailService.notifyPlayerRejected({
+          fullName: player.fullName,
+          email: player.email,
+        });
+
+        res.json(player);
+      } catch (e) {
+        console.error("Reject player error:", e);
+        res.status(500).json({ message: "Failed to reject player" });
+      }
+    }
+  );
+
+  // -------- ADMIN: Deactivate player --------
+  app.post(
+    "/api/admin/players/:id/deactivate",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const player = await storage.deactivatePlayer(req.params.id);
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+        res.json(player);
+      } catch (e) {
+        console.error("Deactivate player error:", e);
+        res.status(500).json({ message: "Failed to deactivate player" });
+      }
+    }
+  );
+
+  // -------- ADMIN: Activate player --------
+  app.post(
+    "/api/admin/players/:id/activate",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const player = await storage.activatePlayer(req.params.id);
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+        res.json(player);
+      } catch (e) {
+        console.error("Activate player error:", e);
+        res.status(500).json({ message: "Failed to activate player" });
+      }
+    }
+  );
+
+  // -------- ADMIN: Delete player --------
+  app.delete(
+    "/api/admin/players/:id",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        await storage.deletePlayer(req.params.id);
+        res.json({ message: "Player deleted" });
+      } catch (e) {
+        console.error("Delete player error:", e);
+        res.status(500).json({ message: "Failed to delete player" });
+      }
+    }
+  );
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
