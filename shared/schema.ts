@@ -66,11 +66,11 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// ✅ ADD THESE TYPE EXPORTS
+// Type exports
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = typeof players.$inferInsert;
 
-// ✅ ADD SIGNUP SCHEMA
+// Signup schema - photo is handled by multer on backend, not validated here
 export const signupPlayerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
@@ -84,7 +84,7 @@ export const signupPlayerSchema = z.object({
   fundingGoals: z.string().min(10, "Please describe your funding goals"),
   videoUrl: z.string().url().optional().or(z.literal("")),
   atpProfileUrl: z.string().url().optional().or(z.literal("")),
-  photo: z.instanceof(File).optional(),
+  photo: z.any().optional(), // Changed from z.instanceof(File) - handled by multer
 });
 
 export type SignupPlayer = z.infer<typeof signupPlayerSchema>;
