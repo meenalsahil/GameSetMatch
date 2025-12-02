@@ -70,7 +70,7 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = typeof players.$inferInsert;
 
-// Signup schema - photo is handled by multer on backend, not validated here
+// Signup schema - VIDEO and ATP PROFILE are now REQUIRED
 export const signupPlayerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
@@ -82,9 +82,12 @@ export const signupPlayerSchema = z.object({
   specialization: z.string().min(2, "Specialization is required"),
   bio: z.string().min(10, "Bio must be at least 10 characters"),
   fundingGoals: z.string().min(10, "Please describe your funding goals"),
-  videoUrl: z.string().url().optional().or(z.literal("")),
-  atpProfileUrl: z.string().url().optional().or(z.literal("")),
-  photo: z.any().optional(), // Changed from z.instanceof(File) - handled by multer
+  
+  // NOW REQUIRED FOR VERIFICATION
+  videoUrl: z.string().url("Please provide a valid video URL (YouTube, Vimeo, etc.)").min(1, "Video is required for identity verification"),
+  atpProfileUrl: z.string().url("Please provide a valid ATP/ITF/WTA profile URL").min(1, "ATP/ITF/WTA Profile is required for verification"),
+  
+  photo: z.any().optional(), // File handled by multer
 });
 
 export type SignupPlayer = z.infer<typeof signupPlayerSchema>;
