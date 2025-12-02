@@ -6,9 +6,11 @@ import { useState, useEffect } from "react";
 
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
   const faqs = [
     {
       question: "Who can join as a player?",
@@ -29,6 +31,11 @@ export default function FAQ() {
       question: "Do sponsors need to sign up?",
       answer:
         "No, sponsors can browse player profiles without creating an account. However, signing up allows sponsors to manage multiple sponsorships and receive updates from players.",
+    },
+    {
+      question: "How do you make sure player profiles are genuine?",
+      answer:
+        "Every player must provide a verification video link and an official ATP/ITF/WTA (or equivalent) profile URL when they apply. Profiles are reviewed before being published, and only approved players appear to sponsors. We also monitor reports and can remove profiles that don’t meet our standards, but we still encourage sponsors to use their own judgment when deciding who to support.",
     },
     {
       question: "Is my payment information secure?",
@@ -57,7 +64,7 @@ export default function FAQ() {
               Frequently Asked Questions
             </h1>
             <p className="text-lg text-muted-foreground">
-              Find answers to common questions about GameSetMatch
+              Find answers to common questions about GameSetMatch.
             </p>
           </div>
         </div>
