@@ -44,7 +44,7 @@ export default function PlayerSignup() {
   });
 
   const onSubmit = async (values: SignupPlayer) => {
-    // 🔴 EXTRA HARD REQUIREMENT CHECK ON FRONTEND
+    // 🔴 Extra hard requirement check on frontend
     // Normalize to strings so .trim() never crashes
     const video = (values.videoUrl ?? "").trim();
     const atp = (values.atpProfileUrl ?? "").trim();
@@ -54,7 +54,7 @@ export default function PlayerSignup() {
     if (!video) {
       form.setError("videoUrl", {
         type: "manual",
-        message: "Video link is required",
+        message: "Verification video link is required",
       });
       hasClientError = true;
     }
@@ -71,7 +71,7 @@ export default function PlayerSignup() {
       toast({
         title: "Please fill out all required fields",
         description:
-          "Video link and ATP/ITF/WTA profile URL are required.",
+          "Verification video and ATP/ITF/WTA profile links are required.",
         variant: "destructive",
       });
       return; // ⛔️ stop here, don't call the API
@@ -191,7 +191,8 @@ export default function PlayerSignup() {
               Player Application
             </h1>
             <p className="text-lg text-muted-foreground">
-              Join GameSetMatch and connect with sponsors for your tennis journey
+              Join GameSetMatch and connect with sponsors for your tennis
+              journey
             </p>
           </div>
         </div>
@@ -424,27 +425,31 @@ export default function PlayerSignup() {
                         </FormItem>
                       )}
                     />
+                    {/* Verification Video field */}
                     <FormField
                       control={form.control}
                       name="videoUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Video Link</FormLabel>
+                          <FormLabel>Verification Video</FormLabel>
                           <FormControl>
                             <Input
                               type="url"
-                              placeholder="Video of you playing tennis or your quick introduction"
+                              placeholder="Paste a link to your video (YouTube, Google Drive, Dropbox, etc.)"
                               data-testid="input-video-url"
                               {...field}
                             />
                           </FormControl>
                           <FormDescription>
-                            YouTube or Vimeo link for identity verification
+                            Record a short video on your phone, upload it to any
+                            service (YouTube unlisted, Google Drive, Dropbox,
+                            iCloud, etc.), then paste the share link here.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                    {/* ATP / ITF / WTA profile field */}
                     <FormField
                       control={form.control}
                       name="atpProfileUrl"
@@ -454,13 +459,13 @@ export default function PlayerSignup() {
                           <FormControl>
                             <Input
                               type="url"
-                              placeholder="https://www.atptour.com/en/players/..."
+                              placeholder="Paste your official ATP, ITF, or WTA profile link"
                               {...field}
                             />
                           </FormControl>
                           <FormDescription>
                             Link to your official ATP Tour, ITF Tennis, or WTA
-                            profile
+                            player profile.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -496,7 +501,8 @@ export default function PlayerSignup() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Upload a professional photo (JPG, PNG, GIF - max 5MB)
+                            Upload a professional photo (JPG, PNG, GIF – max
+                            5MB)
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
