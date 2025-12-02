@@ -22,6 +22,8 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function PlayerSignup() {
   const [step, setStep] = useState(1);
+  const { toast } = useToast();
+
   const form = useForm<SignupPlayer>({
     resolver: zodResolver(signupPlayerSchema),
     mode: "onTouched",
@@ -40,7 +42,6 @@ export default function PlayerSignup() {
       atpProfileUrl: "",
     },
   });
-  const { toast } = useToast();
 
   const onSubmit = async (values: SignupPlayer) => {
     try {
@@ -68,16 +69,34 @@ export default function PlayerSignup() {
         body: formData,
       });
 
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Signup failed");
+        // Map backend field errors into form
+        if (data && Array.isArray(data.errors)) {
+          data.errors.forEach((err: any) => {
+            const fieldName = err.path as keyof SignupPlayer;
+            form.setError(fieldName, {
+              type: "server",
+              message: err.message,
+            });
+          });
+        }
+
+        throw new Error(data?.message || "Signup failed");
       }
 
       window.location.href = "/thank-you";
     } catch (error: any) {
       toast({
         title: "Signup Failed",
-        description: error.message || "Please check your information and try again",
+        description:
+          error.message || "Please check your information and try again",
         variant: "destructive",
       });
     }
@@ -93,7 +112,7 @@ export default function PlayerSignup() {
     }
 
     const isValid = await form.trigger(fieldsToValidate);
-    
+
     if (!isValid) {
       toast({
         title: "Please fill out all required fields",
@@ -102,7 +121,7 @@ export default function PlayerSignup() {
       });
       return;
     }
-    
+
     setStep(step + 1);
   };
 
@@ -127,7 +146,8 @@ export default function PlayerSignup() {
               Player Application
             </h1>
             <p className="text-lg text-muted-foreground">
-              Join GameSetMatch and connect with sponsors for your tennis journey
+              Join GameSetMatch and connect with sponsors for your tennis
+              journey
             </p>
           </div>
         </div>
@@ -224,7 +244,9 @@ export default function PlayerSignup() {
                               {...field}
                               onChange={(e) =>
                                 field.onChange(
-                                  parseInt(e.target.value) || undefined,
+                                  e.target.value === ""
+                                    ? ""
+                                    : parseInt(e.target.value, 10),
                                 )
                               }
                             />
@@ -358,7 +380,6 @@ export default function PlayerSignup() {
                         </FormItem>
                       )}
                     />
-                    {/* FIXED: Changed type="url" to type="text" - browser's url validation was causing "Invalid input" */}
                     <FormField
                       control={form.control}
                       name="videoUrl"
@@ -367,7 +388,7 @@ export default function PlayerSignup() {
                           <FormLabel>Video Link</FormLabel>
                           <FormControl>
                             <Input
-                              type="text"
+                              type="url"
                               placeholder="Video of you playing tennis or your quick introduction"
                               data-testid="input-video-url"
                               {...field}
@@ -380,7 +401,6 @@ export default function PlayerSignup() {
                         </FormItem>
                       )}
                     />
-                    {/* FIXED: Changed type="url" to type="text" - browser's url validation was causing "Invalid input" */}
                     <FormField
                       control={form.control}
                       name="atpProfileUrl"
@@ -389,19 +409,19 @@ export default function PlayerSignup() {
                           <FormLabel>ATP/ITF/WTA Profile URL</FormLabel>
                           <FormControl>
                             <Input
-                              type="text"
+                              type="url"
                               placeholder="https://www.atptour.com/en/players/..."
                               {...field}
                             />
                           </FormControl>
                           <FormDescription>
-                            Link to your official ATP Tour, ITF Tennis, or WTA profile
+                            Link to your official ATP Tour, ITF Tennis, or WTA
+                            profile
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="photo"
@@ -418,7 +438,8 @@ export default function PlayerSignup() {
                                   if (file.size > 5 * 1024 * 1024) {
                                     toast({
                                       title: "File too large",
-                                      description: "Profile photo must be less than 5MB",
+                                      description:
+                                        "Profile photo must be less than 5MB",
                                       variant: "destructive",
                                     });
                                     e.target.value = "";
@@ -431,7 +452,8 @@ export default function PlayerSignup() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Upload a professional photo (JPG, PNG, GIF - max 5MB)
+                            Upload a professional photo (JPG, PNG, GIF - max
+                            5MB)
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

@@ -1,4 +1,4 @@
-// server/routes.ts - FIXED VERSION
+// server/routes.ts
 import { emailService } from "./email.js";
 import { Express, Request, Response, NextFunction } from "express";
 import { createServer, Server } from "http";
@@ -29,7 +29,9 @@ if (!fs.existsSync(uploadsDir)) {
 const photoStorage = multer.diskStorage({
   destination: uploadsDir,
   filename: (_req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(file.originalname)}`;
+    const uniqueName = `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}${path.extname(file.originalname)}`;
     cb(null, uniqueName);
   },
 });
@@ -93,7 +95,9 @@ async function isAdmin(req: Request, res: Response, next: NextFunction) {
   const user: any = await storage.getPlayer(req.session.playerId);
   const isAdminFlag = user?.is_admin || user?.isAdmin;
   if (!user || !isAdminFlag) {
-    return res.status(403).json({ message: "Forbidden - Admin access required" });
+    return res
+      .status(403)
+      .json({ message: "Forbidden - Admin access required" });
   }
   (req as any).user = user;
   next();
@@ -101,158 +105,192 @@ async function isAdmin(req: Request, res: Response, next: NextFunction) {
 
 // -------------------- Routes --------------------
 export async function registerRoutes(app: Express): Promise<Server> {
-  
   // -------- AUTH: Signup with ATP verification --------
-  app.post("/api/auth/signup", uploadPhoto.single("photo"), async (req: Request, res: Response) => {
-    try {
-      const raw = req.body || {};
-      const normalized = {
-        email: String(raw.email || "").trim().toLowerCase(),
-        password: String(raw.password || ""),
-        fullName: String(raw.fullName || "").trim(),
-        age: raw.age === "" || raw.age === undefined ? undefined : Number.parseInt(String(raw.age), 10),
-        country: String(raw.country || "").trim(),
-        location: String(raw.location || "").trim(),
-        ranking: raw.ranking === undefined || raw.ranking === "" ? null : String(raw.ranking),
-        specialization: String(raw.specialization || "").trim(),
-        bio: String(raw.bio || "").trim(),
-        fundingGoals: String(raw.fundingGoals || "").trim(),
-        videoUrl: String(raw.videoUrl || "").trim(),
-        atpProfileUrl: raw.atpProfileUrl === undefined || raw.atpProfileUrl === "" ? undefined : String(raw.atpProfileUrl).trim(),
-      };
+  app.post(
+    "/api/auth/signup",
+    uploadPhoto.single("photo"),
+    async (req: Request, res: Response) => {
+      try {
+        const raw = req.body || {};
+        const normalized = {
+          email: String(raw.email || "").trim().toLowerCase(),
+          password: String(raw.password || ""),
+          fullName: String(raw.fullName || "").trim(),
+          age:
+            raw.age === "" || raw.age === undefined
+              ? undefined
+              : Number.parseInt(String(raw.age), 10),
+          country: String(raw.country || "").trim(),
+          location: String(raw.location || "").trim(),
+          ranking:
+            raw.ranking === undefined || raw.ranking === ""
+              ? null
+              : String(raw.ranking),
+          specialization: String(raw.specialization || "").trim(),
+          bio: String(raw.bio || "").trim(),
+          fundingGoals: String(raw.fundingGoals || "").trim(),
+          videoUrl: String(raw.videoUrl || "").trim(),
+          // 🔴 always a string to match schema
+          atpProfileUrl: String(raw.atpProfileUrl || "").trim(),
+        };
 
-      const parsed = signupPlayerSchema.safeParse(normalized);
-      if (!parsed.success) {
-        console.error("Signup validation failed:", parsed.error.issues);
-        return res.status(400).json({
-          message: "Invalid input",
-          errors: parsed.error.issues.map((i) => ({
-            path: i.path.join("."),
-            message: i.message,
-          })),
-        });
-      }
-
-      const data = parsed.data;
-
-      const existing = await storage.getPlayerByEmail(data.email);
-      if (existing) {
-        return res.status(400).json({ message: "Email already registered" });
-      }
-
-      const passwordHash = await bcrypt.hash(data.password, 10);
-      const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
-
-      // ATP AUTO-VERIFICATION
-      let atpVerificationResult = null;
-      let atpVerified = false;
-      let atpScore = 0;
-
-      if (data.atpProfileUrl) {
-        console.log('🔍 Running ATP verification for:', data.fullName);
-        
-        const nameParts = data.fullName.trim().split(' ');
-        const firstName = nameParts[0];
-        const lastName = nameParts.slice(1).join(' ') || nameParts[0];
-
-        try {
-          atpVerificationResult = await verifyPlayerAgainstATP({
-            firstName,
-            lastName,
-            country: data.country,
-            age: data.age,
-            atpProfileUrl: data.atpProfileUrl
+        const parsed = signupPlayerSchema.safeParse(normalized);
+        if (!parsed.success) {
+          console.error("Signup validation failed:", parsed.error.issues);
+          return res.status(400).json({
+            message: "Invalid input",
+            errors: parsed.error.issues.map((i) => ({
+              path: i.path.join("."), // e.g. "videoUrl"
+              message: i.message, // e.g. "Video link is required"
+            })),
           });
-
-          atpVerified = atpVerificationResult.verified;
-          atpScore = atpVerificationResult.score;
-
-          console.log('✅ ATP Verification Result:', {
-            verified: atpVerified,
-            score: atpScore,
-            discrepancies: atpVerificationResult.discrepancies
-          });
-        } catch (error) {
-          console.error('❌ ATP verification failed:', error);
         }
-      }
 
-      const toCreate = {
-        email: data.email,
-        passwordHash,
-        fullName: data.fullName,
-        age: data.age,
-        country: data.country,
-        location: data.location,
-        ranking: data.ranking ?? null,
-        specialization: data.specialization,
-        bio: data.bio,
-        fundingGoals: data.fundingGoals,
-        videoUrl: data.videoUrl ? data.videoUrl : null,
-        atpProfileUrl: data.atpProfileUrl ?? null,
-        photoUrl,
-        published: false,
-        featured: false,
-        priority: 0,
-        active: true,
-        
-        // ATP Verification fields
-        atpVerified,
-        atpVerificationScore: atpScore,
-        atpVerificationData: atpVerificationResult ? JSON.stringify(atpVerificationResult) : null,
-        atpFirstNameMatch: atpVerificationResult?.matches.firstName || false,
-        atpLastNameMatch: atpVerificationResult?.matches.lastName || false,
-        atpCountryMatch: atpVerificationResult?.matches.country || false,
-        atpAgeMatch: atpVerificationResult?.matches.age || false,
-        atpDiscrepancies: atpVerificationResult?.discrepancies ? JSON.stringify(atpVerificationResult.discrepancies) : null,
-        atpLastChecked: new Date(),
-        atpCurrentRanking: atpVerificationResult?.atpData?.currentRanking || null,
-      } as const;
+        const data = parsed.data;
 
-      const player = await storage.createPlayer(toCreate as any);
+        const existing = await storage.getPlayerByEmail(data.email);
+        if (existing) {
+          return res
+            .status(400)
+            .json({ message: "Email already registered" });
+        }
 
-      // Email admin with ATP results
-      const atpStatusHtml = atpVerificationResult ? `
-        <div style="background: white; padding: 20px; margin: 20px 0; border-left: 4px solid ${atpVerified ? '#10b981' : '#f59e0b'};">
+        const passwordHash = await bcrypt.hash(data.password, 10);
+        const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
+        // ATP AUTO-VERIFICATION
+        let atpVerificationResult: any = null;
+        let atpVerified = false;
+        let atpScore = 0;
+
+        if (data.atpProfileUrl) {
+          console.log("🔍 Running ATP verification for:", data.fullName);
+
+          const nameParts = data.fullName.trim().split(" ");
+          const firstName = nameParts[0];
+          const lastName = nameParts.slice(1).join(" ") || nameParts[0];
+
+          try {
+            atpVerificationResult = await verifyPlayerAgainstATP({
+              firstName,
+              lastName,
+              country: data.country,
+              age: data.age,
+              atpProfileUrl: data.atpProfileUrl,
+            });
+
+            atpVerified = atpVerificationResult.verified;
+            atpScore = atpVerificationResult.score;
+
+            console.log("✅ ATP Verification Result:", {
+              verified: atpVerified,
+              score: atpScore,
+              discrepancies: atpVerificationResult.discrepancies,
+            });
+          } catch (error) {
+            console.error("❌ ATP verification failed:", error);
+          }
+        }
+
+        const toCreate = {
+          email: data.email,
+          passwordHash,
+          fullName: data.fullName,
+          age: data.age,
+          country: data.country,
+          location: data.location,
+          ranking: data.ranking ?? null,
+          specialization: data.specialization,
+          bio: data.bio,
+          fundingGoals: data.fundingGoals,
+          videoUrl: data.videoUrl ? data.videoUrl : null,
+          atpProfileUrl: data.atpProfileUrl ?? null,
+          photoUrl,
+          published: false,
+          featured: false,
+          priority: 0,
+          active: true,
+
+          // ATP Verification fields
+          atpVerified,
+          atpVerificationScore: atpScore,
+          atpVerificationData: atpVerificationResult
+            ? JSON.stringify(atpVerificationResult)
+            : null,
+          atpFirstNameMatch: atpVerificationResult?.matches?.firstName || false,
+          atpLastNameMatch: atpVerificationResult?.matches?.lastName || false,
+          atpCountryMatch: atpVerificationResult?.matches?.country || false,
+          atpAgeMatch: atpVerificationResult?.matches?.age || false,
+          atpDiscrepancies: atpVerificationResult?.discrepancies
+            ? JSON.stringify(atpVerificationResult.discrepancies)
+            : null,
+          atpLastChecked: new Date(),
+          atpCurrentRanking:
+            atpVerificationResult?.atpData?.currentRanking || null,
+        } as const;
+
+        const player = await storage.createPlayer(toCreate as any);
+
+        const atpStatusHtml = atpVerificationResult
+          ? `
+        <div style="background: white; padding: 20px; margin: 20px 0; border-left: 4px solid ${
+          atpVerified ? "#10b981" : "#f59e0b"
+        };">
           <h3>ATP Verification Results</h3>
-          <p><strong>Status:</strong> ${atpVerified ? '✅ AUTO-VERIFIED' : '⚠️ NEEDS REVIEW'}</p>
+          <p><strong>Status:</strong> ${
+            atpVerified ? "✅ AUTO-VERIFIED" : "⚠️ NEEDS REVIEW"
+          }</p>
           <p><strong>Score:</strong> ${atpScore}/100</p>
           <ul>
-            <li>First Name: ${atpVerificationResult.matches.firstName ? '✅' : '❌'}</li>
-            <li>Last Name: ${atpVerificationResult.matches.lastName ? '✅' : '❌'}</li>
-            <li>Country: ${atpVerificationResult.matches.country ? '✅' : '❌'}</li>
-            <li>Age: ${atpVerificationResult.matches.age ? '✅' : '❌'}</li>
+            <li>First Name: ${
+              atpVerificationResult.matches.firstName ? "✅" : "❌"
+            }</li>
+            <li>Last Name: ${
+              atpVerificationResult.matches.lastName ? "✅" : "❌"
+            }</li>
+            <li>Country: ${
+              atpVerificationResult.matches.country ? "✅" : "❌"
+            }</li>
+            <li>Age: ${atpVerificationResult.matches.age ? "✅" : "❌"}</li>
           </ul>
-          ${atpVerificationResult.discrepancies.length > 0 ? `
+          ${
+            atpVerificationResult.discrepancies.length > 0
+              ? `
             <p><strong>Issues:</strong></p>
-            <ul>${atpVerificationResult.discrepancies.map((d: string) => `<li>${d}</li>`).join('')}</ul>
-          ` : ''}
+            <ul>${atpVerificationResult.discrepancies
+              .map((d: string) => `<li>${d}</li>`)
+              .join("")}</ul>
+          `
+              : ""
+          }
         </div>
-      ` : '';
+      `
+          : "";
 
-      await emailService.notifyAdminNewPlayer({
-        fullName: data.fullName,
-        email: data.email,
-        location: data.location,
-        ranking: data.ranking || undefined,
-        specialization: data.specialization,
-        atpStatusHtml
-      });
+        await emailService.notifyAdminNewPlayer({
+          fullName: data.fullName,
+          email: data.email,
+          location: data.location,
+          ranking: data.ranking || undefined,
+          specialization: data.specialization,
+          atpStatusHtml,
+        });
 
-      req.session!.playerId = player.id;
+        req.session!.playerId = player.id;
 
-      res.json({
-        player: {
-          ...player,
-          password_hash: undefined,
-          passwordHash: undefined,
-        },
-      });
-    } catch (e) {
-      console.error("Signup error:", e);
-      res.status(500).json({ message: "Failed to create account" });
+        res.json({
+          player: {
+            ...player,
+            password_hash: undefined,
+            passwordHash: undefined,
+          },
+        });
+      } catch (e) {
+        console.error("Signup error:", e);
+        res.status(500).json({ message: "Failed to create account" });
+      }
     }
-  });
+  );
 
   // -------- AUTH: Signin --------
   app.post("/api/auth/signin", async (req: Request, res: Response) => {
@@ -262,10 +300,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const password = body.password;
 
       if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
+        return res
+          .status(400)
+          .json({ message: "Email and password are required" });
       }
 
-      const player: any = await storage.getPlayerByEmail(String(email).toLowerCase());
+      const player: any = await storage.getPlayerByEmail(
+        String(email).toLowerCase()
+      );
       if (!player) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
@@ -325,43 +367,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // -------- AUTH: Me --------
-  app.get("/api/auth/me", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
-      res.setHeader("Pragma", "no-cache");
-      res.setHeader("Expires", "0");
+  app.get(
+    "/api/auth/me",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        res.setHeader(
+          "Cache-Control",
+          "no-store, no-cache, must-revalidate, private"
+        );
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
 
-      const p: any = await storage.getPlayer(req.session!.playerId!);
-      if (!p) return res.status(404).json({ message: "Player not found" });
+        const p: any = await storage.getPlayer(req.session!.playerId!);
+        if (!p) return res.status(404).json({ message: "Player not found" });
 
-      res.json({
-        id: p.id,
-        email: p.email,
-        fullName: p.fullName,
-        age: p.age,
-        country: p.country,
-        location: p.location,
-        ranking: p.ranking,
-        specialization: p.specialization,
-        bio: p.bio,
-        fundingGoals: p.fundingGoals,
-        videoUrl: p.videoUrl,
-        photoUrl: p.photoUrl,
-        published: p.published,
-        featured: p.featured,
-        priority: p.priority,
-        isAdmin: p.isAdmin,
-        approvalStatus: p.approvalStatus,
-        approvedBy: p.approvedBy,
-        approvedAt: p.approvedAt,
-        createdAt: p.createdAt,
-        active: p.active,
-      });
-    } catch (e) {
-      console.error("/api/auth/me error:", e);
-      res.status(500).json({ message: "Failed to get player" });
+        res.json({
+          id: p.id,
+          email: p.email,
+          fullName: p.fullName,
+          age: p.age,
+          country: p.country,
+          location: p.location,
+          ranking: p.ranking,
+          specialization: p.specialization,
+          bio: p.bio,
+          fundingGoals: p.fundingGoals,
+          videoUrl: p.videoUrl,
+          photoUrl: p.photoUrl,
+          published: p.published,
+          featured: p.featured,
+          priority: p.priority,
+          isAdmin: p.isAdmin,
+          approvalStatus: p.approvalStatus,
+          approvedBy: p.approvedBy,
+          approvedAt: p.approvedAt,
+          createdAt: p.createdAt,
+          active: p.active,
+        });
+      } catch (e) {
+        console.error("/api/auth/me error:", e);
+        res.status(500).json({ message: "Failed to get player" });
+      }
     }
-  });
+  );
 
   // -------- PUBLIC: Browse players --------
   app.get("/api/players", async (_req: Request, res: Response) => {
@@ -424,146 +473,188 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // -------- PLAYER: Upload verification --------
-  app.post("/api/verification/upload", isAuthenticated, uploadVerification.single("file"), async (req: any, res: Response) => {
-    try {
-      const playerId = req.session.playerId;
-      const method = req.body.method as "video" | "tournament_doc";
+  app.post(
+    "/api/verification/upload",
+    isAuthenticated,
+    uploadVerification.single("file"),
+    async (req: any, res: Response) => {
+      try {
+        const playerId = req.session.playerId;
+        const method = req.body.method as "video" | "tournament_doc";
 
-      if (!req.file) {
-        return res.status(400).json({ error: "File is required" });
+        if (!req.file) {
+          return res.status(400).json({ error: "File is required" });
+        }
+        if (method !== "video" && method !== "tournament_doc") {
+          return res.status(400).json({ error: "Invalid method" });
+        }
+
+        const relativePath = `/uploads/verification/${req.file.filename}`;
+
+        if (method === "video") {
+          await db
+            .update(players)
+            .set({
+              verificationMethod: "video",
+              videoUrl: relativePath,
+              videoVerified: false,
+              verificationStatus: "pending",
+            })
+            .where(eq(players.id, Number(playerId)));
+        } else {
+          await db
+            .update(players)
+            .set({
+              verificationMethod: "tournament_doc",
+              tournamentDocUrl: relativePath,
+              tournamentDocVerified: false,
+              verificationStatus: "pending",
+            })
+            .where(eq(players.id, Number(playerId)));
+        }
+
+        return res.json({ ok: true, method, fileUrl: relativePath });
+      } catch (err) {
+        console.error("verification upload error", err);
+        return res.status(500).json({ error: "Upload failed" });
       }
-      if (method !== "video" && method !== "tournament_doc") {
-        return res.status(400).json({ error: "Invalid method" });
-      }
-
-      const relativePath = `/uploads/verification/${req.file.filename}`;
-
-      if (method === "video") {
-        await db.update(players).set({
-          verificationMethod: "video",
-          videoUrl: relativePath,
-          videoVerified: false,
-          verificationStatus: "pending",
-        }).where(eq(players.id, Number(playerId)));
-      } else {
-        await db.update(players).set({
-          verificationMethod: "tournament_doc",
-          tournamentDocUrl: relativePath,
-          tournamentDocVerified: false,
-          verificationStatus: "pending",
-        }).where(eq(players.id, Number(playerId)));
-      }
-
-      return res.json({ ok: true, method, fileUrl: relativePath });
-    } catch (err) {
-      console.error("verification upload error", err);
-      return res.status(500).json({ error: "Upload failed" });
     }
-  });
+  );
 
   // -------- ADMIN: Get all players --------
-  app.get("/api/admin/players", isAdmin, async (_req: Request, res: Response) => {
-    try {
-      const playersList = await storage.getAllPlayers();
-      res.json(playersList);
-    } catch (e) {
-      console.error("Admin get players error:", e);
-      res.status(500).json({ message: "Failed to get players" });
+  app.get(
+    "/api/admin/players",
+    isAdmin,
+    async (_req: Request, res: Response) => {
+      try {
+        const playersList = await storage.getAllPlayers();
+        res.json(playersList);
+      } catch (e) {
+        console.error("Admin get players error:", e);
+        res.status(500).json({ message: "Failed to get players" });
+      }
     }
-  });
+  );
 
   // -------- ADMIN: Approve player --------
-  app.post("/api/admin/players/:id/approve", isAdmin, async (req: Request, res: Response) => {
-    try {
-      const adminId = req.session!.playerId!;
-      const player = await storage.approvePlayer(req.params.id, adminId);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
+  app.post(
+    "/api/admin/players/:id/approve",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const adminId = req.session!.playerId!;
+        const player = await storage.approvePlayer(req.params.id, adminId);
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+
+        await db
+          .update(players)
+          .set({
+            verificationStatus: "approved",
+            verifiedAt: new Date(),
+          })
+          .where(eq(players.id, Number(req.params.id)));
+
+        await emailService.notifyPlayerApproved({
+          fullName: player.fullName,
+          email: player.email,
+        });
+
+        res.json(player);
+      } catch (e) {
+        console.error("Approve player error:", e);
+        res.status(500).json({ message: "Failed to approve player" });
       }
-
-      await db.update(players).set({
-        verificationStatus: "approved",
-        verifiedAt: new Date(),
-      }).where(eq(players.id, Number(req.params.id)));
-
-      await emailService.notifyPlayerApproved({
-        fullName: player.fullName,
-        email: player.email,
-      });
-
-      res.json(player);
-    } catch (e) {
-      console.error("Approve player error:", e);
-      res.status(500).json({ message: "Failed to approve player" });
     }
-  });
+  );
 
   // -------- ADMIN: Reject player --------
-  app.post("/api/admin/players/:id/reject", isAdmin, async (req: Request, res: Response) => {
-    try {
-      const adminId = req.session!.playerId!;
-      const player = await storage.rejectPlayer(req.params.id, adminId);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
+  app.post(
+    "/api/admin/players/:id/reject",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const adminId = req.session!.playerId!;
+        const player = await storage.rejectPlayer(req.params.id, adminId);
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+
+        const reason =
+          (req.body && (req.body.reason as string)) || "Not approved";
+
+        await db
+          .update(players)
+          .set({
+            verificationStatus: "rejected",
+            verificationNotes: reason,
+          })
+          .where(eq(players.id, Number(req.params.id)));
+
+        await emailService.notifyPlayerRejected({
+          fullName: player.fullName,
+          email: player.email,
+        });
+
+        res.json(player);
+      } catch (e) {
+        console.error("Reject player error:", e);
+        res.status(500).json({ message: "Failed to reject player" });
       }
-
-      const reason = (req.body && (req.body.reason as string)) || "Not approved";
-
-      await db.update(players).set({
-        verificationStatus: "rejected",
-        verificationNotes: reason,
-      }).where(eq(players.id, Number(req.params.id)));
-
-      await emailService.notifyPlayerRejected({
-        fullName: player.fullName,
-        email: player.email,
-      });
-
-      res.json(player);
-    } catch (e) {
-      console.error("Reject player error:", e);
-      res.status(500).json({ message: "Failed to reject player" });
     }
-  });
+  );
 
   // -------- ADMIN: Deactivate player --------
-  app.post("/api/admin/players/:id/deactivate", isAdmin, async (req: Request, res: Response) => {
-    try {
-      const player = await storage.deactivatePlayer(req.params.id);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
+  app.post(
+    "/api/admin/players/:id/deactivate",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const player = await storage.deactivatePlayer(req.params.id);
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+        res.json(player);
+      } catch (e) {
+        console.error("Deactivate player error:", e);
+        res.status(500).json({ message: "Failed to deactivate player" });
       }
-      res.json(player);
-    } catch (e) {
-      console.error("Deactivate player error:", e);
-      res.status(500).json({ message: "Failed to deactivate player" });
     }
-  });
+  );
 
   // -------- ADMIN: Activate player --------
-  app.post("/api/admin/players/:id/activate", isAdmin, async (req: Request, res: Response) => {
-    try {
-      const player = await storage.activatePlayer(req.params.id);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
+  app.post(
+    "/api/admin/players/:id/activate",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const player = await storage.activatePlayer(req.params.id);
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+        res.json(player);
+      } catch (e) {
+        console.error("Activate player error:", e);
+        res.status(500).json({ message: "Failed to activate player" });
       }
-      res.json(player);
-    } catch (e) {
-      console.error("Activate player error:", e);
-      res.status(500).json({ message: "Failed to activate player" });
     }
-  });
+  );
 
   // -------- ADMIN: Delete player --------
-  app.delete("/api/admin/players/:id", isAdmin, async (req: Request, res: Response) => {
-    try {
-      await storage.deletePlayer(req.params.id);
-      res.json({ message: "Player deleted" });
-    } catch (e) {
-      console.error("Delete player error:", e);
-      res.status(500).json({ message: "Failed to delete player" });
+  app.delete(
+    "/api/admin/players/:id",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        await storage.deletePlayer(req.params.id);
+        res.json({ message: "Player deleted" });
+      } catch (e) {
+        console.error("Delete player error:", e);
+        res.status(500).json({ message: "Failed to delete player" });
+      }
     }
-  });
+  );
 
   const httpServer = createServer(app);
   return httpServer;
