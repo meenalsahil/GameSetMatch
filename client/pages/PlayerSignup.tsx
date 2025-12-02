@@ -15,17 +15,16 @@ import Footer from "@/components/Footer";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signupPlayerSchema, type SignupPlayer } from "@shared/schema";
-import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
 export default function PlayerSignup() {
   const [step, setStep] = useState(1);
   const form = useForm<SignupPlayer>({
     resolver: zodResolver(signupPlayerSchema),
+    mode: "onChange", // Validate on every change
     defaultValues: {
       email: "",
       password: "",
@@ -41,7 +40,6 @@ export default function PlayerSignup() {
       atpProfileUrl: "",
     },
   });
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const onSubmit = async (values: SignupPlayer) => {
@@ -80,8 +78,8 @@ export default function PlayerSignup() {
       window.location.href = "/thank-you";
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to sign up",
+        title: "Signup Failed",
+        description: error.message || "Please check your information and try again",
         variant: "destructive",
       });
     }
@@ -93,15 +91,23 @@ export default function PlayerSignup() {
     if (step === 1) {
       fieldsToValidate = ["email", "password", "fullName", "age", "country"];
     } else if (step === 2) {
-      fieldsToValidate = ["location", "ranking", "specialization"];
+      fieldsToValidate = ["location", "specialization"];
     } else if (step === 3) {
       fieldsToValidate = ["bio", "fundingGoals", "videoUrl", "atpProfileUrl"];
     }
 
     const isValid = await form.trigger(fieldsToValidate);
-    if (isValid) {
-      setStep(step + 1);
+    
+    if (!isValid) {
+      toast({
+        title: "Please fill out all required fields",
+        description: "Check the fields marked in red and make sure all required information is provided",
+        variant: "destructive",
+      });
+      return;
     }
+    
+    setStep(step + 1);
   };
 
   return (
@@ -125,8 +131,7 @@ export default function PlayerSignup() {
               Player Application
             </h1>
             <p className="text-lg text-muted-foreground">
-              Join GameSetMatch and connect with sponsors for your tennis
-              journey
+              Join GameSetMatch and connect with sponsors for your tennis journey
             </p>
           </div>
         </div>
@@ -362,18 +367,18 @@ export default function PlayerSignup() {
                       name="videoUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-base font-semibold">Video Link (Required)</FormLabel>
+                          <FormLabel>Video Link</FormLabel>
                           <FormControl>
                             <Input
                               type="url"
-                              placeholder="YouTube or Vimeo link of you playing"
+                              placeholder="Video of you playing tennis or your quick introduction"
                               data-testid="input-video-url"
                               {...field}
                               value={field.value || ""}
                             />
                           </FormControl>
                           <FormDescription>
-                            Video of you playing tennis or introducing yourself for identity verification
+                            YouTube or Vimeo link for identity verification
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -384,7 +389,7 @@ export default function PlayerSignup() {
                       name="atpProfileUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-base font-semibold">ATP/ITF/WTA Profile URL (Required)</FormLabel>
+                          <FormLabel>ATP/ITF/WTA Profile URL</FormLabel>
                           <FormControl>
                             <Input
                               type="url"
@@ -394,7 +399,7 @@ export default function PlayerSignup() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Link to your official ATP Tour, ITF Tennis, or WTA profile for verification
+                            Link to your official ATP Tour, ITF Tennis, or WTA profile
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -406,7 +411,7 @@ export default function PlayerSignup() {
                       name="photo"
                       render={({ field: { value, onChange, ...field } }) => (
                         <FormItem>
-                          <FormLabel>Profile Photo</FormLabel>
+                          <FormLabel>Profile Photo (Optional)</FormLabel>
                           <FormControl>
                             <Input
                               type="file"
@@ -415,7 +420,11 @@ export default function PlayerSignup() {
                                 const file = e.target.files?.[0];
                                 if (file) {
                                   if (file.size > 5 * 1024 * 1024) {
-                                    alert("File size must be less than 5MB");
+                                    toast({
+                                      title: "File too large",
+                                      description: "Profile photo must be less than 5MB",
+                                      variant: "destructive",
+                                    });
                                     e.target.value = "";
                                     return;
                                   }
@@ -426,8 +435,7 @@ export default function PlayerSignup() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Upload a professional photo (JPG, PNG, GIF - max
-                            5MB)
+                            Upload a professional photo (JPG, PNG, GIF - max 5MB)
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

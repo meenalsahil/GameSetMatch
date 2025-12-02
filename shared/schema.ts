@@ -70,22 +70,26 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = typeof players.$inferInsert;
 
-// Signup schema - VIDEO and ATP PROFILE are now REQUIRED
+// Signup schema with specific, clear error messages
 export const signupPlayerSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  fullName: z.string().min(2, "Full name is required"),
-  age: z.number().min(13, "Must be at least 13 years old"),
-  country: z.string().min(2, "Country is required"),
-  location: z.string().min(2, "Location is required"),
+  fullName: z.string().min(2, "Please enter your full name"),
+  age: z.number().min(13, "You must be at least 13 years old to register"),
+  country: z.string().min(2, "Please enter your country"),
+  location: z.string().min(2, "Please enter your location (city, state/region)"),
   ranking: z.string().optional(),
-  specialization: z.string().min(2, "Specialization is required"),
-  bio: z.string().min(10, "Bio must be at least 10 characters"),
-  fundingGoals: z.string().min(10, "Please describe your funding goals"),
+  specialization: z.string().min(2, "Please specify your court specialization (e.g., Clay, Hard Court)"),
+  bio: z.string().min(10, "Please tell us about your tennis journey (at least 10 characters)"),
+  fundingGoals: z.string().min(10, "Please describe what you're raising funds for (at least 10 characters)"),
   
-  // NOW REQUIRED FOR VERIFICATION
-  videoUrl: z.string().url("Please provide a valid video URL (YouTube, Vimeo, etc.)").min(1, "Video is required for identity verification"),
-  atpProfileUrl: z.string().url("Please provide a valid ATP/ITF/WTA profile URL").min(1, "ATP/ITF/WTA Profile is required for verification"),
+  // Required for verification
+  videoUrl: z.string()
+    .min(1, "Video link is required for identity verification")
+    .url("Please enter a valid video URL (YouTube or Vimeo)"),
+  atpProfileUrl: z.string()
+    .min(1, "ATP/ITF/WTA Profile URL is required for verification")
+    .url("Please enter a valid ATP, ITF, or WTA profile URL"),
   
   photo: z.any().optional(), // File handled by multer
 });
