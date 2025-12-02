@@ -24,7 +24,7 @@ export default function PlayerSignup() {
   const [step, setStep] = useState(1);
   const form = useForm<SignupPlayer>({
     resolver: zodResolver(signupPlayerSchema),
-    mode: "onChange", // Validate on every change
+    mode: "onBlur", // Validate when field loses focus
     defaultValues: {
       email: "",
       password: "",
@@ -43,10 +43,20 @@ export default function PlayerSignup() {
   const { toast } = useToast();
 
   const onSubmit = async (values: SignupPlayer) => {
+    // Double-check validation before submitting
+    const isValid = await form.trigger();
+    if (!isValid) {
+      toast({
+        title: "Please fill out all required fields",
+        description: "Check the fields marked in red and provide all required information",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const formData = new FormData();
 
-      // Add all text fields
       formData.append("email", values.email);
       formData.append("password", values.password);
       formData.append("fullName", values.fullName);
@@ -60,7 +70,6 @@ export default function PlayerSignup() {
       formData.append("videoUrl", values.videoUrl);
       formData.append("atpProfileUrl", values.atpProfileUrl);
 
-      // Add photo file
       if (values.photo) {
         formData.append("photo", values.photo);
       }
@@ -92,8 +101,6 @@ export default function PlayerSignup() {
       fieldsToValidate = ["email", "password", "fullName", "age", "country"];
     } else if (step === 2) {
       fieldsToValidate = ["location", "specialization"];
-    } else if (step === 3) {
-      fieldsToValidate = ["bio", "fundingGoals", "videoUrl", "atpProfileUrl"];
     }
 
     const isValid = await form.trigger(fieldsToValidate);
@@ -101,13 +108,32 @@ export default function PlayerSignup() {
     if (!isValid) {
       toast({
         title: "Please fill out all required fields",
-        description: "Check the fields marked in red and make sure all required information is provided",
+        description: "Check the fields marked in red",
         variant: "destructive",
       });
       return;
     }
     
     setStep(step + 1);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Trigger validation on step 3 fields
+    const step3Valid = await form.trigger(["bio", "fundingGoals", "videoUrl", "atpProfileUrl"]);
+    
+    if (!step3Valid) {
+      toast({
+        title: "Please fill out all required fields",
+        description: "Video Link and ATP/ITF/WTA Profile URL are required for verification",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // If valid, proceed with form submission
+    form.handleSubmit(onSubmit)();
   };
 
   return (
@@ -154,7 +180,7 @@ export default function PlayerSignup() {
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               {step === 1 && (
                 <Card className="p-6">
                   <h2 className="text-2xl font-bold text-card-foreground mb-6">

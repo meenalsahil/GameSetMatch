@@ -70,28 +70,51 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = typeof players.$inferInsert;
 
-// Signup schema with specific, clear error messages
+// Signup schema - strict validation with clear error messages
 export const signupPlayerSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   fullName: z.string().min(2, "Please enter your full name"),
-  age: z.number().min(13, "You must be at least 13 years old to register"),
+  age: z.number().min(13, "You must be at least 13 years old"),
   country: z.string().min(2, "Please enter your country"),
-  location: z.string().min(2, "Please enter your location (city, state/region)"),
+  location: z.string().min(2, "Please enter your location"),
   ranking: z.string().optional(),
-  specialization: z.string().min(2, "Please specify your court specialization (e.g., Clay, Hard Court)"),
+  specialization: z.string().min(2, "Please specify your court specialization"),
   bio: z.string().min(10, "Please tell us about your tennis journey (at least 10 characters)"),
   fundingGoals: z.string().min(10, "Please describe what you're raising funds for (at least 10 characters)"),
   
-  // Required for verification
+  // REQUIRED - strict non-empty validation
   videoUrl: z.string()
-    .min(1, "Video link is required for identity verification")
-    .url("Please enter a valid video URL (YouTube or Vimeo)"),
+    .refine((val) => val.trim().length > 0, {
+      message: "Video link is required for identity verification"
+    })
+    .refine((val) => {
+      try {
+        new URL(val);
+        return true;
+      } catch {
+        return false;
+      }
+    }, {
+      message: "Please enter a valid video URL (YouTube or Vimeo)"
+    }),
+    
   atpProfileUrl: z.string()
-    .min(1, "ATP/ITF/WTA Profile URL is required for verification")
-    .url("Please enter a valid ATP, ITF, or WTA profile URL"),
+    .refine((val) => val.trim().length > 0, {
+      message: "ATP/ITF/WTA Profile URL is required for verification"
+    })
+    .refine((val) => {
+      try {
+        new URL(val);
+        return true;
+      } catch {
+        return false;
+      }
+    }, {
+      message: "Please enter a valid ATP, ITF, or WTA profile URL"
+    }),
   
-  photo: z.any().optional(), // File handled by multer
+  photo: z.any().optional(),
 });
 
 export type SignupPlayer = z.infer<typeof signupPlayerSchema>;
