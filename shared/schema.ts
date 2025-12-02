@@ -67,7 +67,29 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = typeof players.$inferInsert;
 
-// FIXED: Check for empty FIRST, then validate URL format
+// Helper function for required URL fields with proper error messages
+const requiredUrl = (fieldName: string) =>
+  z.string().superRefine((val, ctx) => {
+    // Step 1: Check if empty FIRST
+    if (!val || val.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${fieldName} is required`,
+      });
+      return; // Stop here - don't check URL format
+    }
+
+    // Step 2: Only check URL format if there's a value
+    try {
+      new URL(val);
+    } catch {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please enter a valid URL (must start with https://)",
+      });
+    }
+  });
+
 export const signupPlayerSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
@@ -78,11 +100,11 @@ export const signupPlayerSchema = z.object({
   ranking: z.string().optional(),
   specialization: z.string().min(2, "Please specify your court specialization"),
   bio: z.string().min(10, "Please tell us about your tennis journey (at least 10 characters)"),
-  fundingGoals: z.string().min(10, "Please describe what you're raising funds for (at least 10 characters)"),
+  fundingGoals: z.string().min(10, "Funding goals are required"),
   
-  // FIXED: Remove .url() - validate URL on backend instead
-  videoUrl: z.string().min(1, "Video link is required"),
-  atpProfileUrl: z.string().min(1, "ATP/ITF/WTA Profile URL is required"),
+  // FIXED: Using superRefine for proper validation order
+  videoUrl: requiredUrl("Video link"),
+  atpProfileUrl: requiredUrl("ATP/ITF/WTA Profile URL"),
   
   photo: z.any().optional(),
 });

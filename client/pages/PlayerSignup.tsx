@@ -24,7 +24,7 @@ export default function PlayerSignup() {
   const [step, setStep] = useState(1);
   const form = useForm<SignupPlayer>({
     resolver: zodResolver(signupPlayerSchema),
-    mode: "onTouched", // Validate when field is touched (clicked in then clicked out)
+    mode: "onTouched",
     defaultValues: {
       email: "",
       password: "",
@@ -358,6 +358,7 @@ export default function PlayerSignup() {
                         </FormItem>
                       )}
                     />
+                    {/* FIXED: Changed type="url" to type="text" - browser's url validation was causing "Invalid input" */}
                     <FormField
                       control={form.control}
                       name="videoUrl"
@@ -366,7 +367,7 @@ export default function PlayerSignup() {
                           <FormLabel>Video Link</FormLabel>
                           <FormControl>
                             <Input
-                              type="url"
+                              type="text"
                               placeholder="Video of you playing tennis or your quick introduction"
                               data-testid="input-video-url"
                               {...field}
@@ -379,6 +380,7 @@ export default function PlayerSignup() {
                         </FormItem>
                       )}
                     />
+                    {/* FIXED: Changed type="url" to type="text" - browser's url validation was causing "Invalid input" */}
                     <FormField
                       control={form.control}
                       name="atpProfileUrl"
@@ -387,7 +389,7 @@ export default function PlayerSignup() {
                           <FormLabel>ATP/ITF/WTA Profile URL</FormLabel>
                           <FormControl>
                             <Input
-                              type="url"
+                              type="text"
                               placeholder="https://www.atptour.com/en/players/..."
                               {...field}
                             />
