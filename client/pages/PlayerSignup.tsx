@@ -24,7 +24,7 @@ export default function PlayerSignup() {
   const [step, setStep] = useState(1);
   const form = useForm<SignupPlayer>({
     resolver: zodResolver(signupPlayerSchema),
-    mode: "onBlur", // Validate when field loses focus
+    mode: "onTouched", // Validate when field is touched (clicked in then clicked out)
     defaultValues: {
       email: "",
       password: "",
@@ -43,17 +43,6 @@ export default function PlayerSignup() {
   const { toast } = useToast();
 
   const onSubmit = async (values: SignupPlayer) => {
-    // Double-check validation before submitting
-    const isValid = await form.trigger();
-    if (!isValid) {
-      toast({
-        title: "Please fill out all required fields",
-        description: "Check the fields marked in red and provide all required information",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       const formData = new FormData();
 
@@ -117,25 +106,6 @@ export default function PlayerSignup() {
     setStep(step + 1);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Trigger validation on step 3 fields
-    const step3Valid = await form.trigger(["bio", "fundingGoals", "videoUrl", "atpProfileUrl"]);
-    
-    if (!step3Valid) {
-      toast({
-        title: "Please fill out all required fields",
-        description: "Video Link and ATP/ITF/WTA Profile URL are required for verification",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // If valid, proceed with form submission
-    form.handleSubmit(onSubmit)();
-  };
-
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1">
@@ -180,7 +150,7 @@ export default function PlayerSignup() {
           </div>
 
           <Form {...form}>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {step === 1 && (
                 <Card className="p-6">
                   <h2 className="text-2xl font-bold text-card-foreground mb-6">
@@ -400,7 +370,6 @@ export default function PlayerSignup() {
                               placeholder="Video of you playing tennis or your quick introduction"
                               data-testid="input-video-url"
                               {...field}
-                              value={field.value || ""}
                             />
                           </FormControl>
                           <FormDescription>
@@ -421,7 +390,6 @@ export default function PlayerSignup() {
                               type="url"
                               placeholder="https://www.atptour.com/en/players/..."
                               {...field}
-                              value={field.value || ""}
                             />
                           </FormControl>
                           <FormDescription>

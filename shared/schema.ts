@@ -70,7 +70,7 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = typeof players.$inferInsert;
 
-// Signup schema - strict validation with clear error messages
+// Signup schema - SIMPLE validation that works the same as other fields
 export const signupPlayerSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
@@ -83,36 +83,9 @@ export const signupPlayerSchema = z.object({
   bio: z.string().min(10, "Please tell us about your tennis journey (at least 10 characters)"),
   fundingGoals: z.string().min(10, "Please describe what you're raising funds for (at least 10 characters)"),
   
-  // REQUIRED - strict non-empty validation
-  videoUrl: z.string()
-    .refine((val) => val.trim().length > 0, {
-      message: "Video link is required for identity verification"
-    })
-    .refine((val) => {
-      try {
-        new URL(val);
-        return true;
-      } catch {
-        return false;
-      }
-    }, {
-      message: "Please enter a valid video URL (YouTube or Vimeo)"
-    }),
-    
-  atpProfileUrl: z.string()
-    .refine((val) => val.trim().length > 0, {
-      message: "ATP/ITF/WTA Profile URL is required for verification"
-    })
-    .refine((val) => {
-      try {
-        new URL(val);
-        return true;
-      } catch {
-        return false;
-      }
-    }, {
-      message: "Please enter a valid ATP, ITF, or WTA profile URL"
-    }),
+  // SAME VALIDATION STYLE AS OTHER FIELDS
+  videoUrl: z.string().min(1, "Video link is required").url("Please enter a valid video URL"),
+  atpProfileUrl: z.string().min(1, "ATP/ITF/WTA Profile URL is required").url("Please enter a valid profile URL"),
   
   photo: z.any().optional(),
 });
