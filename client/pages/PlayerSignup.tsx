@@ -45,10 +45,13 @@ export default function PlayerSignup() {
 
   const onSubmit = async (values: SignupPlayer) => {
     // 🔴 EXTRA HARD REQUIREMENT CHECK ON FRONTEND
-    // This is to guarantee we never even hit the server if these are empty.
+    // Normalize to strings so .trim() never crashes
+    const video = (values.videoUrl ?? "").trim();
+    const atp = (values.atpProfileUrl ?? "").trim();
+
     let hasClientError = false;
 
-    if (!values.videoUrl.trim()) {
+    if (!video) {
       form.setError("videoUrl", {
         type: "manual",
         message: "Video link is required",
@@ -56,7 +59,7 @@ export default function PlayerSignup() {
       hasClientError = true;
     }
 
-    if (!values.atpProfileUrl.trim()) {
+    if (!atp) {
       form.setError("atpProfileUrl", {
         type: "manual",
         message: "ATP/ITF/WTA Profile URL is required",
@@ -67,7 +70,8 @@ export default function PlayerSignup() {
     if (hasClientError) {
       toast({
         title: "Please fill out all required fields",
-        description: "Video link and ATP/ITF/WTA profile URL are required.",
+        description:
+          "Video link and ATP/ITF/WTA profile URL are required.",
         variant: "destructive",
       });
       return; // ⛔️ stop here, don't call the API
@@ -86,8 +90,8 @@ export default function PlayerSignup() {
       formData.append("specialization", values.specialization);
       formData.append("bio", values.bio);
       formData.append("fundingGoals", values.fundingGoals);
-      formData.append("videoUrl", values.videoUrl);
-      formData.append("atpProfileUrl", values.atpProfileUrl);
+      formData.append("videoUrl", video);
+      formData.append("atpProfileUrl", atp);
 
       if (values.photo) {
         formData.append("photo", values.photo);
@@ -105,8 +109,7 @@ export default function PlayerSignup() {
         data = null;
       }
 
-      // If backend sent field errors, map them into the form and DON'T show
-      // the generic "Invalid input" toast.
+      // If backend sent field errors, map them into the form
       if (!response.ok) {
         if (data && Array.isArray(data.errors) && data.errors.length > 0) {
           data.errors.forEach((err: any) => {
@@ -117,7 +120,6 @@ export default function PlayerSignup() {
             });
           });
 
-          // Optional: gentle toast just telling them to look at fields
           toast({
             title: "Please fix the highlighted fields",
             description: "Some of the information you entered is not valid.",
@@ -189,8 +191,7 @@ export default function PlayerSignup() {
               Player Application
             </h1>
             <p className="text-lg text-muted-foreground">
-              Join GameSetMatch and connect with sponsors for your tennis
-              journey
+              Join GameSetMatch and connect with sponsors for your tennis journey
             </p>
           </div>
         </div>
@@ -495,8 +496,7 @@ export default function PlayerSignup() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Upload a professional photo (JPG, PNG, GIF - max
-                            5MB)
+                            Upload a professional photo (JPG, PNG, GIF - max 5MB)
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
