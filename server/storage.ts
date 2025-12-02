@@ -122,52 +122,13 @@ export class DbStorage implements IStorage {
     return result;
   }
 
-  // Add this to your storage.ts getAllPlayers method
-
-async getAllPlayers(): Promise<Player[]> {
-  const result = await db
-    .select({
-      // Existing fields
-      id: players.id,
-      email: players.email,
-      passwordHash: players.passwordHash,
-      fullName: players.fullName,
-      age: players.age,
-      country: players.country,
-      location: players.location,
-      ranking: players.ranking,
-      specialization: players.specialization,
-      bio: players.bio,
-      fundingGoals: players.fundingGoals,
-      photoUrl: players.photoUrl,
-      videoUrl: players.videoUrl,
-      atpProfileUrl: players.atpProfileUrl,
-      published: players.published,
-      featured: players.featured,
-      priority: players.priority,
-      isAdmin: players.isAdmin,
-      approvalStatus: players.approvalStatus,
-      approvedBy: players.approvedBy,
-      approvedAt: players.approvedAt,
-      active: players.active,
-      createdAt: players.createdAt,
-      
-      // ATP Verification fields - ADD THESE
-      atpVerified: players.atpVerified,
-      atpVerificationScore: players.atpVerificationScore,
-      atpFirstNameMatch: players.atpFirstNameMatch,
-      atpLastNameMatch: players.atpLastNameMatch,
-      atpCountryMatch: players.atpCountryMatch,
-      atpAgeMatch: players.atpAgeMatch,
-      atpDiscrepancies: players.atpDiscrepancies,
-      atpLastChecked: players.atpLastChecked,
-      atpCurrentRanking: players.atpCurrentRanking,
-    })
-    .from(players)
-    .orderBy(desc(players.createdAt));
-  
-  return result;
-}
+  async getPublishedPlayers(): Promise<Player[]> {
+    const result = await db
+      .select()
+      .from(players)
+      .where(eq(players.published, true));
+    return result;
+  }
 
   async getFeaturedPlayers(): Promise<Player[]> {
     const result = await db
