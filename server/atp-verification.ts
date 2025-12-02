@@ -94,7 +94,9 @@ export async function scrapeATPProfile(atpProfileUrl: string): Promise<ATPProfil
     $('*').each((i, el) => {
       const text = $(el).text().trim();
       if (text === 'United States' || text === 'USA' ||  text === 'United Kingdom' || text === 'UK') {
-        const info = `${el.name}.${$(el).attr('class')} = "${text}"`;
+        const tagName = (el as any).tagName || (el as any).name || 'unknown';
+        const className = $(el).attr('class') || 'no-class';
+        const info = `${tagName}.${className} = "${text}"`;
         console.log('Found country in:', info);
         if (!country && (text === 'United States' || text === 'USA')) {
           country = text;
@@ -121,7 +123,9 @@ export async function scrapeATPProfile(atpProfileUrl: string): Promise<ATPProfil
       const text = $(el).text().trim();
       const agePattern = text.match(/^(\d{2})\s*\((\d{4})\.(\d{2})\.(\d{2})\)/);
       if (agePattern) {
-        console.log('Found age pattern:', text, 'in', el.name, $(el).attr('class'));
+        const tagName = (el as any).tagName || (el as any).name || 'unknown';
+        const className = $(el).attr('class') || 'no-class';
+        console.log('Found age pattern:', text, 'in', tagName, className);
         age = parseInt(agePattern[1]);
         dateOfBirth = `${agePattern[2]}.${agePattern[3]}.${agePattern[4]}`;
       }
