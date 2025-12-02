@@ -59,9 +59,8 @@ export default function PlayerSignup() {
       formData.append("specialization", values.specialization);
       formData.append("bio", values.bio);
       formData.append("fundingGoals", values.fundingGoals);
-      if (values.videoUrl) formData.append("videoUrl", values.videoUrl);
-      if (values.atpProfileUrl)
-        formData.append("atpProfileUrl", values.atpProfileUrl);
+      formData.append("videoUrl", values.videoUrl);
+      formData.append("atpProfileUrl", values.atpProfileUrl);
 
       // Add photo file
       if (values.photo) {
@@ -95,6 +94,8 @@ export default function PlayerSignup() {
       fieldsToValidate = ["email", "password", "fullName", "age", "country"];
     } else if (step === 2) {
       fieldsToValidate = ["location", "ranking", "specialization"];
+    } else if (step === 3) {
+      fieldsToValidate = ["bio", "fundingGoals", "videoUrl", "atpProfileUrl"];
     }
 
     const isValid = await form.trigger(fieldsToValidate);
@@ -317,7 +318,7 @@ export default function PlayerSignup() {
               {step === 3 && (
                 <Card className="p-6">
                   <h2 className="text-2xl font-bold text-card-foreground mb-6">
-                    About You
+                    About You & Verification
                   </h2>
                   <div className="space-y-4">
                     <FormField
@@ -361,7 +362,7 @@ export default function PlayerSignup() {
                       name="videoUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Video Link (Optional)</FormLabel>
+                          <FormLabel className="text-base font-semibold">Video Link (Required)</FormLabel>
                           <FormControl>
                             <Input
                               type="url"
@@ -371,6 +372,9 @@ export default function PlayerSignup() {
                               value={field.value || ""}
                             />
                           </FormControl>
+                          <FormDescription>
+                            Video of you playing tennis or introducing yourself for identity verification
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -380,7 +384,7 @@ export default function PlayerSignup() {
                       name="atpProfileUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>ATP/ITF Profile URL (Optional)</FormLabel>
+                          <FormLabel className="text-base font-semibold">ATP/ITF/WTA Profile URL (Required)</FormLabel>
                           <FormControl>
                             <Input
                               type="url"
@@ -390,7 +394,7 @@ export default function PlayerSignup() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Link to your ATP Tour, ITF Tennis, or WTA profile
+                            Link to your official ATP Tour, ITF Tennis, or WTA profile for verification
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
