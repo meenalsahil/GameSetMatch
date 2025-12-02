@@ -4,7 +4,13 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ExternalLink, RefreshCw, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import {
+  ExternalLink,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+} from "lucide-react";
 
 interface Player {
   id: number;
@@ -24,7 +30,7 @@ interface Player {
   featured: boolean;
   approvalStatus: string;
   active: boolean;
-  
+
   // ATP Verification fields
   atpVerified: boolean;
   atpVerificationScore: number | null;
@@ -39,7 +45,7 @@ interface Player {
 
 function ATPVerificationBadge({ player }: { player: Player }) {
   const score = player.atpVerificationScore || 0;
-  
+
   if (!player.atpProfileUrl) {
     return (
       <Badge variant="outline" className="bg-gray-100">
@@ -47,7 +53,7 @@ function ATPVerificationBadge({ player }: { player: Player }) {
       </Badge>
     );
   }
-  
+
   if (score >= 75) {
     return (
       <Badge className="bg-green-100 text-green-800 border-green-300">
@@ -70,21 +76,28 @@ function ATPVerificationBadge({ player }: { player: Player }) {
       </Badge>
     );
   }
-  
-  return (
-    <Badge variant="outline">
-      Not Verified
-    </Badge>
-  );
+
+  return <Badge variant="outline">Not Verified</Badge>;
 }
 
 function ATPVerificationDetails({ player }: { player: Player }) {
   if (!player.atpProfileUrl) return null;
-  
+
+  let discrepancies: string[] = [];
+  if (player.atpDiscrepancies) {
+    try {
+      discrepancies = JSON.parse(player.atpDiscrepancies);
+    } catch {
+      discrepancies = [];
+    }
+  }
+
   return (
     <div className="mt-3 p-3 bg-gray-50 rounded-md space-y-2 text-sm">
-      <div className="font-semibold text-gray-700">ATP Verification Breakdown:</div>
-      
+      <div className="font-semibold text-gray-700">
+        ATP Verification Breakdown:
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <div className="flex items-center gap-2">
           {player.atpFirstNameMatch ? (
@@ -94,7 +107,7 @@ function ATPVerificationDetails({ player }: { player: Player }) {
           )}
           <span>First Name</span>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {player.atpLastNameMatch ? (
             <CheckCircle className="w-4 h-4 text-green-600" />
@@ -103,7 +116,7 @@ function ATPVerificationDetails({ player }: { player: Player }) {
           )}
           <span>Last Name</span>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {player.atpCountryMatch ? (
             <CheckCircle className="w-4 h-4 text-green-600" />
@@ -112,7 +125,7 @@ function ATPVerificationDetails({ player }: { player: Player }) {
           )}
           <span>Country</span>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {player.atpAgeMatch ? (
             <CheckCircle className="w-4 h-4 text-green-600" />
@@ -122,27 +135,27 @@ function ATPVerificationDetails({ player }: { player: Player }) {
           <span>Age</span>
         </div>
       </div>
-      
+
       {player.atpCurrentRanking && (
         <div className="text-gray-600">
           <strong>ATP Ranking:</strong> #{player.atpCurrentRanking}
         </div>
       )}
-      
-      {player.atpDiscrepancies && (
+
+      {discrepancies.length > 0 && (
         <div className="text-red-600 text-xs">
           <strong>Issues:</strong>
           <div className="mt-1">
-            {JSON.parse(player.atpDiscrepancies).map((d: string, i: number) => (
+            {discrepancies.map((d, i) => (
               <div key={i}>• {d}</div>
             ))}
           </div>
         </div>
       )}
-      
+
       <div className="flex gap-2 mt-2">
         <a
-          href={player.atpProfileUrl}
+          href={player.atpProfileUrl!}
           target="_blank"
           rel="noopener noreferrer"
           className="text-blue-600 hover:underline text-xs flex items-center gap-1"
@@ -150,6 +163,50 @@ function ATPVerificationDetails({ player }: { player: Player }) {
           View ATP Profile <ExternalLink className="w-3 h-3" />
         </a>
       </div>
+    </div>
+  );
+}
+
+function PlayerVideo({ player }: { player: Player }) {
+  if (!player.videoUrl) return null;
+
+  const isLocalUpload = player.videoUrl.startsWith("/uploads");
+  const isYouTube = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(
+    player.videoUrl
+  );
+
+  return (
+    <div className="mt-4">
+      <h4 className="font-semibold text-sm mb-2">Verification Video</h4>
+
+      {isLocalUpload ? (
+        <video
+          controls
+          className="w-full max-w-md rounded-md border bg-black"
+        >
+          <source src={player.videoUrl} />
+          Your browser does not support the video tag.
+        </video>
+      ) : isYouTube ? (
+        <div className="aspect-video w-full max-w-md rounded-md overflow-hidden border">
+          <iframe
+            src={player.videoUrl.replace("watch?v=", "embed/")}
+            title="Verification Video"
+            className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      ) : (
+        <a
+          href={player.videoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+        >
+          Watch video <ExternalLink className="w-3 h-3" />
+        </a>
+      )}
     </div>
   );
 }
@@ -243,27 +300,40 @@ export default function AdminDashboard() {
         <div className="space-y-4">
           {pendingPlayers.map((player) => (
             <Card key={player.id} className="p-6">
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start gap-6">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-xl font-semibold">{player.fullName}</h3>
                     <ATPVerificationBadge player={player} />
                   </div>
-                  
+
                   <p className="text-gray-600">{player.email}</p>
-                  
-                  <div className="mt-2 text-sm text-gray-600">
-                    <div><strong>Age:</strong> {player.age}</div>
-                    <div><strong>Country:</strong> {player.country}</div>
-                    <div><strong>Location:</strong> {player.location}</div>
-                    {player.ranking && <div><strong>Ranking:</strong> #{player.ranking}</div>}
-                    <div><strong>Specialization:</strong> {player.specialization}</div>
+
+                  <div className="mt-2 text-sm text-gray-600 space-y-1">
+                    <div>
+                      <strong>Age:</strong> {player.age}
+                    </div>
+                    <div>
+                      <strong>Country:</strong> {player.country}
+                    </div>
+                    <div>
+                      <strong>Location:</strong> {player.location}
+                    </div>
+                    {player.ranking && (
+                      <div>
+                        <strong>Ranking:</strong> #{player.ranking}
+                      </div>
+                    )}
+                    <div>
+                      <strong>Specialization:</strong> {player.specialization}
+                    </div>
                   </div>
-                  
+
                   <ATPVerificationDetails player={player} />
+                  <PlayerVideo player={player} />
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2">
                   <Button
                     onClick={() => approveMutation.mutate(player.id)}
                     disabled={approveMutation.isPending}

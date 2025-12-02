@@ -1,7 +1,14 @@
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ArrowLeft, MapPin, Trophy, Heart, ExternalLink, Globe } from "lucide-react";
+import {
+  ArrowLeft,
+  MapPin,
+  Trophy,
+  Heart,
+  ExternalLink,
+  Globe,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,7 +33,8 @@ export default function PlayerProfile() {
   const handleSponsor = () => {
     toast({
       title: "Sponsor Interest",
-      description: "Thank you for your interest! We'll contact you shortly.",
+      description:
+        "Thank you for your interest! We'll contact you shortly with next steps.",
     });
   };
 
@@ -49,6 +57,12 @@ export default function PlayerProfile() {
       </div>
     );
 
+  const hasVideo = !!player.videoUrl;
+  const isLocalVideo = hasVideo && player.videoUrl.startsWith("/uploads");
+  const isYouTube =
+    hasVideo &&
+    /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(player.videoUrl);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-background dark:from-green-950/20 py-12">
       <div className="container mx-auto px-6 max-w-4xl">
@@ -63,7 +77,7 @@ export default function PlayerProfile() {
         {/* Player Header with Sponsor Button */}
         <Card className="mb-8">
           <CardHeader>
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-start gap-4">
               <div className="flex-1">
                 <CardTitle className="text-3xl font-bold mb-2">
                   {player.fullName}
@@ -78,7 +92,8 @@ export default function PlayerProfile() {
                     </span>
                   )}
                   <span className="flex items-center gap-1">
-                    <Trophy className="h-4 w-4" /> Rank #{player.ranking || "N/A"}
+                    <Trophy className="h-4 w-4" /> Rank #
+                    {player.ranking || "N/A"}
                   </span>
                 </div>
               </div>
@@ -87,7 +102,7 @@ export default function PlayerProfile() {
                 Become a Sponsor
               </Button>
             </div>
-            
+
             {player.atpProfileUrl && (
               <a
                 href={player.atpProfileUrl}
@@ -96,11 +111,50 @@ export default function PlayerProfile() {
                 className="text-blue-600 hover:underline text-sm mt-3 inline-flex items-center gap-1"
               >
                 <ExternalLink className="h-4 w-4" />
-                View ATP Profile
+                View ATP / ITF / WTA Profile
               </a>
             )}
           </CardHeader>
         </Card>
+
+        {/* Video Section */}
+        {hasVideo && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Verification / Intro Video</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLocalVideo ? (
+                <video
+                  controls
+                  className="w-full max-w-xl rounded-lg border bg-black"
+                >
+                  <source src={player.videoUrl} />
+                  Your browser does not support the video tag.
+                </video>
+              ) : isYouTube ? (
+                <div className="aspect-video w-full max-w-xl rounded-lg overflow-hidden border">
+                  <iframe
+                    src={player.videoUrl.replace("watch?v=", "embed/")}
+                    title="Player Video"
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              ) : (
+                <a
+                  href={player.videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline flex items-center gap-1"
+                >
+                  Watch video <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Player Statistics */}
         <Card className="mb-8">
@@ -118,8 +172,12 @@ export default function PlayerProfile() {
                 <p className="text-2xl font-bold">{player.age || "N/A"}</p>
               </div>
               <div className="bg-muted/50 p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">Specialization</p>
-                <p className="text-lg font-semibold">{player.specialization}</p>
+                <p className="text-sm text-muted-foreground mb-1">
+                  Specialization
+                </p>
+                <p className="text-lg font-semibold">
+                  {player.specialization || "N/A"}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -134,7 +192,7 @@ export default function PlayerProfile() {
                   📖 Your Story
                 </h3>
                 <p className="text-muted-foreground whitespace-pre-line">
-                  {player.story || "No story provided yet."}
+                  {player.bio || "No story provided yet."}
                 </p>
               </div>
 
@@ -146,15 +204,6 @@ export default function PlayerProfile() {
                   {player.fundingGoals || "No fundraising details provided."}
                 </p>
               </div>
-
-              <div>
-                <h3 className="font-semibold text-xl mb-2 flex items-center gap-2">
-                  ℹ️ About
-                </h3>
-                <p className="text-muted-foreground whitespace-pre-line">
-                  {player.bio || "No bio available."}
-                </p>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -162,8 +211,12 @@ export default function PlayerProfile() {
         {/* Call to Action */}
         <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
           <CardContent className="py-8 text-center">
-            <h3 className="text-2xl font-bold mb-2">Support {player.fullName}'s Journey</h3>
-            <p className="mb-4 text-green-50">Help talented players reach their full potential</p>
+            <h3 className="text-2xl font-bold mb-2">
+              Support {player.fullName}&apos;s Journey
+            </h3>
+            <p className="mb-4 text-green-50">
+              Help talented players reach their full potential.
+            </p>
             <Button onClick={handleSponsor} variant="secondary" size="lg">
               <Heart className="h-5 w-5 mr-2" />
               Become a Sponsor Today

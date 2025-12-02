@@ -427,6 +427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bio: p.bio,
           fundingGoals: p.fundingGoals,
           videoUrl: p.videoUrl,
+          atpProfileUrl: p.atpProfileUrl,
           photoUrl: p.photoUrl,
           country: p.country,
           age: p.age,
@@ -440,9 +441,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // -------- PUBLIC: Get single player --------
-  app.get("/api/players/:id", async (req: Request, res: Response) => {
+   app.get("/api/players/:id", async (req: Request, res: Response) => {
     try {
-      const player = await storage.getPlayer(Number(req.params.id));
+      // DON'T force Number() here – some setups use UUIDs
+      const rawId = req.params.id;
+
+      const player = await storage.getPlayer(rawId as any);
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }

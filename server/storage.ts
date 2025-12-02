@@ -36,14 +36,17 @@ export interface IStorage {
 }
 
 export class DbStorage implements IStorage {
-  async getPlayer(id: number): Promise<Player | undefined> {
-    const result = await db
-      .select()
-      .from(players)
-      .where(eq(players.id, id))
-      .limit(1);
-    return result[0];
-  }
+  async getPlayer(id: string | number) {
+  const numericId =
+    typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id;
+  const rows = await db
+    .select()
+    .from(players)
+    .where(eq(players.id, numericId as any))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 
   async getPlayerByEmail(email: string): Promise<Player | undefined> {
     try {
