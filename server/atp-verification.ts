@@ -1,4 +1,4 @@
-// server/atp-verification.ts - FIXED VERSION with correct selectors
+// server/atp-verification.ts - With extensive logging
 import * as cheerio from 'cheerio';
 
 interface ATPProfileData {
@@ -24,168 +24,161 @@ interface VerificationResult {
   discrepancies: string[];
 }
 
-/**
- * Scrape ATP profile and extract data
- */
 export async function scrapeATPProfile(atpProfileUrl: string): Promise<ATPProfileData | null> {
   try {
+    console.log('\n=== ATP SCRAPE START ===');
+    console.log('URL:', atpProfileUrl);
+    
     if (!atpProfileUrl.includes('atptour.com/en/players/')) {
       throw new Error('Invalid ATP profile URL');
     }
 
     const response = await fetch(atpProfileUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
       },
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP ${response.status}`);
     }
 
     const html = await response.text();
+    console.log('HTML length:', html.length);
+    console.log('HTML sample:', html.substring(0, 200));
+    
     const $ = cheerio.load(html);
 
-    console.log('🔍 Starting ATP scrape...');
-
-    // Extract full name from the hero section
+    // Extract name - log every attempt
     let fullName = '';
     
-    // Try multiple selectors for the name
-    fullName = $('.player-profile-hero-name .first-name').text().trim() + ' ' + 
-               $('.player-profile-hero-name .last-name').text().trim();
+    console.log('\n--- NAME EXTRACTION ---');
+    const nameAttempts = [
+      { selector: '.player-profile-hero-name', value: $('.player-profile-hero-name').text().trim() },
+      { selector: 'h1.player-profile-hero-name', value: $('h1.player-profile-hero-name').text().trim() },
+      { selector: 'h1', value: $('h1').first().text().trim() },
+      { selector: 'meta[property="og:title"]', value: $('meta[property="og:title"]').attr('content') || '' },
+      { selector: 'title', value: $('title').text().replace(' | Overview | ATP Tour | Tennis', '').trim() },
+    ];
     
-    if (!fullName.trim()) {
-      fullName = $('.player-profile-hero-name').text().trim();
+    for (const attempt of nameAttempts) {
+      console.log(`${attempt.selector}: "${attempt.value}"`);
+      if (attempt.value && !fullName) {
+        fullName = attempt.value;
+      }
     }
     
-    if (!fullName.trim()) {
-      fullName = $('h1.player-profile-hero-name').text().trim();
+    console.log('FINAL NAME:', fullName);
+    
+    if (!fullName) {
+      throw new Error('Could not extract name');
     }
-
-    if (!fullName.trim()) {
-      // Try to get from meta tags
-      fullName = $('meta[property="og:title"]').attr('content') || '';
-      fullName = fullName.replace(' | Overview | ATP Tour | Tennis', '').trim();
-    }
-
-    console.log('📛 Found name:', fullName);
-
+    
     const nameParts = fullName.split(' ').filter(p => p.length > 0);
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    // Extract country - try multiple approaches
+    // Extract country
+    console.log('\n--- COUNTRY EXTRACTION ---');
     let country = '';
     
-    // Try flag code
-    country = $('.player-flag-code').text().trim();
+    const countryAttempts = [
+      { selector: '.player-flag-code', value: $('.player-flag-code').text().trim() },
+      { selector: '.country-item', value: $('.country-item').text().trim() },
+      { selector: 'img alt in hero', value: $('.player-profile-hero img[alt]').attr('alt') || '' },
+    ];
     
-    if (!country) {
-      // Try nationality section
-      country = $('.player-profile-hero-nationality').text().trim();
-    }
-    
-    if (!country) {
-      // Try from table
-      $('td').each((i, el) => {
-        const text = $(el).text().trim();
-        if (text === 'Country') {
-          country = $(el).next('td').text().trim();
-        }
-      });
-    }
-
-    console.log('🌍 Found country:', country);
-
-    // Extract age and date of birth
-    let dateOfBirth = '';
-    let age = 0;
-    
-    // Look for age in multiple places
-    $('.table-big-value').each((i, el) => {
+    // Check all elements for country data
+    $('*').each((i, el) => {
       const text = $(el).text().trim();
-      // Look for pattern like "28 (1997.08.28)" or "28"
-      const ageMatch = text.match(/^(\d{2})\s*\((\d{4})\.(\d{2})\.(\d{2})\)/);
-      if (ageMatch) {
-        age = parseInt(ageMatch[1]);
-        dateOfBirth = `${ageMatch[2]}.${ageMatch[3]}.${ageMatch[4]}`;
-        console.log('🎂 Found age from hero:', age, dateOfBirth);
+      if (text === 'United States' || text === 'USA' ||  text === 'United Kingdom' || text === 'UK') {
+        const info = `${el.name}.${$(el).attr('class')} = "${text}"`;
+        console.log('Found country in:', info);
+        if (!country && (text === 'United States' || text === 'USA')) {
+          country = text;
+        }
       }
     });
-
-    // If not found, try table format
-    if (!age) {
-      $('td').each((i, el) => {
-        const label = $(el).text().trim();
-        if (label === 'Age' || label.includes('Age')) {
-          const value = $(el).next('td').text().trim();
-          const ageMatch = value.match(/(\d{2})/);
-          if (ageMatch) {
-            age = parseInt(ageMatch[1]);
-            console.log('🎂 Found age from table:', age);
-          }
-        }
-        
-        if (label === 'Born' || label.includes('Born')) {
-          const value = $(el).next('td').text().trim();
-          const dobMatch = value.match(/(\d{4})\.(\d{2})\.(\d{2})/);
-          if (dobMatch) {
-            dateOfBirth = `${dobMatch[1]}.${dobMatch[2]}.${dobMatch[3]}`;
-            // Calculate age from DOB
-            const birthDate = new Date(parseInt(dobMatch[1]), parseInt(dobMatch[2]) - 1, parseInt(dobMatch[3]));
-            const today = new Date();
-            age = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-              age--;
-            }
-            console.log('🎂 Calculated age from DOB:', age);
-          }
-        }
-      });
+    
+    for (const attempt of countryAttempts) {
+      console.log(`${attempt.selector}: "${attempt.value}"`);
+      if (attempt.value && !country) {
+        country = attempt.value;
+      }
     }
+    
+    console.log('FINAL COUNTRY:', country);
+
+    // Extract age
+    console.log('\n--- AGE EXTRACTION ---');
+    let age = 0;
+    let dateOfBirth = '';
+    
+    // Look for age patterns
+    $('*').each((i, el) => {
+      const text = $(el).text().trim();
+      const agePattern = text.match(/^(\d{2})\s*\((\d{4})\.(\d{2})\.(\d{2})\)/);
+      if (agePattern) {
+        console.log('Found age pattern:', text, 'in', el.name, $(el).attr('class'));
+        age = parseInt(agePattern[1]);
+        dateOfBirth = `${agePattern[2]}.${agePattern[3]}.${agePattern[4]}`;
+      }
+    });
+    
+    // Check table
+    $('tr').each((i, el) => {
+      const cells = $(el).find('td');
+      if (cells.length >= 2) {
+        const label = $(cells[0]).text().trim();
+        const value = $(cells[1]).text().trim();
+        console.log(`Table: ${label} = ${value}`);
+        
+        if (label.toLowerCase().includes('age') && !age) {
+          const ageNum = parseInt(value.match(/\d+/)?.[0] || '0');
+          if (ageNum > 0) age = ageNum;
+        }
+      }
+    });
+    
+    console.log('FINAL AGE:', age);
 
     // Extract ranking
+    console.log('\n--- RANKING EXTRACTION ---');
     let currentRanking: number | null = null;
     
-    // Try singles ranking from hero stats
-    $('.stat-value').each((i, el) => {
-      const parent = $(el).parent();
-      if (parent.find('.stat-label').text().includes('Rank')) {
-        const rankText = $(el).text().trim();
-        const rankNum = parseInt(rankText.replace(/[^0-9]/g, ''));
-        if (!isNaN(rankNum)) {
-          currentRanking = rankNum;
-          console.log('🏆 Found ranking:', currentRanking);
-        }
+    $('.stat-value, .data-number, .rank-number').each((i, el) => {
+      const text = $(el).text().trim();
+      console.log('Potential ranking:', text);
+      const rankNum = parseInt(text.replace(/[^0-9]/g, ''));
+      if (!isNaN(rankNum) && rankNum > 0 && rankNum < 2000 && !currentRanking) {
+        currentRanking = rankNum;
       }
     });
-
-    console.log('✅ Scrape complete:', { firstName, lastName, country, age, currentRanking });
-
-    if (!firstName || !lastName) {
-      throw new Error('Could not extract player name from ATP profile');
-    }
-
-    return {
+    
+    console.log('FINAL RANKING:', currentRanking);
+    
+    console.log('\n=== SCRAPE RESULT ===');
+    const result = {
       firstName,
       lastName,
       country: country || 'Unknown',
       dateOfBirth,
-      age: age || 0,
+      age,
       currentRanking,
       profileExists: true
     };
+    console.log(JSON.stringify(result, null, 2));
+    console.log('=== ATP SCRAPE END ===\n');
+    
+    return result;
   } catch (error) {
     console.error('❌ ATP scraping error:', error);
     return null;
   }
 }
 
-/**
- * Verify player data against ATP profile
- */
 export async function verifyPlayerAgainstATP(submittedData: {
   firstName: string;
   lastName: string;
@@ -202,11 +195,10 @@ export async function verifyPlayerAgainstATP(submittedData: {
       score: 0,
       matches: { firstName: false, lastName: false, country: false, age: false },
       atpData: null,
-      discrepancies: ['Could not fetch ATP profile']
+      discrepancies: ['Could not fetch ATP profile - check logs']
     };
   }
 
-  // Normalize for comparison
   const normalize = (str: string) => 
     str.toLowerCase()
       .normalize('NFD')
@@ -214,22 +206,6 @@ export async function verifyPlayerAgainstATP(submittedData: {
       .replace(/[^a-z0-9\s]/g, '')
       .trim();
 
-  console.log('🔍 Comparing:', {
-    submitted: {
-      firstName: submittedData.firstName,
-      lastName: submittedData.lastName,
-      country: submittedData.country,
-      age: submittedData.age
-    },
-    atp: {
-      firstName: atpData.firstName,
-      lastName: atpData.lastName,
-      country: atpData.country,
-      age: atpData.age
-    }
-  });
-
-  // Check matches with more flexible matching
   const firstNameMatch = 
     normalize(submittedData.firstName) === normalize(atpData.firstName) ||
     normalize(submittedData.firstName).includes(normalize(atpData.firstName)) ||
@@ -240,7 +216,6 @@ export async function verifyPlayerAgainstATP(submittedData: {
     normalize(submittedData.lastName).includes(normalize(atpData.lastName)) ||
     normalize(atpData.lastName).includes(normalize(submittedData.lastName));
 
-  // Country matching - handle variations
   const normalizedSubmittedCountry = normalize(submittedData.country);
   const normalizedAtpCountry = normalize(atpData.country);
   
@@ -248,23 +223,17 @@ export async function verifyPlayerAgainstATP(submittedData: {
     normalizedSubmittedCountry === normalizedAtpCountry ||
     normalizedSubmittedCountry.includes(normalizedAtpCountry) ||
     normalizedAtpCountry.includes(normalizedSubmittedCountry) ||
-    // Handle common variations
     (normalizedSubmittedCountry === 'usa' && normalizedAtpCountry.includes('united states')) ||
-    (normalizedSubmittedCountry.includes('united states') && normalizedAtpCountry === 'usa') ||
-    (normalizedSubmittedCountry === 'uk' && normalizedAtpCountry.includes('united kingdom')) ||
-    (normalizedSubmittedCountry.includes('united kingdom') && normalizedAtpCountry === 'uk');
+    (normalizedSubmittedCountry.includes('united states') && normalizedAtpCountry === 'usa');
 
-  // Age: allow ±1 year tolerance
   const ageMatch = atpData.age > 0 && Math.abs(submittedData.age - atpData.age) <= 1;
 
-  // Calculate score
   let score = 0;
   if (firstNameMatch) score += 25;
   if (lastNameMatch) score += 25;
   if (countryMatch) score += 25;
   if (ageMatch) score += 25;
 
-  // Collect discrepancies
   const discrepancies: string[] = [];
   if (!firstNameMatch) {
     discrepancies.push(`First name: "${submittedData.firstName}" vs ATP "${atpData.firstName}"`);
@@ -281,12 +250,7 @@ export async function verifyPlayerAgainstATP(submittedData: {
 
   const verified = score >= 75;
 
-  console.log('📊 Verification result:', {
-    score,
-    verified,
-    matches: { firstNameMatch, lastNameMatch, countryMatch, ageMatch },
-    discrepancies
-  });
+  console.log('VERIFICATION:', { score, verified, firstNameMatch, lastNameMatch, countryMatch, ageMatch });
 
   return {
     verified,
