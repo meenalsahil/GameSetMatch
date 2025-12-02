@@ -44,6 +44,35 @@ export default function PlayerSignup() {
   });
 
   const onSubmit = async (values: SignupPlayer) => {
+    // 🔴 EXTRA HARD REQUIREMENT CHECK ON FRONTEND
+    // This is to guarantee we never even hit the server if these are empty.
+    let hasClientError = false;
+
+    if (!values.videoUrl.trim()) {
+      form.setError("videoUrl", {
+        type: "manual",
+        message: "Video link is required",
+      });
+      hasClientError = true;
+    }
+
+    if (!values.atpProfileUrl.trim()) {
+      form.setError("atpProfileUrl", {
+        type: "manual",
+        message: "ATP/ITF/WTA Profile URL is required",
+      });
+      hasClientError = true;
+    }
+
+    if (hasClientError) {
+      toast({
+        title: "Please fill out all required fields",
+        description: "Video link and ATP/ITF/WTA profile URL are required.",
+        variant: "destructive",
+      });
+      return; // ⛔️ stop here, don't call the API
+    }
+
     try {
       const formData = new FormData();
 
@@ -76,9 +105,10 @@ export default function PlayerSignup() {
         data = null;
       }
 
+      // If backend sent field errors, map them into the form and DON'T show
+      // the generic "Invalid input" toast.
       if (!response.ok) {
-        // Map backend field errors into form
-        if (data && Array.isArray(data.errors)) {
+        if (data && Array.isArray(data.errors) && data.errors.length > 0) {
           data.errors.forEach((err: any) => {
             const fieldName = err.path as keyof SignupPlayer;
             form.setError(fieldName, {
@@ -86,17 +116,30 @@ export default function PlayerSignup() {
               message: err.message,
             });
           });
+
+          // Optional: gentle toast just telling them to look at fields
+          toast({
+            title: "Please fix the highlighted fields",
+            description: "Some of the information you entered is not valid.",
+            variant: "destructive",
+          });
+
+          return; // ⛔️ don't throw, we already handled it
         }
 
+        // No field-level errors from backend → treat as real failure
         throw new Error(data?.message || "Signup failed");
       }
 
+      // ✅ Success
       window.location.href = "/thank-you";
     } catch (error: any) {
+      // This will now only run for *real* server errors (500 etc),
+      // not for simple validation issues.
       toast({
         title: "Signup Failed",
         description:
-          error.message || "Please check your information and try again",
+          error.message || "Please try again later or contact support.",
         variant: "destructive",
       });
     }
