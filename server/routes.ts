@@ -413,32 +413,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // -------- PUBLIC: Browse players --------
-  app.get("/api/players", async (_req: Request, res: Response) => {
-    try {
-      const list: any[] = await storage.getPublishedPlayers();
-      const transformed = list
-        .filter((p: any) => p.active !== false)
-        .map((p: any) => ({
-          id: p.id,
-          fullName: p.fullName,
-          location: p.location,
-          ranking: p.ranking,
-          specialization: p.specialization,
-          bio: p.bio,
-          fundingGoals: p.fundingGoals,
-          videoUrl: p.videoUrl,
-          atpProfileUrl: p.atpProfileUrl,
-          photoUrl: p.photoUrl,
-          country: p.country,
-          age: p.age,
-        }));
+  // -------- PUBLIC: Browse players --------
+app.get("/api/players", async (_req: Request, res: Response) => {
+  try {
+    const list: any[] = await storage.getPublishedPlayers();
+    const transformed = list
+      .filter((p: any) => p.active !== false)
+      .map((p: any) => ({
+        id: p.id,
+        fullName: p.fullName,
+        location: p.location,
+        ranking: p.ranking,
+        specialization: p.specialization,
+        bio: p.bio,
+        fundingGoals: p.fundingGoals,
+        videoUrl: p.videoUrl,
+        photoUrl: p.photoUrl,
+        country: p.country,
+        age: p.age,
 
-      res.json(transformed);
-    } catch (e) {
-      console.error("Get players error:", e);
-      res.status(500).json({ message: "Failed to get players" });
-    }
-  });
+        // NEW: expose verification info to the frontend
+        atpProfileUrl: p.atpProfileUrl,
+        atpVerified: p.atpVerified,
+        atpVerificationScore: p.atpVerificationScore,
+      }));
+
+    res.json(transformed);
+  } catch (e) {
+    console.error("Get players error:", e);
+    res.status(500).json({ message: "Failed to get players" });
+  }
+});
+
 
   // -------- PUBLIC: Get single player --------
    app.get("/api/players/:id", async (req: Request, res: Response) => {

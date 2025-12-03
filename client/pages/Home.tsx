@@ -2,7 +2,14 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
-import { Trophy, Target, Users, ArrowRight, CheckCircle2 } from "lucide-react";
+import {
+  Trophy,
+  Target,
+  Users,
+  ArrowRight,
+  CheckCircle2,
+  PlayCircle,
+} from "lucide-react";
 import Footer from "@/components/Footer";
 
 export default function HomePage() {
@@ -18,56 +25,104 @@ export default function HomePage() {
       }
     }
   }, []);
+
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-green-50 via-white to-blue-50 dark:from-green-950 dark:via-gray-900 dark:to-blue-950">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-        <div className="container mx-auto px-6 py-24 relative">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-4 py-2 rounded-full text-sm font-medium mb-6">
-              <Trophy className="h-4 w-4" />
-              Supporting Tennis Players Worldwide
+    <div className="min-h-screen flex flex-col">
+      {/* HERO SECTION WITH BACKGROUND VIDEO */}
+      <section className="relative overflow-hidden">
+        {/* Background video */}
+        <video
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+        >
+          {/* You can replace this with your own hosted tennis video later */}
+          <source
+            src="https://videos.pexels.com/video-files/4761793/4761793-uhd_2560_1440_25fps.mp4"
+            type="video/mp4"
+          />
+        </video>
+
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/65 to-emerald-900/50" />
+
+        {/* Hero content */}
+        <div className="relative z-10 container mx-auto px-6 py-24 flex items-center min-h-[70vh]">
+          <div className="max-w-4xl">
+            {/* Small trust pill */}
+            <div className="inline-flex items-center gap-2 bg-emerald-900/40 border border-emerald-500/40 text-emerald-200 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide mb-5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              Verified tennis players • ATP / ITF / WTA linked
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
-              Connect Tennis Players
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600">
-                with Sponsors
-              </span>
+            {/* Headline */}
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 leading-tight">
+              Connect{" "}
+              <span className="text-emerald-300">real tennis players</span>{" "}
+              with sponsors who care.
             </h1>
 
-            <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
-              Support rising tennis stars from ATP to ITF tournaments. Help
-              players achieve their dreams with gear, travel, and training
-              funds.
+            {/* Subheadline */}
+            <p className="text-base md:text-lg text-emerald-50/90 max-w-2xl mb-8">
+              GameSetMatch helps sponsors support verified tennis players using
+              ATP/ITF/WTA profile links and verification videos—so you know
+              you’re backing genuine athletes, not fake profiles.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="text-lg px-8 py-6" asChild>
-                <Link href="/players">
-                  Browse Players
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              <Button
+                size="lg"
+                className="text-lg px-8 py-6 shadow-lg shadow-emerald-500/30"
+                asChild
+                data-testid="button-cta-player"
+              >
+                <Link href="/signup/player">
+                  I’m a Player
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
+
               <Button
                 size="lg"
                 variant="outline"
-                className="text-lg px-8 py-6"
+                className="text-lg px-8 py-6 border-emerald-300/70 text-emerald-50 hover:bg-emerald-900/40"
                 asChild
+                data-testid="button-cta-sponsor"
               >
-                <Link href="/signup/player">I'm a Player</Link>
+                <Link href="/players">
+                  Browse Players
+                  <PlayCircle className="ml-2 h-5 w-5" />
+                </Link>
               </Button>
+            </div>
+
+            {/* Trust strip bullets */}
+            <div className="flex flex-wrap gap-4 text-xs md:text-sm text-emerald-100/85">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                ATP / ITF / WTA profile link required for players
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Video verification for player identity
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Manual review before profiles go live
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Stats Section */}
-
-      {/* How It Works - For Players */}
-      <div id="how-it-works" className="py-24 bg-white dark:bg-gray-900">
+      {/* HOW IT WORKS SECTION (your existing content) */}
+      <div
+        id="how-it-works"
+        className="py-24 bg-white dark:bg-gray-900 flex-1"
+      >
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">How It Works</h2>

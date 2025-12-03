@@ -1,55 +1,80 @@
+// client/src/pages/Players.tsx
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import PlayerCard from "@/components/PlayerCard";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
+
+interface PlayerListItem {
+  id: number;
+  fullName: string;
+  location: string;
+  country?: string | null;
+  ranking?: number | string | null;
+  specialization?: string | null;
+  photoUrl?: string | null;
+  atpProfileUrl?: string | null;
+  atpVerified?: boolean;
+  atpVerificationScore?: number | null;
+}
 
 export default function Players() {
   const [searchQuery, setSearchQuery] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
   const [rankFilter, setRankFilter] = useState("all");
 
-  const { data: players = [], isLoading } = useQuery({
+  const { data: players = [], isLoading } = useQuery<PlayerListItem[]>({
     queryKey: ["/api/players"],
   });
 
-  // Get unique countries for filter
+  // unique countries
   const countries = useMemo(() => {
-    const uniqueCountries = [...new Set(players.map((p: any) => p.country).filter(Boolean))];
+    const uniqueCountries = [
+      ...new Set(
+        players.map((p: any) => p.country).filter((c) => !!c) as string[],
+      ),
+    ];
     return uniqueCountries.sort();
   }, [players]);
 
-  // Filter players
   const filteredPlayers = useMemo(() => {
-    return players.filter((player: any) => {
-      // Search filter
-      const matchesSearch = 
+    return (players as PlayerListItem[]).filter((player) => {
+      const matchesSearch =
         player.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         player.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        player.specialization?.toLowerCase().includes(searchQuery.toLowerCase());
+        player.specialization
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase());
 
-      // Country filter
-      const matchesCountry = countryFilter === "all" || player.country === countryFilter;
+      const matchesCountry =
+        countryFilter === "all" || player.country === countryFilter;
 
-      // Rank filter
       let matchesRank = true;
       if (rankFilter !== "all" && player.ranking) {
-        const rank = parseInt(player.ranking);
-        switch (rankFilter) {
-          case "top100":
-            matchesRank = rank <= 100;
-            break;
-          case "101-500":
-            matchesRank = rank > 100 && rank <= 500;
-            break;
-          case "501-1000":
-            matchesRank = rank > 500 && rank <= 1000;
-            break;
-          case "1000plus":
-            matchesRank = rank > 1000;
-            break;
+        const rank = parseInt(String(player.ranking));
+        if (!Number.isNaN(rank)) {
+          switch (rankFilter) {
+            case "top100":
+              matchesRank = rank <= 100;
+              break;
+            case "101-500":
+              matchesRank = rank > 100 && rank <= 500;
+              break;
+            case "501-1000":
+              matchesRank = rank > 500 && rank <= 1000;
+              break;
+            case "1000plus":
+              matchesRank = rank > 1000;
+              break;
+          }
         }
       }
 
@@ -71,10 +96,9 @@ export default function Players() {
           Discover tennis players at all levels seeking sponsorship support
         </p>
 
-        {/* Search and Filters */}
+        {/* Search + filters */}
         <div className="bg-card rounded-lg p-6 mb-8 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search */}
             <div className="md:col-span-2 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -85,14 +109,13 @@ export default function Players() {
               />
             </div>
 
-            {/* Country Filter */}
             <Select value={countryFilter} onValueChange={setCountryFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="All Countries" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Countries</SelectItem>
-                {countries.map((country: string) => (
+                {countries.map((country) => (
                   <SelectItem key={country} value={country}>
                     {country}
                   </SelectItem>
@@ -100,7 +123,6 @@ export default function Players() {
               </SelectContent>
             </Select>
 
-            {/* Rank Filter */}
             <Select value={rankFilter} onValueChange={setRankFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="All Ranks" />
@@ -115,7 +137,6 @@ export default function Players() {
             </Select>
           </div>
 
-          {/* Clear Filters */}
           {(searchQuery || countryFilter !== "all" || rankFilter !== "all") && (
             <Button
               variant="outline"
@@ -128,33 +149,36 @@ export default function Players() {
           )}
         </div>
 
-        {/* Results Count */}
         <p className="text-sm text-muted-foreground mb-4">
-          Showing {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'}
+          Showing {filteredPlayers.length}{" "}
+          {filteredPlayers.length === 1 ? "player" : "players"}
         </p>
 
-        {/* Player Cards */}
         {isLoading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Loading players...</p>
           </div>
         ) : filteredPlayers.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">No players found matching your filters.</p>
+            <p className="text-muted-foreground">
+              No players found matching your filters.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPlayers.map((player: any) => (
+            {filteredPlayers.map((player) => (
               <PlayerCard
                 key={player.id}
                 id={player.id}
                 name={player.fullName}
                 location={player.location}
-                country={player.country}
+                country={player.country || undefined}
                 ranking={player.ranking}
-                specialization={player.specialization}
-                photoUrl={player.photoUrl}
-                atpProfileUrl={player.atpProfileUrl}
+                specialization={player.specialization || undefined}
+                photoUrl={player.photoUrl || undefined}
+                atpProfileUrl={player.atpProfileUrl || undefined}
+                atpVerified={player.atpVerified}
+                atpVerificationScore={player.atpVerificationScore}
               />
             ))}
           </div>

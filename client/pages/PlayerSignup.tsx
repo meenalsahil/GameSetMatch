@@ -1,3 +1,4 @@
+// client/src/pages/PlayerSignup.tsx
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signupPlayerSchema, type SignupPlayer } from "@shared/schema";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,40 +44,40 @@ export default function PlayerSignup() {
     },
   });
 
+  // --- Profile completeness logic ---
+  const watchedValues = form.watch();
+
+  const completion = useMemo(() => {
+    const requiredFields: (keyof SignupPlayer)[] = [
+      "email",
+      "password",
+      "fullName",
+      "age",
+      "country",
+      "location",
+      "specialization",
+      "bio",
+      "fundingGoals",
+      "videoUrl",
+      "atpProfileUrl",
+    ];
+
+    let filled = 0;
+
+    for (const field of requiredFields) {
+      const value = (watchedValues as any)[field];
+
+      if (typeof value === "number") {
+        if (!Number.isNaN(value) && value > 0) filled++;
+      } else if (typeof value === "string") {
+        if (value.trim().length > 0) filled++;
+      }
+    }
+
+    return Math.round((filled / requiredFields.length) * 100);
+  }, [watchedValues]);
+
   const onSubmit = async (values: SignupPlayer) => {
-    // 🔴 Extra hard requirement check on frontend
-    // Normalize to strings so .trim() never crashes
-    const video = (values.videoUrl ?? "").trim();
-    const atp = (values.atpProfileUrl ?? "").trim();
-
-    let hasClientError = false;
-
-    if (!video) {
-      form.setError("videoUrl", {
-        type: "manual",
-        message: "Verification video link is required",
-      });
-      hasClientError = true;
-    }
-
-    if (!atp) {
-      form.setError("atpProfileUrl", {
-        type: "manual",
-        message: "ATP/ITF/WTA Profile URL is required",
-      });
-      hasClientError = true;
-    }
-
-    if (hasClientError) {
-      toast({
-        title: "Please fill out all required fields",
-        description:
-          "Verification video and ATP/ITF/WTA profile links are required.",
-        variant: "destructive",
-      });
-      return; // ⛔️ stop here, don't call the API
-    }
-
     try {
       const formData = new FormData();
 
@@ -90,11 +91,11 @@ export default function PlayerSignup() {
       formData.append("specialization", values.specialization);
       formData.append("bio", values.bio);
       formData.append("fundingGoals", values.fundingGoals);
-      formData.append("videoUrl", video);
-      formData.append("atpProfileUrl", atp);
+      formData.append("videoUrl", values.videoUrl);
+      formData.append("atpProfileUrl", values.atpProfileUrl);
 
-      if (values.photo) {
-        formData.append("photo", values.photo);
+      if ((values as any).photo) {
+        formData.append("photo", (values as any).photo);
       }
 
       const response = await fetch("/api/auth/signup", {
@@ -102,46 +103,17 @@ export default function PlayerSignup() {
         body: formData,
       });
 
-      let data: any = null;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
-
-      // If backend sent field errors, map them into the form
       if (!response.ok) {
-        if (data && Array.isArray(data.errors) && data.errors.length > 0) {
-          data.errors.forEach((err: any) => {
-            const fieldName = err.path as keyof SignupPlayer;
-            form.setError(fieldName, {
-              type: "server",
-              message: err.message,
-            });
-          });
-
-          toast({
-            title: "Please fix the highlighted fields",
-            description: "Some of the information you entered is not valid.",
-            variant: "destructive",
-          });
-
-          return; // ⛔️ don't throw, we already handled it
-        }
-
-        // No field-level errors from backend → treat as real failure
-        throw new Error(data?.message || "Signup failed");
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || "Signup failed");
       }
 
-      // ✅ Success
       window.location.href = "/thank-you";
     } catch (error: any) {
-      // This will now only run for *real* server errors (500 etc),
-      // not for simple validation issues.
       toast({
         title: "Signup Failed",
         description:
-          error.message || "Please try again later or contact support.",
+          error.message || "Please check your information and try again",
         variant: "destructive",
       });
     }
@@ -198,7 +170,8 @@ export default function PlayerSignup() {
         </div>
 
         <div className="container mx-auto px-6 py-12 max-w-3xl">
-          <div className="mb-8">
+          {/* Step indicator */}
+          <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               {[1, 2, 3].map((s) => (
                 <div
@@ -209,9 +182,23 @@ export default function PlayerSignup() {
                 />
               ))}
             </div>
-            <p className="text-sm text-muted-foreground text-center">
+            <p className="text-sm text-muted-foreground text-center mb-2">
               Step {step} of 3
             </p>
+
+            {/* Profile completeness bar */}
+            <div className="mt-3">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>Profile completeness</span>
+                <span>{completion}%</span>
+              </div>
+              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{ width: `${completion}%` }}
+                />
+              </div>
+            </div>
           </div>
 
           <Form {...form}>
@@ -289,9 +276,7 @@ export default function PlayerSignup() {
                               {...field}
                               onChange={(e) =>
                                 field.onChange(
-                                  e.target.value === ""
-                                    ? ""
-                                    : parseInt(e.target.value, 10),
+                                  parseInt(e.target.value) || undefined,
                                 )
                               }
                             />
@@ -425,7 +410,7 @@ export default function PlayerSignup() {
                         </FormItem>
                       )}
                     />
-                    {/* Verification Video field */}
+
                     <FormField
                       control={form.control}
                       name="videoUrl"
@@ -441,15 +426,14 @@ export default function PlayerSignup() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Record a short video on your phone, upload it to any
-                            service (YouTube unlisted, Google Drive, Dropbox,
-                            iCloud, etc.), then paste the share link here.
+                            Record on your phone, upload anywhere, then paste the
+                            share link here.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    {/* ATP / ITF / WTA profile field */}
+
                     <FormField
                       control={form.control}
                       name="atpProfileUrl"
@@ -459,18 +443,19 @@ export default function PlayerSignup() {
                           <FormControl>
                             <Input
                               type="url"
-                              placeholder="Paste your official ATP, ITF, or WTA profile link"
+                              placeholder="https://www.atptour.com/en/players/..."
                               {...field}
                             />
                           </FormControl>
                           <FormDescription>
                             Link to your official ATP Tour, ITF Tennis, or WTA
-                            player profile.
+                            profile.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
                     <FormField
                       control={form.control}
                       name="photo"
@@ -501,8 +486,7 @@ export default function PlayerSignup() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Upload a professional photo (JPG, PNG, GIF – max
-                            5MB)
+                            Upload a professional photo (JPG, PNG, GIF - max 5MB)
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
