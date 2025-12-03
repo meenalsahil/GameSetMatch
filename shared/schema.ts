@@ -36,7 +36,6 @@ export const players = pgTable("players", {
   active: boolean("active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 
-  // ATP verification
   atpVerified: boolean("atp_verified").default(false),
   atpVerificationScore: integer("atp_verification_score"),
   atpVerificationData: jsonb("atp_verification_data").$type<any>(),
@@ -48,7 +47,6 @@ export const players = pgTable("players", {
   atpLastChecked: timestamp("atp_last_checked"),
   atpCurrentRanking: integer("atp_current_ranking"),
 
-  // Manual verification
   verificationMethod: text("verification_method"),
   videoVerified: boolean("video_verified").default(false),
   tournamentDocUrl: text("tournament_doc_url"),
@@ -69,50 +67,68 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = typeof players.$inferInsert;
 
-// ---------------------
-// Zod signup schema
-// ---------------------
+// ---- Zod schemas used by client + server ----
+
+// helper: is it ATP / ITF / WTA host?
+const isOfficialTourHost = (value: string) => {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+
+    const allowedRoots = ["atptour.com", "itftennis.com", "wtatennis.com"];
+
+    return allowedRoots.some(
+      (root) => host === root || host.endsWith("." + root),
+    );
+  } catch {
+    return false;
+  }
+};
 
 export const signupPlayerSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   fullName: z.string().min(2, "Please enter your full name"),
-
-  // allow form string to become number safely
-  age: z.coerce
-    .number()
-    .min(13, "You must be at least 13 years old"),
-
+  age: z.number().min(13, "You must be at least 13 years old"),
   country: z.string().min(2, "Please enter your country"),
   location: z.string().min(2, "Please enter your location"),
-
   ranking: z.string().optional(),
-
   specialization: z
     .string()
     .min(2, "Please specify your court specialization"),
-
   bio: z
     .string()
-    .min(10, "Please tell us about your tennis journey (at least 10 characters)"),
-
+    .min(
+      10,
+      "Please tell us about your tennis journey (at least 10 characters)",
+    ),
   fundingGoals: z
     .string()
-    .min(10, "Please describe what you're raising funds for (at least 10 characters)"),
+    .min(
+      10,
+      "Please describe what you're raising funds for (at least 10 characters)",
+    ),
 
-  // REQUIRED – no .url() here so we control error message
-  videoUrl: z
-    .string()
-    .trim()
-    .min(1, "Video link is required"),
+  // Verification video: any shareable link (YouTube, Drive, Dropbox, etc.), just required
+  videoUrl: z.string().min(1, "Verification video link is required"),
 
-  // REQUIRED – no .url() here so we control error message
+  // ATP / ITF / WTA profile: required + must be on official domains
   atpProfileUrl: z
     .string()
     .trim()
-    .min(1, "ATP/ITF/WTA Profile URL is required"),
+    .min(1, "ATP/ITF/WTA Profile URL is required")
+    .refine(
+      (value) => {
+        // if somehow empty, let the .min() error handle it – avoid double errors
+        if (!value) return true;
+        return isOfficialTourHost(value);
+      },
+      {
+        message:
+          "Please enter a link to an official ATP, ITF, or WTA player profile",
+      },
+    ),
 
-  // file object – handled by frontend/multer, not by zod
   photo: z.any().optional(),
 });
 
