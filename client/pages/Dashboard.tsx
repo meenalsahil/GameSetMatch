@@ -1,3 +1,4 @@
+// client/src/pages/Dashboard.tsx
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,8 +21,10 @@ import {
   XCircle,
   LogOut,
   Shield,
+  CreditCard,
+  Loader2,
 } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -50,12 +53,8 @@ export default function Dashboard() {
       return res.json();
     },
     onSuccess: () => {
-      // CRITICAL: Set the auth data to null BEFORE invalidating
       queryClient.setQueryData(["/api/auth/me"], null);
-
-      // Then invalidate to trigger refetch
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-
       toast({ title: "Signed out successfully" });
       setLocation("/");
     },
@@ -67,6 +66,7 @@ export default function Dashboard() {
       });
     },
   });
+
   const toggleActiveMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/players/toggle-active", { method: "POST" });
@@ -80,6 +80,7 @@ export default function Dashboard() {
       });
     },
   });
+
   const publishMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/players/${player?.id}/publish`, {
@@ -109,6 +110,46 @@ export default function Dashboard() {
     },
   });
 
+  // ---------- Stripe Connect client logic ----------
+  const stripeStatusQuery = useQuery({
+    queryKey: ["/api/payments/stripe/status"],
+    enabled: !!player && !!player.stripeAccountId, // only check if we have an account id
+    queryFn: async () => {
+      const res = await fetch("/api/payments/stripe/status");
+      if (!res.ok) throw new Error("Failed to fetch Stripe status");
+      return res.json() as Promise<{
+        ready: boolean;
+        hasAccount: boolean;
+        chargesEnabled: boolean;
+        payoutsEnabled: boolean;
+        detailsSubmitted: boolean;
+      }>;
+    },
+  });
+
+  const connectStripeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/payments/stripe/connect-link", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to create Stripe link");
+      }
+      return res.json() as Promise<{ url: string }>;
+    },
+    onSuccess: (data) => {
+      window.location.href = data.url;
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Stripe setup failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -126,6 +167,8 @@ export default function Dashboard() {
     .map((n) => n[0])
     .join("")
     .toUpperCase();
+
+  const stripeReady = player.stripeReady || stripeStatusQuery.data?.ready;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -195,6 +238,12 @@ export default function Dashboard() {
                     >
                       <XCircle className="h-4 w-4 mr-2" />
                       Not Published
+                    </Badge>
+                  )}
+                  {stripeReady && (
+                    <Badge className="w-full justify-center bg-emerald-600 text-white">
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Stripe payouts ready
                     </Badge>
                   )}
                 </div>
@@ -273,14 +322,14 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
-                  {player.approvalStatus === "approved" &&
-                    !player.published && (
-                      <div className="bg-muted/50 p-4 rounded-md">
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Your profile has been approved! Publish it now to make
-                          it visible to sponsors and start receiving sponsorship
-                          opportunities.
-                        </p>
+                  {player.approvalStatus === "approved" && !player.published && (
+                    <div className="bg-muted/50 p-4 rounded-md space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Your profile has been approved! Publish it now to make
+                        it visible to sponsors and start receiving sponsorship
+                        opportunities.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           onClick={() => publishMutation.mutate()}
                           disabled={publishMutation.isPending}
@@ -299,7 +348,8 @@ export default function Dashboard() {
                             : "Activate Profile"}
                         </Button>
                       </div>
-                    )}
+                    </div>
+                  )}
                   {player.published && (
                     <div className="bg-primary/5 p-4 rounded-md border border-primary/20">
                       <p className="text-sm text-foreground">
@@ -311,6 +361,66 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Stripe Connect Card */}
+          {player.approvalStatus === "approved" && (
+            <div className="mt-8">
+              <Card className="border-2 border-dashed border-emerald-300 bg-emerald-50/40">
+                <CardHeader className="flex flex-row items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5 text-emerald-600" />
+                      Set up payouts with Stripe (test)
+                    </CardTitle>
+                    <CardDescription>
+                      Connect a Stripe Express account so sponsors can send you
+                      funds in the future. Right now this is in{" "}
+                      <strong>test mode</strong> for your own experimentation.
+                    </CardDescription>
+                  </div>
+                  {stripeStatusQuery.isFetching && (
+                    <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+                  )}
+                </CardHeader>
+                <CardContent className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="text-sm text-muted-foreground max-w-xl">
+                    {!stripeReady ? (
+                      <>
+                        When you click the button, you&apos;ll be taken to
+                        Stripe to complete onboarding. Use{" "}
+                        <strong>test details</strong> only. After you return,
+                        refresh this page and you should see &quot;Stripe
+                        payouts ready&quot; on your profile.
+                      </>
+                    ) : (
+                      <>
+                        Your Stripe Express account looks ready in test mode.
+                        You can re-run onboarding if you want to test again.
+                      </>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={stripeReady ? "outline" : "default"}
+                      onClick={() => connectStripeMutation.mutate()}
+                      disabled={connectStripeMutation.isPending}
+                    >
+                      {connectStripeMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Contacting Stripe...
+                        </>
+                      ) : stripeReady ? (
+                        "Re-open Stripe onboarding"
+                      ) : (
+                        "Set up Stripe payouts (test)"
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
       <Footer />

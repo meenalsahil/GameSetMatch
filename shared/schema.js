@@ -1,92 +1,100 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, boolean, timestamp, integer, } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import { pgTable, serial, varchar, integer, boolean, text, timestamp, jsonb, } from "drizzle-orm/pg-core";
 import { z } from "zod";
-// =============================
-// 🧱 Database Tables
-// =============================
 export const players = pgTable("players", {
-    id: varchar("id")
-        .primaryKey()
-        .default(sql `gen_random_uuid()`),
-    email: text("email").notNull().unique(),
+    id: serial("id").primaryKey(),
+    email: varchar("email", { length: 255 }).notNull(),
     passwordHash: text("password_hash").notNull(),
     fullName: text("full_name").notNull(),
-    age: integer("age").notNull(),
-    country: text("country").notNull(),
-    location: text("location").notNull(),
-    ranking: text("ranking"),
-    specialization: text("specialization").notNull(),
-    bio: text("bio").notNull(),
-    fundingGoals: text("funding_goals").notNull(),
+    age: integer("age"),
+    country: text("country"),
+    location: text("location"),
+    ranking: integer("ranking"),
+    specialization: text("specialization"),
+    bio: text("bio"),
+    fundingGoals: text("funding_goals"),
+    photoUrl: text("photo_url"),
     videoUrl: text("video_url"),
     atpProfileUrl: text("atp_profile_url"),
-    photoUrl: text("photo_url"),
-    published: boolean("published").notNull().default(false),
-    featured: boolean("featured").notNull().default(false),
-    active: boolean("active").notNull().default(true),
-    priority: text("priority").default("normal"),
-    isAdmin: boolean("is_admin").notNull().default(false),
-    approvalStatus: text("approval_status").notNull().default("pending"),
-    approvedBy: varchar("approved_by"),
+    published: boolean("published").default(false),
+    featured: boolean("featured").default(false),
+    priority: integer("priority").default(0),
+    isAdmin: boolean("is_admin").default(false),
+    approvalStatus: text("approval_status").default("pending"),
+    approvedBy: integer("approved_by"),
     approvedAt: timestamp("approved_at"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    active: boolean("active").default(true),
+    createdAt: timestamp("created_at").defaultNow(),
+    stripeAccountId: varchar("stripe_account_id", { length: 255 }),
+    stripeReady: boolean("stripe_ready").notNull().default(false),
+    atpVerified: boolean("atp_verified").default(false),
+    atpVerificationScore: integer("atp_verification_score"),
+    atpVerificationData: jsonb("atp_verification_data").$type(),
+    atpFirstNameMatch: boolean("atp_first_name_match"),
+    atpLastNameMatch: boolean("atp_last_name_match"),
+    atpCountryMatch: boolean("atp_country_match"),
+    atpAgeMatch: boolean("atp_age_match"),
+    atpDiscrepancies: text("atp_discrepancies"),
+    atpLastChecked: timestamp("atp_last_checked"),
+    atpCurrentRanking: integer("atp_current_ranking"),
+    verificationMethod: text("verification_method"),
+    videoVerified: boolean("video_verified").default(false),
+    tournamentDocUrl: text("tournament_doc_url"),
+    tournamentDocVerified: boolean("tournament_doc_verified").default(false),
+    verificationStatus: text("verification_status").default("pending"),
+    verifiedAt: timestamp("verified_at"),
+    verificationNotes: text("verification_notes"),
 });
 export const passwordResetTokens = pgTable("password_reset_tokens", {
-    id: varchar("id")
-        .primaryKey()
-        .default(sql `gen_random_uuid()`),
-    playerId: varchar("player_id")
-        .notNull()
-        .references(() => players.id, { onDelete: "cascade" }),
-    token: text("token").notNull().unique(),
+    id: serial("id").primaryKey(),
+    playerId: integer("player_id").notNull(),
+    token: text("token").notNull(),
     expiresAt: timestamp("expires_at").notNull(),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at").defaultNow(),
 });
-export const insertPlayerSchema = createInsertSchema(players).omit({
-    id: true,
-    createdAt: true,
-});
-// =============================
-// 🧩 Validation Schema
-// =============================
+// ---- Zod schemas used by client + server ----
+// helper: is it ATP / ITF / WTA host?
+const isOfficialTourHost = (value) => {
+    try {
+        const url = new URL(value);
+        const host = url.hostname.toLowerCase();
+        const allowedRoots = ["atptour.com", "itftennis.com", "wtatennis.com"];
+        return allowedRoots.some((root) => host === root || host.endsWith("." + root));
+    }
+    catch {
+        return false;
+    }
+};
 export const signupPlayerSchema = z.object({
-    email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    fullName: z.string().min(1, "Full name is required"),
-    age: z
-        .number()
-        .int()
-        .positive()
-        .optional()
-        .or(z.nan())
-        .transform((v) => (isNaN(v) ? undefined : v)),
-    country: z.string().min(1, "Country is required"),
-    location: z.string().min(1, "Location is required"),
-    ranking: z.string().optional().nullable(),
-    specialization: z.string().min(1, "Specialization is required"),
-    bio: z.string().min(1, "Bio is required"),
-    fundingGoals: z.string().min(1, "Funding goals are required"),
-    videoUrl: z
+    email: z.string().email("Please enter a valid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    fullName: z.string().min(2, "Please enter your full name"),
+    age: z.number().min(13, "You must be at least 13 years old"),
+    country: z.string().min(2, "Please enter your country"),
+    location: z.string().min(2, "Please enter your location"),
+    ranking: z.string().optional(),
+    specialization: z
         .string()
-        .url("Must be a valid URL")
-        .optional()
-        .or(z.literal(""))
-        .nullable(),
-    // ✅ ATP/ITF Profile Required (older syntax)
+        .min(2, "Please specify your court specialization"),
+    bio: z
+        .string()
+        .min(10, "Please tell us about your tennis journey (at least 10 characters)"),
+    fundingGoals: z
+        .string()
+        .min(10, "Please describe what you're raising funds for (at least 10 characters)"),
+    // Verification video: any shareable link (YouTube, Drive, Dropbox, etc.), just required
+    videoUrl: z.string().min(1, "Verification video link is required"),
+    // ATP / ITF / WTA profile: required + must be on official domains
     atpProfileUrl: z
-        .union([
-        z.string().url("Must be a valid ATP/ITF profile URL"),
-        z.literal(""),
-        z.undefined(),
-    ])
-        .optional()
-        .nullable()
-        .transform((val) => {
-        if (!val || val === "")
-            return null;
-        return val;
+        .string()
+        .trim()
+        .min(1, "ATP/ITF/WTA Profile URL is required")
+        .refine((value) => {
+        // if somehow empty, let the .min() error handle it – avoid double errors
+        if (!value)
+            return true;
+        return isOfficialTourHost(value);
+    }, {
+        message: "Please enter a link to an official ATP, ITF, or WTA player profile",
     }),
-    // ✅ Photo Optional
-    photoUrl: z.string().optional().nullable(),
+    photo: z.any().optional(),
 });

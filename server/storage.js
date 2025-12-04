@@ -1,14 +1,15 @@
 import { players, } from "../shared/schema.js";
 import { pool, db } from "./db.js";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 export class DbStorage {
     async getPlayer(id) {
-        const result = await db
+        const numericId = typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id;
+        const rows = await db
             .select()
             .from(players)
-            .where(eq(players.id, id))
+            .where(eq(players.id, numericId))
             .limit(1);
-        return result[0];
+        return rows[0] ?? null;
     }
     async getPlayerByEmail(email) {
         try {
@@ -34,9 +35,12 @@ export class DbStorage {
         email, password_hash, full_name, age, country, location,
         ranking, specialization, bio, funding_goals, video_url,
         atp_profile_url, photo_url, published, featured, priority,
-        approval_status, active
+        approval_status, active,
+        atp_verified, atp_verification_score, atp_verification_data,
+        atp_first_name_match, atp_last_name_match, atp_country_match, atp_age_match,
+        atp_discrepancies, atp_last_checked, atp_current_ranking
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
       RETURNING *`, [
             player.email,
             player.passwordHash,
@@ -53,15 +57,28 @@ export class DbStorage {
             player.photoUrl || null,
             false, // published
             false, // featured
-            player.priority || "normal",
-            "pending", // approval_status default
-            true, // active by default
+            player.priority || 0,
+            "pending", // approval_status
+            true, // active
+            player.atpVerified || false,
+            player.atpVerificationScore || null,
+            player.atpVerificationData || null,
+            player.atpFirstNameMatch || false,
+            player.atpLastNameMatch || false,
+            player.atpCountryMatch || false,
+            player.atpAgeMatch || false,
+            player.atpDiscrepancies || null,
+            player.atpLastChecked || null,
+            player.atpCurrentRanking || null,
         ]);
         return result.rows[0];
     }
     async getAllPlayers() {
-        const result = await pool.query("SELECT * FROM players ORDER BY created_at DESC");
-        return result.rows;
+        const result = await db
+            .select()
+            .from(players)
+            .orderBy(desc(players.createdAt));
+        return result;
     }
     async getPublishedPlayers() {
         const result = await db
@@ -71,8 +88,13 @@ export class DbStorage {
         return result;
     }
     async getFeaturedPlayers() {
-        const result = await pool.query("SELECT * FROM players WHERE featured = true ORDER BY created_at DESC LIMIT 4");
-        return result.rows;
+        const result = await db
+            .select()
+            .from(players)
+            .where(eq(players.featured, true))
+            .orderBy(desc(players.createdAt))
+            .limit(4);
+        return result;
     }
     async updatePlayer(id, player) {
         const fields = [];
@@ -115,7 +137,7 @@ export class DbStorage {
             values.push(player.photoUrl);
         }
         if (fields.length === 0) {
-            return this.getPlayer(id);
+            return this.getPlayer(Number(id));
         }
         values.push(id);
         const result = await pool.query(`UPDATE players SET ${fields.join(", ")} WHERE id = $${paramCount} RETURNING *`, values);
@@ -126,9 +148,7 @@ export class DbStorage {
         return result.rows[0];
     }
     async approvePlayer(id, adminId) {
-        const result = await pool.query(
-        // set approval_status and also set published = true
-        "UPDATE players SET approval_status = 'approved', published = true, approved_by = $2, approved_at = NOW() WHERE id = $1 RETURNING *", [id, adminId]);
+        const result = await pool.query("UPDATE players SET approval_status = 'approved', published = true, approved_by = $2, approved_at = NOW() WHERE id = $1 RETURNING *", [id, adminId]);
         return result.rows[0];
     }
     async rejectPlayer(id, adminId) {

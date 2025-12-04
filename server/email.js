@@ -1,38 +1,27 @@
 import { Resend } from 'resend';
-
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'sudhirmalini@gmail.com';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'GameSetMatch <onboarding@resend.dev>';
-
-let resend: Resend | null = null;
-
+let resend = null;
 if (RESEND_API_KEY) {
-  resend = new Resend(RESEND_API_KEY);
-  console.log('✅ Email service enabled');
-} else {
-  console.log('⚠️  Email service disabled - RESEND_API_KEY not set');
+    resend = new Resend(RESEND_API_KEY);
+    console.log('✅ Email service enabled');
 }
-
+else {
+    console.log('⚠️  Email service disabled - RESEND_API_KEY not set');
+}
 export const emailService = {
-  async notifyAdminNewPlayer(player: {
-    fullName: string;
-    email: string;
-    location: string;
-    ranking?: string;
-    specialization: string;
-    atpStatusHtml?: string; // ← ALREADY CORRECT
-  }) {
-    if (!resend) {
-      console.log('📧 [SKIPPED] Admin notification for:', player.fullName);
-      return;
-    }
-
-    try {
-      await resend.emails.send({
-        from: FROM_EMAIL,
-        to: ADMIN_EMAIL,
-        subject: `New Player Application: ${player.fullName}`,
-        html: `
+    async notifyAdminNewPlayer(player) {
+        if (!resend) {
+            console.log('📧 [SKIPPED] Admin notification for:', player.fullName);
+            return;
+        }
+        try {
+            await resend.emails.send({
+                from: FROM_EMAIL,
+                to: ADMIN_EMAIL,
+                subject: `New Player Application: ${player.fullName}`,
+                html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center;">
               <h1>New Player Application</h1>
@@ -56,28 +45,24 @@ export const emailService = {
             </div>
           </div>
         `,
-      });
-      console.log('✅ Admin notification sent for:', player.fullName);
-    } catch (error) {
-      console.error('❌ Failed to send admin notification:', error);
-    }
-  },
-
-  async notifyPlayerApproved(player: {
-    fullName: string;
-    email: string;
-  }) {
-    if (!resend) {
-      console.log('📧 [SKIPPED] Approval email for:', player.email);
-      return;
-    }
-
-    try {
-      await resend.emails.send({
-        from: FROM_EMAIL,
-        to: player.email,
-        subject: 'Your GameSetMatch Profile Has Been Approved!',
-        html: `
+            });
+            console.log('✅ Admin notification sent for:', player.fullName);
+        }
+        catch (error) {
+            console.error('❌ Failed to send admin notification:', error);
+        }
+    },
+    async notifyPlayerApproved(player) {
+        if (!resend) {
+            console.log('📧 [SKIPPED] Approval email for:', player.email);
+            return;
+        }
+        try {
+            await resend.emails.send({
+                from: FROM_EMAIL,
+                to: player.email,
+                subject: 'Your GameSetMatch Profile Has Been Approved!',
+                html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 40px; text-align: center;">
               <h1>Congratulations, ${player.fullName}!</h1>
@@ -103,28 +88,24 @@ export const emailService = {
             </div>
           </div>
         `,
-      });
-      console.log('✅ Approval email sent to:', player.email);
-    } catch (error) {
-      console.error('❌ Failed to send approval email:', error);
-    }
-  },
-
-  async notifyPlayerRejected(player: {
-    fullName: string;
-    email: string;
-  }) {
-    if (!resend) {
-      console.log('📧 [SKIPPED] Rejection email for:', player.email);
-      return;
-    }
-
-    try {
-      await resend.emails.send({
-        from: FROM_EMAIL,
-        to: player.email,
-        subject: 'Update on Your GameSetMatch Application',
-        html: `
+            });
+            console.log('✅ Approval email sent to:', player.email);
+        }
+        catch (error) {
+            console.error('❌ Failed to send approval email:', error);
+        }
+    },
+    async notifyPlayerRejected(player) {
+        if (!resend) {
+            console.log('📧 [SKIPPED] Rejection email for:', player.email);
+            return;
+        }
+        try {
+            await resend.emails.send({
+                from: FROM_EMAIL,
+                to: player.email,
+                subject: 'Update on Your GameSetMatch Application',
+                html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; padding: 30px; text-align: center;">
               <h1>Application Update</h1>
@@ -150,10 +131,11 @@ export const emailService = {
             </div>
           </div>
         `,
-      });
-      console.log('✅ Rejection email sent to:', player.email);
-    } catch (error) {
-      console.error('❌ Failed to send rejection email:', error);
-    }
-  },
+            });
+            console.log('✅ Rejection email sent to:', player.email);
+        }
+        catch (error) {
+            console.error('❌ Failed to send rejection email:', error);
+        }
+    },
 };

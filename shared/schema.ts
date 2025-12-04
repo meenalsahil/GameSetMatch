@@ -35,6 +35,8 @@ export const players = pgTable("players", {
   approvedAt: timestamp("approved_at"),
   active: boolean("active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
+  stripeAccountId: varchar("stripe_account_id", { length: 255 }),
+stripeReady: boolean("stripe_ready").notNull().default(false),
 
   atpVerified: boolean("atp_verified").default(false),
   atpVerificationScore: integer("atp_verification_score"),

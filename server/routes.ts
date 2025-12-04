@@ -1,4 +1,6 @@
 // server/routes.ts
+import { stripeHelpers } from "./stripe.js";
+import { and } from "drizzle-orm"; // if not already imported
 import { emailService } from "./email.js";
 import { Express, Request, Response, NextFunction } from "express";
 import { createServer, Server } from "http";
@@ -404,6 +406,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           approvedAt: p.approvedAt,
           createdAt: p.createdAt,
           active: p.active,
+          stripeAccountId: p.stripeAccountId,
+stripeReady: p.stripeReady,
+
         });
       } catch (e) {
         console.error("/api/auth/me error:", e);
@@ -665,6 +670,94 @@ app.get("/api/players", async (_req: Request, res: Response) => {
       }
     }
   );
+
+  // -------- PAYMENTS: Stripe Connect onboarding --------
+  app.post(
+    "/api/payments/stripe/connect-link",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const playerId = req.session!.playerId!;
+        const player: any = await storage.getPlayer(playerId);
+
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+
+        if (player.approvalStatus !== "approved") {
+          return res
+            .status(400)
+            .json({ message: "Profile must be approved before connecting Stripe" });
+        }
+const account = await stripeHelpers.createOrGetExpressAccount({
+  playerId: player.id,
+  fullName: player.fullName,
+  email: player.email,
+  country: player.country,
+  existingAccountId: player.stripeAccountId,
+});
+
+
+        // Save account id if new
+        if (account.id !== player.stripeAccountId) {
+          await db
+            .update(players)
+            .set({ stripeAccountId: account.id })
+            .where(eq(players.id, Number(playerId)));
+        }
+
+        const url = await stripeHelpers.createOnboardingLink(account.id);
+
+        res.json({ url });
+      } catch (e: any) {
+        console.error("Stripe connect-link error:", e);
+        res
+          .status(500)
+          .json({ message: e.message || "Failed to create Stripe onboarding link" });
+      }
+    }
+  );
+
+  app.get(
+    "/api/payments/stripe/status",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const playerId = req.session!.playerId!;
+        const player: any = await storage.getPlayer(playerId);
+
+        if (!player || !player.stripeAccountId) {
+          return res.json({ ready: false, hasAccount: false });
+        }
+
+        const status = await stripeHelpers.getPayoutStatus(
+          player.stripeAccountId
+        );
+
+        // If Stripe says we're ready, mark in DB
+        if (status.ready && !player.stripeReady) {
+          await db
+            .update(players)
+            .set({ stripeReady: true })
+            .where(eq(players.id, Number(playerId)));
+        }
+
+        res.json({
+          ready: status.ready,
+          hasAccount: true,
+          chargesEnabled: status.chargesEnabled,
+          payoutsEnabled: status.payoutsEnabled,
+          detailsSubmitted: status.detailsSubmitted,
+        });
+      } catch (e: any) {
+        console.error("Stripe status error:", e);
+        res.status(500).json({
+          message: e.message || "Failed to fetch Stripe status",
+        });
+      }
+    }
+  );
+
 
   const httpServer = createServer(app);
   return httpServer;

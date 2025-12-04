@@ -11,6 +11,9 @@ const app = express();
 // Path setup for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// Serve uploads from the SAME folder Multer writes to (process.cwd()/uploads)
+const uploadsPath = path.join(process.cwd(), "uploads");
+app.use("/uploads", express.static(uploadsPath));
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -21,12 +24,21 @@ app.use(cors({
 }));
 // Sessions
 const PgSession = connectPgSimple(session);
+const sessionStore = new PgSession({
+    pool: pool,
+    tableName: "session",
+});
 app.use(session({
-    store: new PgSession({ pool }),
-    secret: process.env.SESSION_SECRET || "dev_secret",
+    secret: process.env.SESSION_SECRET || "your-secret-key-change-this",
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 },
+    cookie: {
+        secure: false, // Railway behind proxy; fine for now (use true + trust proxy later)
+        httpOnly: true,
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        sameSite: "lax",
+    },
+    store: sessionStore,
 }));
 app.use(flash());
 // API routes
