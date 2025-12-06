@@ -10,7 +10,7 @@ export const stripe = stripeSecretKey
 
 if (!stripeSecretKey) {
   console.warn(
-    "⚠️ STRIPE_SECRET_KEY not set – Stripe Connect helpers will throw if used."
+    "⚠️ STRIPE_SECRET_KEY not set – Stripe helpers will throw if used.",
   );
 }
 
@@ -20,8 +20,14 @@ type CreateAccountArgs = {
   playerId: number;
   email: string;
   fullName: string;
-  country?: string; 
-  existingAccountId?: string;// <-- added
+  country?: string;
+  existingAccountId?: string;
+};
+
+type CreateSponsorCheckoutSessionArgs = {
+  playerId: number;
+  playerName: string;
+  stripeAccountId: string;
 };
 
 export const stripeHelpers = {
@@ -33,10 +39,19 @@ export const stripeHelpers = {
       throw new Error("Stripe is not configured (STRIPE_SECRET_KEY missing).");
     }
 
+    // If we already have an account id, you could look it up.
+    if (args.existingAccountId) {
+      const existing = await stripe.accounts.retrieve(args.existingAccountId);
+      if (!("deleted" in existing && existing.deleted)) {
+        return existing;
+      }
+      // if it was deleted, fall through and create new
+    }
+
     const account = await stripe.accounts.create({
       type: "express",
       email: args.email,
-      country: args.country || "US", // <-- use passed country or fallback
+      country: args.country || "US",
       business_type: "individual",
       capabilities: {
         transfers: { requested: true },
@@ -71,7 +86,7 @@ export const stripeHelpers = {
   },
 
   /**
-   * Payout status helper – **must** return `ready` because routes.ts uses it.
+   * Payout status helper – routes.ts checks `status.ready`.
    */
   async getPayoutStatus(accountId: string) {
     if (!stripeSecretKey) {
@@ -88,9 +103,54 @@ export const stripeHelpers = {
       payoutsEnabled,
       chargesEnabled,
       detailsSubmitted,
-      // routes.ts checks `status.ready`
       ready: Boolean(payoutsEnabled && chargesEnabled && detailsSubmitted),
     };
+  },
+
+  /**
+   * Create a Stripe Checkout session for sponsoring a player.
+   * This assumes a fixed example amount – you can tune this later.
+   */
+  async createSponsorCheckoutSession(
+    args: CreateSponsorCheckoutSessionArgs,
+  ): Promise<string> {
+    if (!stripeSecretKey) {
+      throw new Error("Stripe is not configured (STRIPE_SECRET_KEY missing).");
+    }
+
+    const appUrl = process.env.APP_URL || "http://localhost:5001";
+
+    // Example: $25.00 USD one-time payment routed to the player's account
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: "usd",
+            unit_amount: 2500, // 25.00 USD
+            product_data: {
+              name: `Sponsorship for ${args.playerName}`,
+            },
+          },
+        },
+      ],
+      success_url: `${appUrl}/players/${args.playerId}?sponsored=1`,
+      cancel_url: `${appUrl}/players/${args.playerId}?canceled=1`,
+      // Route the funds to the player's connected account
+      payment_intent_data: {
+        transfer_data: {
+          destination: args.stripeAccountId,
+        },
+      },
+    });
+
+    if (!session.url) {
+      throw new Error("Stripe Checkout session did not return a URL");
+    }
+
+    return session.url;
   },
 };
 

@@ -1,3 +1,4 @@
+// client/src/pages/PlayerProfile.tsx
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -30,12 +31,49 @@ export default function PlayerProfile() {
     },
   });
 
-  const handleSponsor = () => {
-    toast({
-      title: "Sponsor Interest",
-      description:
-        "Thank you for your interest! We'll contact you shortly with next steps.",
-    });
+  const handleSponsor = async () => {
+    // Safety: no id or no player loaded
+    if (!id || !player) {
+      toast({
+        title: "Sponsor Interest",
+        description:
+          "Thank you for your interest! We'll contact you shortly with next steps.",
+      });
+      return;
+    }
+
+    try {
+      // Try Stripe checkout first
+      const res = await fetch(`/api/players/${id}/sponsor-checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.url) {
+          // Redirect to Stripe Checkout
+          window.location.href = data.url;
+          return;
+        }
+      }
+
+      // If Stripe is not ready or any non-OK response:
+      toast({
+        title: "Sponsor Interest",
+        description:
+          "Thank you for your interest! We'll contact you shortly with next steps.",
+      });
+    } catch (err) {
+      console.error("Sponsor error", err);
+      toast({
+        title: "Sponsor Interest",
+        description:
+          "Thank you for your interest! We'll contact you shortly with next steps.",
+      });
+    }
   };
 
   if (isLoading)

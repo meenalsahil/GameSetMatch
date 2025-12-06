@@ -1,5 +1,5 @@
 // server/routes.ts
-import { stripeHelpers } from "./stripe.js";
+import { stripeHelpers, isStripeEnabled } from "./stripe.js";
 import { and } from "drizzle-orm"; // if not already imported
 import { emailService } from "./email.js";
 import { Express, Request, Response, NextFunction } from "express";
@@ -132,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bio: String(raw.bio || "").trim(),
           fundingGoals: String(raw.fundingGoals || "").trim(),
           videoUrl: String(raw.videoUrl || "").trim(),
-          // 🔴 always a string to match schema
+          // always a string to match schema
           atpProfileUrl: String(raw.atpProfileUrl || "").trim(),
         };
 
@@ -291,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Signup error:", e);
         res.status(500).json({ message: "Failed to create account" });
       }
-    }
+    },
   );
 
   // -------- AUTH: Signin --------
@@ -308,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const player: any = await storage.getPlayerByEmail(
-        String(email).toLowerCase()
+        String(email).toLowerCase(),
       );
       if (!player) {
         return res.status(401).json({ message: "Invalid credentials" });
@@ -376,7 +376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         res.setHeader(
           "Cache-Control",
-          "no-store, no-cache, must-revalidate, private"
+          "no-store, no-cache, must-revalidate, private",
         );
         res.setHeader("Pragma", "no-cache");
         res.setHeader("Expires", "0");
@@ -407,57 +407,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: p.createdAt,
           active: p.active,
           stripeAccountId: p.stripeAccountId,
-stripeReady: p.stripeReady,
-
+          stripeReady: p.stripeReady,
         });
       } catch (e) {
         console.error("/api/auth/me error:", e);
         res.status(500).json({ message: "Failed to get player" });
       }
-    }
+    },
   );
 
   // -------- PUBLIC: Browse players --------
-  // -------- PUBLIC: Browse players --------
-app.get("/api/players", async (_req: Request, res: Response) => {
-  try {
-    const list: any[] = await storage.getPublishedPlayers();
-    const transformed = list
-      .filter((p: any) => p.active !== false)
-      .map((p: any) => ({
-        id: p.id,
-        fullName: p.fullName,
-        location: p.location,
-        ranking: p.ranking,
-        specialization: p.specialization,
-        bio: p.bio,
-        fundingGoals: p.fundingGoals,
-        videoUrl: p.videoUrl,
-        photoUrl: p.photoUrl,
-        country: p.country,
-        age: p.age,
+  app.get("/api/players", async (_req: Request, res: Response) => {
+    try {
+      const list: any[] = await storage.getPublishedPlayers();
+      const transformed = list
+        .filter((p: any) => p.active !== false)
+        .map((p: any) => ({
+          id: p.id,
+          fullName: p.fullName,
+          location: p.location,
+          ranking: p.ranking,
+          specialization: p.specialization,
+          bio: p.bio,
+          fundingGoals: p.fundingGoals,
+          videoUrl: p.videoUrl,
+          photoUrl: p.photoUrl,
+          country: p.country,
+          age: p.age,
 
-        // NEW: expose verification info to the frontend
-        atpProfileUrl: p.atpProfileUrl,
-        atpVerified: p.atpVerified,
-        atpVerificationScore: p.atpVerificationScore,
-      }));
+          // verification info
+          atpProfileUrl: p.atpProfileUrl,
+          atpVerified: p.atpVerified,
+          atpVerificationScore: p.atpVerificationScore,
+        }));
 
-    res.json(transformed);
-  } catch (e) {
-    console.error("Get players error:", e);
-    res.status(500).json({ message: "Failed to get players" });
-  }
-});
-
+      res.json(transformed);
+    } catch (e) {
+      console.error("Get players error:", e);
+      res.status(500).json({ message: "Failed to get players" });
+    }
+  });
 
   // -------- PUBLIC: Get single player --------
-   app.get("/api/players/:id", async (req: Request, res: Response) => {
+  app.get("/api/players/:id", async (req: Request, res: Response) => {
     try {
-      // DON'T force Number() here – some setups use UUIDs
       const rawId = req.params.id;
-
-      const player = await storage.getPlayer(rawId as any);
+      const player: any = await storage.getPlayer(rawId as any);
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -478,6 +473,9 @@ app.get("/api/players", async (_req: Request, res: Response) => {
         photoUrl: player.photoUrl,
         published: player.published,
         featured: player.featured,
+        // expose stripe flags if you want them on detail page too
+        stripeAccountId: player.stripeAccountId,
+        stripeReady: player.stripeReady,
       };
 
       res.json(transformed);
@@ -533,7 +531,7 @@ app.get("/api/players", async (_req: Request, res: Response) => {
         console.error("verification upload error", err);
         return res.status(500).json({ error: "Upload failed" });
       }
-    }
+    },
   );
 
   // -------- ADMIN: Get all players --------
@@ -548,7 +546,7 @@ app.get("/api/players", async (_req: Request, res: Response) => {
         console.error("Admin get players error:", e);
         res.status(500).json({ message: "Failed to get players" });
       }
-    }
+    },
   );
 
   // -------- ADMIN: Approve player --------
@@ -581,7 +579,7 @@ app.get("/api/players", async (_req: Request, res: Response) => {
         console.error("Approve player error:", e);
         res.status(500).json({ message: "Failed to approve player" });
       }
-    }
+    },
   );
 
   // -------- ADMIN: Reject player --------
@@ -617,7 +615,7 @@ app.get("/api/players", async (_req: Request, res: Response) => {
         console.error("Reject player error:", e);
         res.status(500).json({ message: "Failed to reject player" });
       }
-    }
+    },
   );
 
   // -------- ADMIN: Deactivate player --------
@@ -635,7 +633,7 @@ app.get("/api/players", async (_req: Request, res: Response) => {
         console.error("Deactivate player error:", e);
         res.status(500).json({ message: "Failed to deactivate player" });
       }
-    }
+    },
   );
 
   // -------- ADMIN: Activate player --------
@@ -653,7 +651,7 @@ app.get("/api/players", async (_req: Request, res: Response) => {
         console.error("Activate player error:", e);
         res.status(500).json({ message: "Failed to activate player" });
       }
-    }
+    },
   );
 
   // -------- ADMIN: Delete player --------
@@ -668,7 +666,46 @@ app.get("/api/players", async (_req: Request, res: Response) => {
         console.error("Delete player error:", e);
         res.status(500).json({ message: "Failed to delete player" });
       }
-    }
+    },
+  );
+
+  // -------- PAYMENTS: Sponsor via Stripe Checkout (NEW) --------
+  app.post(
+    "/api/players/:id/sponsor-checkout",
+    async (req: Request, res: Response) => {
+      try {
+        if (!isStripeEnabled()) {
+          return res
+            .status(400)
+            .json({ error: "Stripe is not enabled for this app" });
+        }
+
+        const rawId = req.params.id;
+        const player: any = await storage.getPlayer(rawId as any);
+        if (!player) {
+          return res.status(404).json({ error: "Player not found" });
+        }
+
+        if (!player.stripeAccountId || !player.stripeReady) {
+          return res
+            .status(400)
+            .json({ error: "Stripe is not ready for this player" });
+        }
+
+        const url = await stripeHelpers.createSponsorCheckoutSession({
+          playerId: player.id,
+          playerName: player.fullName,
+          stripeAccountId: player.stripeAccountId,
+        });
+
+        return res.json({ url });
+      } catch (err) {
+        console.error("Error creating sponsor checkout session:", err);
+        return res
+          .status(500)
+          .json({ error: "Failed to create sponsor checkout session" });
+      }
+    },
   );
 
   // -------- PAYMENTS: Stripe Connect onboarding --------
@@ -685,18 +722,18 @@ app.get("/api/players", async (_req: Request, res: Response) => {
         }
 
         if (player.approvalStatus !== "approved") {
-          return res
-            .status(400)
-            .json({ message: "Profile must be approved before connecting Stripe" });
+          return res.status(400).json({
+            message: "Profile must be approved before connecting Stripe",
+          });
         }
-const account = await stripeHelpers.createOrGetExpressAccount({
-  playerId: player.id,
-  fullName: player.fullName,
-  email: player.email,
-  country: player.country,
-  existingAccountId: player.stripeAccountId,
-});
 
+        const account = await stripeHelpers.createOrGetExpressAccount({
+          playerId: player.id,
+          fullName: player.fullName,
+          email: player.email,
+          country: player.country,
+          existingAccountId: player.stripeAccountId,
+        });
 
         // Save account id if new
         if (account.id !== player.stripeAccountId) {
@@ -711,11 +748,11 @@ const account = await stripeHelpers.createOrGetExpressAccount({
         res.json({ url });
       } catch (e: any) {
         console.error("Stripe connect-link error:", e);
-        res
-          .status(500)
-          .json({ message: e.message || "Failed to create Stripe onboarding link" });
+        res.status(500).json({
+          message: e.message || "Failed to create Stripe onboarding link",
+        });
       }
-    }
+    },
   );
 
   app.get(
@@ -731,7 +768,7 @@ const account = await stripeHelpers.createOrGetExpressAccount({
         }
 
         const status = await stripeHelpers.getPayoutStatus(
-          player.stripeAccountId
+          player.stripeAccountId,
         );
 
         // If Stripe says we're ready, mark in DB
@@ -755,9 +792,8 @@ const account = await stripeHelpers.createOrGetExpressAccount({
           message: e.message || "Failed to fetch Stripe status",
         });
       }
-    }
+    },
   );
-
 
   const httpServer = createServer(app);
   return httpServer;

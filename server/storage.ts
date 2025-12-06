@@ -1,3 +1,4 @@
+// server/storage.ts
 import {
   type Player,
   type InsertPlayer,
@@ -37,16 +38,16 @@ export interface IStorage {
 
 export class DbStorage implements IStorage {
   async getPlayer(id: string | number) {
-  const numericId =
-    typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id;
-  const rows = await db
-    .select()
-    .from(players)
-    .where(eq(players.id, numericId as any))
-    .limit(1);
-  return rows[0] ?? null;
-}
-
+    const numericId =
+      typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id;
+    const rows = await db
+      .select()
+      .from(players)
+      .where(eq(players.id, numericId as any))
+      .limit(1);
+    // rows[0] has all columns, including stripeAccountId & stripeReady
+    return rows[0] ?? null;
+  }
 
   async getPlayerByEmail(email: string): Promise<Player | undefined> {
     try {
@@ -55,12 +56,12 @@ export class DbStorage implements IStorage {
         .from(players)
         .where(eq(players.email, email))
         .limit(1);
-      
+
       if (result && result.length > 0) {
         console.log("storage.getPlayerByEmail - Player found");
         return result[0];
       }
-      
+
       console.log("storage.getPlayerByEmail - Player not found");
       return undefined;
     } catch (error) {
