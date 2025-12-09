@@ -58,19 +58,20 @@ export default function HomePage() {
             </div>
 
             {/* Headline */}
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 leading-tight">
-              Connect{" "}
-              <span className="text-emerald-300">real tennis players</span>{" "}
-              with supporters who care.
-            </h1>
+<h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 leading-tight">
+  Connect{" "}
+  <span className="text-emerald-300">real tennis players</span>{" "}
+  with supporters who care.
+</h1>
 
-            {/* Subheadline */}
-            <p className="text-base md:text-lg text-emerald-50/90 max-w-2xl mb-8">
-              GameSetMatch helps supporters connect with verified tennis
-              players using ATP/ITF/WTA profile links and verification
-              videos—so you know you&apos;re backing genuine athletes, not fake
-              profiles.
-            </p>
+{/* Subheadline */}
+<p className="text-base md:text-lg text-emerald-50/90 max-w-2xl mb-8">
+  GameSetMatch helps supporters connect with verified tennis
+  players using ATP/ITF/WTA profile links and verification
+  videos—so you know you're backing genuine athletes, not fake
+  profiles.
+</p>
+
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
