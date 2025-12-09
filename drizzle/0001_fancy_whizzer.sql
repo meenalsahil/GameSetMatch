@@ -1,0 +1,1 @@
+ALTER TABLE "players" ALTER COLUMN "atp_profile_url" SET NOT NULL;
