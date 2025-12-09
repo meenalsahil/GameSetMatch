@@ -360,34 +360,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // -------- ADMIN DEBUG: One-off Stripe fix for Super Player 2 --------
-  app.get(
-    "/api/admin/debug/link-super-player-2-stripe",
-    isAdmin,
-    async (_req: Request, res: Response) => {
-      try {
-        const result = await db
-          .update(players)
-          .set({
-            stripeAccountId: "acct_1sCwJkB6WlhoDxcB0uC1LdNSSiT", // <-- your Stripe connected acct id
-            stripeReady: true,
-          })
-          .where(eq(players.email, "ajaykumaragarwalusa@gmail.com"))
-          .returning({
-            id: players.id,
-            email: players.email,
-            stripeAccountId: players.stripeAccountId,
-            stripeReady: players.stripeReady,
-          });
-
-        res.json({ ok: true, updated: result });
-      } catch (e: any) {
-        console.error("DEBUG link stripe error:", e);
-        res.status(500).json({ message: e.message || "Failed to update Stripe" });
-      }
-    },
-  );
-
 
   // -------- AUTH: Logout --------
   app.post("/api/auth/logout", (req: Request, res: Response) => {
