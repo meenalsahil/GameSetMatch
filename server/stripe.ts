@@ -54,18 +54,20 @@ export const stripeHelpers = {
 
     // Otherwise create a new Express account
     const account = await stripe.accounts.create({
-      type: "express",
-      email: args.email,
-      country: args.country || "US",
-      business_type: "individual",
-      capabilities: {
-        transfers: { requested: true },
-      },
-      metadata: {
-        playerId: String(args.playerId),
-        fullName: args.fullName,
-      },
-    });
+  type: "express",
+  email: args.email,
+  country: args.country || "US",
+  business_type: "individual",
+  capabilities: {
+    card_payments: { requested: true },
+    transfers: { requested: true },
+  },
+  metadata: {
+    playerId: String(args.playerId),
+    fullName: args.fullName,
+  },
+});
+
 
     return account;
   },
