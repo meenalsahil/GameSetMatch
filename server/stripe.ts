@@ -12,11 +12,8 @@ if (!stripeSecretKey) {
   );
 }
 
-// Platform fee: GameSetMatch keeps 7% of each sponsorship
-const PLATFORM_FEE_PERCENT = 0.07;
+// ---- Types ----
 
-
-// NOTE: routes.ts passes player.country and existingAccountId as well
 type CreateAccountArgs = {
   playerId: number;
   email: string;
@@ -30,8 +27,14 @@ type CreateSponsorCheckoutArgs = {
   playerName: string;
   amountCents: number;
   currency: string;
-  stripeAccountId: string; // connected account to receive funds
+  // Connected account that should receive the funds
+  stripeAccountId: string;
 };
+
+// Platform fee: 7% (GameSetMatch keeps this)
+const PLATFORM_FEE_PERCENT = 7;
+
+// ---- Helpers ----
 
 export const stripeHelpers = {
   /**
@@ -113,7 +116,9 @@ export const stripeHelpers = {
    * Create a Checkout Session for sponsoring a player.
    * Used by /api/payments/sponsor-checkout in routes.ts
    */
-  async createSponsorCheckoutSession(args: CreateSponsorCheckoutArgs) {
+  async createSponsorCheckoutSession(
+    args: CreateSponsorCheckoutArgs,
+  ): Promise<string> {
     if (!stripeSecretKey || !stripe) {
       throw new Error("Stripe is not configured (STRIPE_SECRET_KEY missing).");
     }
@@ -124,9 +129,9 @@ export const stripeHelpers = {
 
     const appUrl = process.env.APP_URL || "http://localhost:5001";
 
-    // 7% platform fee (GameSetMatch keeps this)
-    const applicationFeeAmount = Math.round(
-      args.amountCents * PLATFORM_FEE_PERCENT,
+    // Platform fee: 7% of the amount
+    const platformFeeAmount = Math.round(
+      (args.amountCents * PLATFORM_FEE_PERCENT) / 100,
     );
 
     const session = await stripe.checkout.sessions.create({
@@ -139,18 +144,17 @@ export const stripeHelpers = {
             unit_amount: args.amountCents,
             product_data: {
               name: `Support for ${args.playerName}`,
-              description: "One-time contribution via GameSetMatch",
             },
           },
           quantity: 1,
         },
       ],
-      // NOTE: your frontend URLs use /players/:id, not /player/:id
-      success_url: `${appUrl}/players/${args.playerId}?sponsored=1`,
-      cancel_url: `${appUrl}/players/${args.playerId}?canceled=1`,
+      success_url: `${appUrl}/player/${args.playerId}?sponsored=1`,
+      cancel_url: `${appUrl}/player/${args.playerId}?canceled=1`,
       payment_intent_data: {
-        // Platform keeps 7%, remaining goes to connected account
-        application_fee_amount: applicationFeeAmount,
+        // Platform fee that GameSetMatch keeps
+        application_fee_amount: platformFeeAmount,
+        // Remaining funds go to the player's connected account
         transfer_data: {
           destination: args.stripeAccountId,
         },
@@ -158,6 +162,7 @@ export const stripeHelpers = {
       metadata: {
         playerId: String(args.playerId),
         playerName: args.playerName,
+        platformFeePercent: String(PLATFORM_FEE_PERCENT),
       },
     });
 
@@ -165,8 +170,10 @@ export const stripeHelpers = {
       throw new Error("Failed to create Stripe Checkout Session.");
     }
 
+    // routes.ts expects a plain URL string
     return session.url;
   },
+};
 
 export function isStripeEnabled() {
   return Boolean(stripeSecretKey);
