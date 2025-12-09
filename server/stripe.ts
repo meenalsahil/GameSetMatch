@@ -39,35 +39,47 @@ const PLATFORM_FEE_PERCENT = 7;
 export const stripeHelpers = {
   /**
    * Create (or look up) an Express account for a player.
-   * If existingAccountId is provided, we just retrieve and return that account.
+   * If existingAccountId is provided, we try to retrieve it; if Stripe says
+   * "no such account", we gracefully create a new one instead of exploding.
    */
   async createOrGetExpressAccount(args: CreateAccountArgs) {
     if (!stripeSecretKey || !stripe) {
       throw new Error("Stripe is not configured (STRIPE_SECRET_KEY missing).");
     }
 
-    // Reuse existing account if we already have one
+    // Try to reuse existing account if we already have one
     if (args.existingAccountId) {
-      const existing = await stripe.accounts.retrieve(args.existingAccountId);
-      return existing;
+      try {
+        const existing = await stripe.accounts.retrieve(args.existingAccountId);
+        return existing;
+      } catch (err: any) {
+        console.warn(
+          "Stripe existing account lookup failed – will create a new Express account instead",
+          {
+            playerId: args.playerId,
+            existingAccountId: args.existingAccountId,
+            stripeError: err?.message,
+          },
+        );
+        // fall through to create a brand new account
+      }
     }
 
     // Otherwise create a new Express account
     const account = await stripe.accounts.create({
-  type: "express",
-  email: args.email,
-  country: args.country || "US",
-  business_type: "individual",
-  capabilities: {
-    card_payments: { requested: true },
-    transfers: { requested: true },
-  },
-  metadata: {
-    playerId: String(args.playerId),
-    fullName: args.fullName,
-  },
-});
-
+      type: "express",
+      email: args.email,
+      country: args.country || "US",
+      business_type: "individual",
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+      metadata: {
+        playerId: String(args.playerId),
+        fullName: args.fullName,
+      },
+    });
 
     return account;
   },
@@ -116,7 +128,7 @@ export const stripeHelpers = {
 
   /**
    * Create a Checkout Session for sponsoring a player.
-   * Used by /api/payments/sponsor-checkout in routes.ts
+   * Used by /api/players/:id/sponsor-checkout in routes.ts
    */
   async createSponsorCheckoutSession(
     args: CreateSponsorCheckoutArgs,
