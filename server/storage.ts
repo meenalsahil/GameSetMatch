@@ -45,7 +45,6 @@ export class DbStorage implements IStorage {
       .from(players)
       .where(eq(players.id, numericId as any))
       .limit(1);
-    // rows[0] has all columns, including stripeAccountId & stripeReady
     return rows[0] ?? null;
   }
 
@@ -192,13 +191,13 @@ export class DbStorage implements IStorage {
       fields.push(`video_url = $${paramCount++}`);
       values.push(player.videoUrl);
     }
-    if (player.atpProfileUrl !== undefined) {
-      fields.push(`atp_profile_url = $${paramCount++}`);
-      values.push(player.atpProfileUrl);
-    }
     if (player.photoUrl !== undefined) {
       fields.push(`photo_url = $${paramCount++}`);
       values.push(player.photoUrl);
+    }
+    if (player.atpProfileUrl !== undefined) {
+      fields.push(`atp_profile_url = $${paramCount++}`);
+      values.push(player.atpProfileUrl);
     }
 
     if (fields.length === 0) {

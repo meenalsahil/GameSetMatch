@@ -385,30 +385,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!p) return res.status(404).json({ message: "Player not found" });
 
         res.json({
-          id: p.id,
-          email: p.email,
-          fullName: p.fullName,
-          age: p.age,
-          country: p.country,
-          location: p.location,
-          ranking: p.ranking,
-          specialization: p.specialization,
-          bio: p.bio,
-          fundingGoals: p.fundingGoals,
-          videoUrl: p.videoUrl,
-          photoUrl: p.photoUrl,
-          published: p.published,
-          featured: p.featured,
-          priority: p.priority,
-          isAdmin: p.isAdmin,
-          approvalStatus: p.approvalStatus,
-          approvedBy: p.approvedBy,
-          approvedAt: p.approvedAt,
-          createdAt: p.createdAt,
-          active: p.active,
-          stripeAccountId: p.stripeAccountId,
-          stripeReady: p.stripeReady,
-        });
+  id: p.id,
+  email: p.email,
+  fullName: p.fullName,
+  age: p.age,
+  country: p.country,
+  location: p.location,
+  ranking: p.ranking,
+  specialization: p.specialization,
+  bio: p.bio,
+  fundingGoals: p.fundingGoals,
+  videoUrl: p.videoUrl,
+  photoUrl: p.photoUrl,
+  published: p.published,
+  featured: p.featured,
+  priority: p.priority,
+  isAdmin: p.isAdmin,
+  approvalStatus: p.approvalStatus,
+  approvedBy: p.approvedBy,
+  approvedAt: p.approvedAt,
+  createdAt: p.createdAt,
+  active: p.active,
+  stripeAccountId: p.stripeAccountId,
+  stripeReady: p.stripeReady,
+  atpProfileUrl: p.atpProfileUrl,
+});
+
       } catch (e) {
         console.error("/api/auth/me error:", e);
         res.status(500).json({ message: "Failed to get player" });
@@ -422,90 +424,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
 app.put(
   "/api/players/me",
   isAuthenticated,
-  uploadPhoto.single("photo"),
   async (req: Request, res: Response) => {
     try {
       const playerId = req.session!.playerId!;
-      const player: any = await storage.getPlayer(playerId);
+      const body = req.body || {};
 
-      if (!player) {
+      // Build a patch object with *only* editable fields
+      const update: any = {};
+
+      if (body.email !== undefined) {
+        update.email = String(body.email).trim();
+      }
+      if (body.fullName !== undefined) {
+        update.fullName = String(body.fullName).trim();
+      }
+      if (body.age !== undefined) {
+        update.age =
+          body.age === null || body.age === ""
+            ? null
+            : Number.parseInt(String(body.age), 10);
+      }
+      if (body.country !== undefined) {
+        update.country = String(body.country).trim();
+      }
+      if (body.location !== undefined) {
+        update.location = String(body.location).trim();
+      }
+      if (body.ranking !== undefined) {
+        update.ranking =
+          body.ranking === null || body.ranking === ""
+            ? null
+            : Number.parseInt(String(body.ranking), 10);
+      }
+      if (body.specialization !== undefined) {
+        update.specialization = String(body.specialization).trim();
+      }
+      if (body.bio !== undefined) {
+        update.bio = String(body.bio).trim();
+      }
+      if (body.fundingGoals !== undefined) {
+        update.fundingGoals = String(body.fundingGoals).trim();
+      }
+      if (body.videoUrl !== undefined) {
+        update.videoUrl = String(body.videoUrl).trim();
+      }
+      if (body.atpProfileUrl !== undefined) {
+        update.atpProfileUrl = String(body.atpProfileUrl).trim();
+      }
+
+      const updated = await storage.updatePlayer(String(playerId), update);
+
+      if (!updated) {
         return res.status(404).json({ message: "Player not found" });
       }
 
-      const raw = req.body || {};
-      
-      // Build update object with only fields that are provided
-      const updates: any = {};
-
-      if (raw.fullName !== undefined) updates.fullName = String(raw.fullName).trim();
-      if (raw.age !== undefined && raw.age !== "") {
-        updates.age = Number.parseInt(String(raw.age), 10);
-      }
-      if (raw.country !== undefined) updates.country = String(raw.country).trim();
-      if (raw.location !== undefined) updates.location = String(raw.location).trim();
-      if (raw.ranking !== undefined) {
-        updates.ranking = raw.ranking === "" ? null : String(raw.ranking);
-      }
-      if (raw.specialization !== undefined) {
-        updates.specialization = String(raw.specialization).trim();
-      }
-      if (raw.bio !== undefined) updates.bio = String(raw.bio).trim();
-      if (raw.fundingGoals !== undefined) {
-        updates.fundingGoals = String(raw.fundingGoals).trim();
-      }
-      if (raw.videoUrl !== undefined) updates.videoUrl = String(raw.videoUrl).trim();
-      if (raw.atpProfileUrl !== undefined) {
-        updates.atpProfileUrl = String(raw.atpProfileUrl).trim();
-      }
-
-      // If new photo uploaded
-      if (req.file) {
-        updates.photoUrl = `/uploads/${req.file.filename}`;
-        
-        // Delete old photo if exists
-        if (player.photoUrl) {
-          const oldPath = path.join(process.cwd(), player.photoUrl);
-          if (fs.existsSync(oldPath)) {
-            fs.unlinkSync(oldPath);
-          }
-        }
-      }
-
-      // Update player
-      const updated = await storage.updatePlayer(String(playerId), updates);
-
-      if (!updated) {
-        return res.status(404).json({ message: "Failed to update profile" });
-      }
-
-      // Return updated player without password
-      res.json({
-        id: updated.id,
-        email: updated.email,
-        fullName: updated.fullName,
-        age: updated.age,
-        country: updated.country,
-        location: updated.location,
-        ranking: updated.ranking,
-        specialization: updated.specialization,
-        bio: updated.bio,
-        fundingGoals: updated.fundingGoals,
-        videoUrl: updated.videoUrl,
-        atpProfileUrl: updated.atpProfileUrl,
-        photoUrl: updated.photoUrl,
-        published: updated.published,
-        featured: updated.featured,
-        isAdmin: updated.isAdmin,
-        approvalStatus: updated.approvalStatus,
-        active: updated.active,
-        stripeAccountId: updated.stripeAccountId,
-        stripeReady: updated.stripeReady,
+      return res.json({
+        player: {
+          ...updated,
+          password_hash: undefined,
+          passwordHash: undefined,
+        },
       });
     } catch (e) {
       console.error("Update profile error:", e);
-      res.status(500).json({ message: "Failed to update profile" });
+      return res.status(500).json({ message: "Failed to update profile" });
     }
-  }
+  },
 );
 
   // -------- PUBLIC: Browse players --------
