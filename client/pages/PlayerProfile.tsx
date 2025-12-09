@@ -32,8 +32,8 @@ export default function PlayerProfile() {
   });
 
   const handleSponsor = async () => {
-    // Safety: no id or no player loaded
-    if (!id || !player) {
+    // Safety: no player loaded yet
+    if (!player) {
       toast({
         title: "Support Interest",
         description:
@@ -43,24 +43,47 @@ export default function PlayerProfile() {
     }
 
     try {
-      // Try Stripe checkout first
-      const res = await fetch(`/api/players/${id}/sponsor-checkout`, {
+      // Use per-player checkout route
+      const res = await fetch(`/api/players/${player.id}/sponsor-checkout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        // If you later add a custom amount input, pass it here:
+        // body: JSON.stringify({ amount: 50 }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.url) {
-          // Redirect to Stripe Checkout
-          window.location.href = data.url;
-          return;
-        }
+      // Player not Stripe-ready: fall back to interest flow
+      if (res.status === 409) {
+        toast({
+          title: "Support Interest",
+          description:
+            "Thanks for your interest in supporting this player! We'll contact you shortly with next steps.",
+        });
+        return;
       }
 
-      // If Stripe is not ready or any non-OK response:
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        console.error("Sponsor error:", data);
+        toast({
+          title: "Something went wrong",
+          description:
+            data?.message ||
+            "We couldn't start the sponsorship right now. Please try again.",
+        });
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data?.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+        return;
+      }
+
+      // Fallback if backend didn't return a URL
       toast({
         title: "Support Interest",
         description:

@@ -592,53 +592,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // -------- PUBLIC: Sponsor a player (Checkout) --------
-  app.post(
-    "/api/players/:id/sponsor-checkout",
-    async (req: Request, res: Response) => {
-      try {
-        const playerId = Number(req.params.id);
-        const body = req.body || {};
-        const { amount } = body;
+ // -------- PUBLIC: Sponsor a player (Checkout) --------
+app.post(
+  "/api/players/:id/sponsor-checkout",
+  async (req: Request, res: Response) => {
+    try {
+      const playerIdRaw = req.params.id; // keep as string (works for UUIDs too)
+      const body = req.body || {};
+      const { amount } = body;
 
-        if (!Number.isFinite(playerId)) {
-          return res.status(400).json({ message: "Invalid player id" });
-        }
+      if (!playerIdRaw) {
+        return res.status(400).json({ message: "Invalid player id" });
+      }
 
-        const player: any = await storage.getPlayer(playerId);
-        if (!player || !player.published || player.active === false) {
-          return res.status(404).json({ message: "Player not found" });
-        }
+      const player: any = await storage.getPlayer(playerIdRaw as any);
+      if (!player || !player.published || player.active === false) {
+        return res.status(404).json({ message: "Player not found" });
+      }
 
-        // If Stripe isn't ready for this player, let frontend fall back to the “interest” toast
-        if (!player.stripeAccountId || !player.stripeReady) {
-          return res.status(409).json({
-            message: "Player is not yet ready to receive Stripe payouts.",
-          });
-        }
-
-        // If no amount sent from frontend, default to $50
-        const amountCents =
-          typeof amount === "number" && amount > 0
-            ? Math.round(amount * 100)
-            : 5000; // 5000 cents = $50
-
-        const checkoutUrl = await stripeHelpers.createSponsorCheckoutSession({
-          playerId: player.id,
-          playerName: player.fullName,
-          stripeAccountId: player.stripeAccountId,
-          amountCents,
-          currency: "usd",
-        });
-
-        return res.json({ url: checkoutUrl });
-      } catch (e: any) {
-        console.error("Sponsor checkout (per-player) error:", e);
-        return res.status(500).json({
-          message: e.message || "Failed to start sponsorship",
+      // If Stripe isn't ready for this player, let frontend show interest message
+      if (!player.stripeAccountId || !player.stripeReady) {
+        return res.status(409).json({
+          message: "Player is not yet ready to receive Stripe payouts.",
         });
       }
-    },
-  );
+
+      const amountCents =
+        typeof amount === "number" && amount > 0
+          ? Math.round(amount * 100)
+          : 5000; // default $50
+
+      const checkoutUrl = await stripeHelpers.createSponsorCheckoutSession({
+        playerId: player.id,
+        playerName: player.fullName,
+        stripeAccountId: player.stripeAccountId,
+        amountCents,
+        currency: "usd",
+      });
+
+      return res.json({ url: checkoutUrl });
+    } catch (e: any) {
+      console.error("Sponsor checkout (per-player) error:", e);
+      return res.status(500).json({
+        message: e.message || "Failed to start sponsorship",
+      });
+    }
+  },
+);
 
 
   // -------- PLAYER: Upload verification --------
