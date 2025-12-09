@@ -163,8 +163,8 @@ export default function PlayerSignup() {
               Player Application
             </h1>
             <p className="text-lg text-muted-foreground">
-              Join GameSetMatch and connect with sponsors for your tennis
-              journey
+              Join GameSetMatch and connect with supporters for your tennis
+              journey.
             </p>
           </div>
         </div>
@@ -382,7 +382,7 @@ export default function PlayerSignup() {
                           <FormLabel>Your Story</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="Tell sponsors about your tennis journey, goals, and why you need support..."
+                              placeholder="Tell supporters about your tennis journey, goals, and why you need support..."
                               className="min-h-[150px]"
                               data-testid="input-bio"
                               {...field}

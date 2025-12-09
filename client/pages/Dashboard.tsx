@@ -141,7 +141,7 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Profile Published",
-        description: "Your profile is now visible to sponsors!",
+        description: "Your profile is now visible to supporters!",
       });
     },
     onError: (error: Error) => {
@@ -599,8 +599,8 @@ export default function Dashboard() {
                               <p className="text-sm text-orange-800 dark:text-orange-200">
                                 Your application is being reviewed by our team.
                                 You&apos;ll receive an email once your profile
-                                has been approved and you can publish it to
-                                sponsors.
+                                has been approved and you can publish it so
+                                supporters can discover you.
                               </p>
                             </div>
                           </div>
@@ -629,8 +629,8 @@ export default function Dashboard() {
                           <div className="bg-muted/50 p-4 rounded-md space-y-3">
                             <p className="text-sm text-muted-foreground">
                               Your profile has been approved! Publish it now to
-                              make it visible to sponsors and start receiving
-                              sponsorship opportunities.
+                              make it visible to supporters and start receiving
+                              help with travel, coaching, and tournament costs.
                             </p>
                             <div className="flex flex-wrap gap-2">
                               <Button
@@ -658,7 +658,7 @@ export default function Dashboard() {
                       {player.published && (
                         <div className="bg-primary/5 p-4 rounded-md border border-primary/20">
                           <p className="text-sm text-foreground">
-                            Your profile is live and visible to sponsors!
+                            Your profile is live and visible to supporters!
                           </p>
                         </div>
                       )}
@@ -680,8 +680,8 @@ export default function Dashboard() {
                       Set up payouts with Stripe (test)
                     </CardTitle>
                     <CardDescription>
-                      Connect a Stripe Express account so sponsors can send you
-                      funds in the future. Right now this is in{" "}
+                      Connect a Stripe Express account so supporters can send
+                      you funds in the future. Right now this is in{" "}
                       <strong>test mode</strong> for your own experimentation.
                     </CardDescription>
                   </div>

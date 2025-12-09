@@ -28,13 +28,13 @@ const playerSteps = [
     icon: FileText,
     title: "Build Your Profile",
     description:
-      "Share your story, funding goals, and upload a short verification video plus your ATP/ITF/WTA profile link so sponsors know you're genuine.",
+      "Share your story, funding goals, and upload a short verification video plus your ATP/ITF/WTA profile link so supporters know you're genuine.",
   },
   {
     icon: TrendingUp,
-    title: "Get Sponsored",
+    title: "Get Support",
     description:
-      "Once approved, your profile appears to sponsors who are looking for verified players to support with travel, gear, and monthly stipends.",
+      "Once approved, your profile appears to supporters who are looking for verified players to help with travel, gear, and monthly stipends.",
   },
 ];
 
@@ -68,22 +68,22 @@ const faqs = [
   {
     question: "How much does it cost for players?",
     answer:
-      "Players get a 3-month free trial. After that, a subscription fee applies to maintain your active profile and connect with sponsors.",
+      "Players get a 3-month free trial. After that, a subscription fee applies to maintain your active profile and connect with supporters.",
   },
   {
-    question: "What types of sponsorship are available?",
+    question: "What types of support are available?",
     answer:
-      "Sponsors can contribute travel funds, hotel accommodations (using points), training gear, tournament entry fees, or monthly stipends to support ongoing expenses.",
+      "Supporters can contribute travel funds, hotel accommodations (using points), training gear, tournament entry fees, or monthly stipends to support ongoing expenses.",
   },
   {
-    question: "Do sponsors need to sign up?",
+    question: "Do supporters need to sign up?",
     answer:
-      "No signup is required to browse player profiles. When you're ready to sponsor a player, you'll be guided through a simple process to make your contribution.",
+      "No signup is required to browse player profiles. When you're ready to support a player, you'll be guided through a simple process to make your contribution.",
   },
   {
     question: "How do you make sure player profiles are genuine?",
     answer:
-      "Every player must provide a verification video link and an official ATP/ITF/WTA (or equivalent) profile URL when they apply. Profiles are reviewed before being published, and only approved players appear to sponsors. We also monitor reports and can remove profiles that don’t meet our standards.",
+      "Every player must provide a verification video link and an official ATP/ITF/WTA (or equivalent) profile URL when they apply. Profiles are reviewed before being published, and only approved players appear to supporters. We also monitor reports and can remove profiles that don’t meet our standards.",
   },
   {
     question: "Is my payment information secure?",
@@ -91,7 +91,7 @@ const faqs = [
       "Yes, all payments are processed securely through Stripe, a leading payment processor. We never store your payment details on our servers.",
   },
   {
-    question: "Can I sponsor multiple players?",
+    question: "Can I support multiple players?",
     answer:
       "Absolutely! You can support as many players as you'd like and choose different types of support for each one.",
   },
@@ -107,9 +107,9 @@ export default function HowItWorks() {
               How It Works
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              GameSetMatch connects tennis players at all levels with sponsors
-              who want to support their journey. Here's how our platform works
-              for both players and sponsors.
+              GameSetMatch connects tennis players at all levels with supporters
+              who want to back their journey. Here&apos;s how our platform works
+              for both players and supporters.
             </p>
           </div>
         </div>
@@ -148,15 +148,15 @@ export default function HowItWorks() {
             </div>
           </div>
 
-          {/* For Sponsors */}
+          {/* For Supporters */}
           <div id="for-sponsors" className="mb-20">
             <h2 className="text-4xl font-bold text-foreground text-center mb-4">
-              For Sponsors
+              For Supporters
             </h2>
             <p className="text-lg text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
               Support tennis players with travel, gear, and training expenses,
               with additional safeguards to help you feel confident in who
-              you’re supporting.
+              you&apos;re supporting.
             </p>
             <div className="grid md:grid-cols-3 gap-8 mb-8">
               {sponsorSteps.map((step, index) => (
@@ -178,7 +178,7 @@ export default function HowItWorks() {
                 variant="outline"
                 data-testid="button-browse-players-how-it-works"
               >
-                <Link href="/players">Browse Players to Sponsor</Link>
+                <Link href="/players">Browse Players to Support</Link>
               </Button>
             </div>
           </div>

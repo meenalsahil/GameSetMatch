@@ -61,14 +61,15 @@ export default function HomePage() {
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 leading-tight">
               Connect{" "}
               <span className="text-emerald-300">real tennis players</span>{" "}
-              with sponsors who care.
+              with supporters who care.
             </h1>
 
             {/* Subheadline */}
             <p className="text-base md:text-lg text-emerald-50/90 max-w-2xl mb-8">
-              GameSetMatch helps sponsors support verified tennis players using
-              ATP/ITF/WTA profile links and verification videos—so you know
-              you’re backing genuine athletes, not fake profiles.
+              GameSetMatch helps supporters connect with verified tennis
+              players using ATP/ITF/WTA profile links and verification
+              videos—so you know you&apos;re backing genuine athletes, not fake
+              profiles.
             </p>
 
             {/* CTAs */}
@@ -144,7 +145,8 @@ export default function HomePage() {
                   </div>
                   <h3 className="text-2xl font-bold mb-4">Sign Up</h3>
                   <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Create your player profile in minutes. It's free to join!
+                    Create your player profile in minutes. It&apos;s free to
+                    join!
                   </p>
                   <ul className="text-left text-sm text-gray-600 dark:text-gray-400 space-y-2">
                     <li className="flex items-start gap-2">
@@ -190,9 +192,9 @@ export default function HomePage() {
                       3
                     </span>
                   </div>
-                  <h3 className="text-2xl font-bold mb-4">Get Sponsored</h3>
+                  <h3 className="text-2xl font-bold mb-4">Get Support</h3>
                   <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Connect with sponsors who want to support your tennis
+                    Connect with supporters who want to back your tennis
                     journey
                   </p>
                   <ul className="text-left text-sm text-gray-600 dark:text-gray-400 space-y-2">
@@ -216,10 +218,10 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* For Sponsors */}
+          {/* For Supporters */}
           <div>
             <h3 className="text-3xl font-bold text-center mb-12">
-              For Sponsors
+              For Supporters
             </h3>
             <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
               <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg">
@@ -238,8 +240,8 @@ export default function HomePage() {
                   <Target className="h-12 w-12 text-blue-600 mx-auto mb-4" />
                   <h3 className="text-xl font-bold mb-3">Choose a Player</h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    Review profiles, equipment needs, and sponsorship goals to
-                    find your match
+                    Review profiles, equipment needs, and support goals to find
+                    your match
                   </p>
                 </CardContent>
               </Card>
@@ -249,8 +251,8 @@ export default function HomePage() {
                   <Trophy className="h-12 w-12 text-blue-600 mx-auto mb-4" />
                   <h3 className="text-xl font-bold mb-3">Make an Impact</h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    Contribute with travel support, gear, or stipends and help
-                    athletes achieve goals
+                    Contribute toward travel, coaching, gear, or stipends and
+                    help athletes achieve their goals
                   </p>
                 </CardContent>
               </Card>

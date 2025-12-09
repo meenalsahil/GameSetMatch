@@ -20,32 +20,32 @@ export default function FAQ() {
     {
       question: "How much does it cost for players?",
       answer:
-        "It's completely FREE for players to create a profile and connect with sponsors. We don't charge any membership fees or take a percentage of sponsorships.",
+        "It's completely FREE for players to create a profile and connect with supporters. We don't charge any membership fees or take a percentage of support contributions.",
     },
     {
-      question: "What types of sponsorship are available?",
+      question: "What types of support are available?",
       answer:
-        "Sponsors can provide travel expenses, equipment (rackets, strings, shoes), monthly training stipends, tournament entry fees, or one-time contributions for specific needs.",
+        "Supporters can provide travel expenses, equipment (rackets, strings, shoes), monthly training stipends, tournament entry fees, or one-time contributions for specific needs.",
     },
     {
-      question: "How much should I contribute as a sponsor?",
+      question: "How much should I contribute as a supporter?",
       answer:
-        "There's no minimum contribution amount—every bit of support makes a real difference. Whether it's $50 for strings, $200 for tournament entry fees, or $1,000 for travel expenses, you can contribute whatever feels right for you. The beauty of our platform is that it allows sponsors of all backgrounds to make an impact at a level that's comfortable and meaningful to them. Even smaller contributions add up and help players pursue their dreams.",
+        "There's no minimum contribution amount—every bit of support makes a real difference. Whether it's $50 for strings, $200 for tournament entry fees, or $1,000 for travel expenses, you can contribute whatever feels right for you. The beauty of our platform is that it allows supporters of all backgrounds to make an impact at a level that's comfortable and meaningful to them. Even smaller contributions add up and help players pursue their dreams.",
     },
     {
-      question: "What do I get in return for sponsoring a player?",
+      question: "What do I get in return for supporting a player?",
       answer:
-        "As a sponsor, you become part of a player's journey in one of the world's most demanding and expensive sports. Tennis players often need $50,000-$150,000 annually to compete at the professional level, and your support directly helps them access training, tournaments, and coaching that can make or break their career. You'll have the satisfaction of knowing you're investing in someone's future and potentially helping launch the next tennis star. Players will share their progress, tournament results, and success stories with you—and soon, these testimonials will be featured on our platform to inspire others and showcase the real impact of sponsorship. It's more than a transaction; it's about being part of their story.",
+        "As a supporter, you become part of a player's journey in one of the world's most demanding and expensive sports. Tennis players often need $50,000-$150,000 annually to compete at the professional level, and your support directly helps them access training, tournaments, and coaching that can make or break their career. You'll have the satisfaction of knowing you're investing in someone's future and potentially helping launch the next tennis star. Players will share their progress, tournament results, and success stories with you—and soon, these testimonials will be featured on our platform to inspire others and showcase the real impact of your support. It's more than a transaction; it's about being part of their story.",
     },
     {
-      question: "Do sponsors need to sign up?",
+      question: "Do supporters need to sign up?",
       answer:
-        "No, sponsors can browse player profiles without creating an account. However, signing up allows sponsors to manage multiple sponsorships and receive updates from players.",
+        "No, supporters can browse player profiles without creating an account. However, signing up allows supporters to manage multiple players they support and receive updates from players.",
     },
     {
       question: "How do you make sure player profiles are genuine?",
       answer:
-        "Every player must provide a verification video link and an official ATP/ITF/WTA (or equivalent) profile URL when they apply. Profiles are reviewed before being published, and only approved players appear to sponsors. We also monitor reports and can remove profiles that don't meet our standards, but we still encourage sponsors to use their own judgment when deciding who to support.",
+        "Every player must provide a verification video link and an official ATP/ITF/WTA (or equivalent) profile URL when they apply. Profiles are reviewed before being published, and only approved players appear to supporters. We also monitor reports and can remove profiles that don't meet our standards, but we still encourage supporters to use their own judgment when deciding who to support.",
     },
     {
       question: "Is my payment information secure?",
@@ -53,9 +53,9 @@ export default function FAQ() {
         "Yes, all payments are processed through Stripe, a secure payment platform used by millions of businesses worldwide. We never store your payment details on our servers.",
     },
     {
-      question: "Can I sponsor multiple players?",
+      question: "Can I support multiple players?",
       answer:
-        "Absolutely! You can sponsor as many players as you'd like. Many sponsors support multiple athletes at different competitive levels.",
+        "Absolutely! You can support as many players as you'd like. Many supporters back multiple athletes at different competitive levels.",
     },
   ];
 
@@ -108,7 +108,7 @@ export default function FAQ() {
           <div className="mt-12 text-center p-8 bg-primary/5 rounded-lg">
             <h3 className="text-xl font-bold mb-2">Still have questions?</h3>
             <p className="text-muted-foreground mb-4">
-              We're here to help! Contact our support team.
+              We&apos;re here to help! Contact our support team.
             </p>
             <Button asChild>
               <Link href="/contact">Contact Us</Link>

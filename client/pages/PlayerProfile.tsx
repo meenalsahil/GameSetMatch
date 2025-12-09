@@ -35,9 +35,9 @@ export default function PlayerProfile() {
     // Safety: no id or no player loaded
     if (!id || !player) {
       toast({
-        title: "Sponsor Interest",
+        title: "Support Interest",
         description:
-          "Thank you for your interest! We'll contact you shortly with next steps.",
+          "Thanks for your interest in supporting this player! We'll contact you shortly with next steps.",
       });
       return;
     }
@@ -62,16 +62,16 @@ export default function PlayerProfile() {
 
       // If Stripe is not ready or any non-OK response:
       toast({
-        title: "Sponsor Interest",
+        title: "Support Interest",
         description:
-          "Thank you for your interest! We'll contact you shortly with next steps.",
+          "Thanks for your interest in supporting this player! We'll contact you shortly with next steps.",
       });
     } catch (err) {
       console.error("Sponsor error", err);
       toast({
-        title: "Sponsor Interest",
+        title: "Support Interest",
         description:
-          "Thank you for your interest! We'll contact you shortly with next steps.",
+          "Thanks for your interest in supporting this player! We'll contact you shortly with next steps.",
       });
     }
   };
@@ -112,7 +112,7 @@ export default function PlayerProfile() {
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Browse Players
         </Button>
 
-        {/* Player Header with Sponsor Button */}
+        {/* Player Header with Support Button */}
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-start gap-4">
@@ -137,7 +137,7 @@ export default function PlayerProfile() {
               </div>
               <Button onClick={handleSponsor} className="ml-4">
                 <Heart className="h-4 w-4 mr-2" />
-                Become a Sponsor
+                Support this Player
               </Button>
             </div>
 
@@ -257,7 +257,7 @@ export default function PlayerProfile() {
             </p>
             <Button onClick={handleSponsor} variant="secondary" size="lg">
               <Heart className="h-5 w-5 mr-2" />
-              Become a Sponsor Today
+              Become a Supporter Today
             </Button>
           </CardContent>
         </Card>
