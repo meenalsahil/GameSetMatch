@@ -39,29 +39,30 @@ const PLATFORM_FEE_PERCENT = 7;
 export const stripeHelpers = {
   /**
    * Create (or look up) an Express account for a player.
-   * If existingAccountId is provided, we try to retrieve it; if Stripe says
-   * "no such account", we gracefully create a new one instead of exploding.
+   * If existingAccountId is provided, we try to retrieve it.
+   * If Stripe says "no such account", we create a fresh one and let
+   * routes.ts persist the new account id in the database.
    */
   async createOrGetExpressAccount(args: CreateAccountArgs) {
     if (!stripeSecretKey || !stripe) {
       throw new Error("Stripe is not configured (STRIPE_SECRET_KEY missing).");
     }
 
-    // Try to reuse existing account if we already have one
+    // Try to reuse existing account if the stored ID is valid
     if (args.existingAccountId) {
       try {
         const existing = await stripe.accounts.retrieve(args.existingAccountId);
         return existing;
       } catch (err: any) {
-        console.warn(
-          "Stripe existing account lookup failed – will create a new Express account instead",
-          {
-            playerId: args.playerId,
-            existingAccountId: args.existingAccountId,
-            stripeError: err?.message,
-          },
-        );
-        // fall through to create a brand new account
+        // If Stripe says "no such account", fall through and create a new one
+        if (err && err.code === "resource_missing") {
+          console.warn(
+            "Stored stripeAccountId is invalid; creating a fresh Express account",
+          );
+        } else {
+          // Any other error is real – rethrow it
+          throw err;
+        }
       }
     }
 
@@ -128,7 +129,7 @@ export const stripeHelpers = {
 
   /**
    * Create a Checkout Session for sponsoring a player.
-   * Used by /api/players/:id/sponsor-checkout in routes.ts
+   * Used by /api/payments/sponsor-checkout in routes.ts
    */
   async createSponsorCheckoutSession(
     args: CreateSponsorCheckoutArgs,
