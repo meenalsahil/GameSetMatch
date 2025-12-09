@@ -12,6 +12,10 @@ if (!stripeSecretKey) {
   );
 }
 
+// Platform fee: GameSetMatch keeps 7% of each sponsorship
+const PLATFORM_FEE_PERCENT = 0.07;
+
+
 // NOTE: routes.ts passes player.country and existingAccountId as well
 type CreateAccountArgs = {
   playerId: number;
@@ -120,6 +124,11 @@ export const stripeHelpers = {
 
     const appUrl = process.env.APP_URL || "http://localhost:5001";
 
+    // 7% platform fee (GameSetMatch keeps this)
+    const applicationFeeAmount = Math.round(
+      args.amountCents * PLATFORM_FEE_PERCENT,
+    );
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
@@ -129,16 +138,19 @@ export const stripeHelpers = {
             currency: args.currency,
             unit_amount: args.amountCents,
             product_data: {
-              name: `Sponsorship for ${args.playerName}`,
+              name: `Support for ${args.playerName}`,
+              description: "One-time contribution via GameSetMatch",
             },
           },
           quantity: 1,
         },
       ],
-      success_url: `${appUrl}/player/${args.playerId}?sponsored=1`,
-      cancel_url: `${appUrl}/player/${args.playerId}?canceled=1`,
+      // NOTE: your frontend URLs use /players/:id, not /player/:id
+      success_url: `${appUrl}/players/${args.playerId}?sponsored=1`,
+      cancel_url: `${appUrl}/players/${args.playerId}?canceled=1`,
       payment_intent_data: {
-        // Send funds to the player's connected account
+        // Platform keeps 7%, remaining goes to connected account
+        application_fee_amount: applicationFeeAmount,
         transfer_data: {
           destination: args.stripeAccountId,
         },
@@ -155,7 +167,6 @@ export const stripeHelpers = {
 
     return session.url;
   },
-};
 
 export function isStripeEnabled() {
   return Boolean(stripeSecretKey);

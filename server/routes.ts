@@ -10,7 +10,11 @@ import fs from "fs";
 import bcrypt from "bcrypt";
 import { storage } from "./storage.js";
 import { db } from "./db.js";
-import { players, signupPlayerSchema } from "../shared/schema.js";
+import {
+  players,
+  signupPlayerSchema,
+  type InsertPlayer,
+} from "../shared/schema.js";
 import { eq } from "drizzle-orm";
 import { verifyPlayerAgainstATP } from "./atp-verification.js";
 
@@ -421,76 +425,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add this route to your routes.ts file
 
 // -------- PLAYER: Update own profile --------
-app.put(
-  "/api/players/me",
-  isAuthenticated,
-  async (req: Request, res: Response) => {
-    try {
-      const playerId = req.session!.playerId!;
-      const body = req.body || {};
+  // -------- PLAYER: Update own profile --------
+  app.put(
+    "/api/players/me",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const playerId = req.session!.playerId!;
+        const body = req.body || {};
 
-      // Build a patch object with *only* editable fields
-      const update: any = {};
+        // Normalize / coerce types
+        const update: Partial<InsertPlayer> = {
+          email:
+            body.email === undefined ? undefined : String(body.email).trim(),
+          fullName:
+            body.fullName === undefined
+              ? undefined
+              : String(body.fullName).trim(),
+          age:
+            body.age === undefined || body.age === ""
+              ? undefined
+              : Number.parseInt(String(body.age), 10),
+          country:
+            body.country === undefined
+              ? undefined
+              : String(body.country).trim(),
+          location:
+            body.location === undefined
+              ? undefined
+              : String(body.location).trim(),
+          ranking:
+            body.ranking === undefined || body.ranking === ""
+              ? undefined
+              : Number.parseInt(String(body.ranking), 10),
+          specialization:
+            body.specialization === undefined
+              ? undefined
+              : String(body.specialization).trim(),
+          bio:
+            body.bio === undefined ? undefined : String(body.bio).trim(),
+          fundingGoals:
+            body.fundingGoals === undefined
+              ? undefined
+              : String(body.fundingGoals).trim(),
+          videoUrl:
+            body.videoUrl === undefined
+              ? undefined
+              : String(body.videoUrl).trim(),
+          atpProfileUrl:
+            body.atpProfileUrl === undefined
+              ? undefined
+              : String(body.atpProfileUrl).trim(),
+          photoUrl:
+            body.photoUrl === undefined
+              ? undefined
+              : String(body.photoUrl).trim(),
+        };
 
-      if (body.email !== undefined) {
-        update.email = String(body.email).trim();
-      }
-      if (body.fullName !== undefined) {
-        update.fullName = String(body.fullName).trim();
-      }
-      if (body.age !== undefined) {
-        update.age =
-          body.age === null || body.age === ""
-            ? null
-            : Number.parseInt(String(body.age), 10);
-      }
-      if (body.country !== undefined) {
-        update.country = String(body.country).trim();
-      }
-      if (body.location !== undefined) {
-        update.location = String(body.location).trim();
-      }
-      if (body.ranking !== undefined) {
-        update.ranking =
-          body.ranking === null || body.ranking === ""
-            ? null
-            : Number.parseInt(String(body.ranking), 10);
-      }
-      if (body.specialization !== undefined) {
-        update.specialization = String(body.specialization).trim();
-      }
-      if (body.bio !== undefined) {
-        update.bio = String(body.bio).trim();
-      }
-      if (body.fundingGoals !== undefined) {
-        update.fundingGoals = String(body.fundingGoals).trim();
-      }
-      if (body.videoUrl !== undefined) {
-        update.videoUrl = String(body.videoUrl).trim();
-      }
-      if (body.atpProfileUrl !== undefined) {
-        update.atpProfileUrl = String(body.atpProfileUrl).trim();
-      }
+        const updated = await storage.updatePlayer(String(playerId), update);
+        if (!updated) {
+          return res.status(404).json({ message: "Player not found" });
+        }
 
-      const updated = await storage.updatePlayer(String(playerId), update);
-
-      if (!updated) {
-        return res.status(404).json({ message: "Player not found" });
+        // Return a safe subset (same shape as /api/auth/me)
+        res.json({
+          id: updated.id,
+          email: updated.email,
+          fullName: updated.fullName,
+          age: updated.age,
+          country: updated.country,
+          location: updated.location,
+          ranking: updated.ranking,
+          specialization: updated.specialization,
+          bio: updated.bio,
+          fundingGoals: updated.fundingGoals,
+          videoUrl: updated.videoUrl,
+          photoUrl: updated.photoUrl,
+          published: updated.published,
+          featured: updated.featured,
+          priority: updated.priority,
+          isAdmin: (updated as any).isAdmin,
+          approvalStatus: (updated as any).approvalStatus,
+          approvedBy: (updated as any).approvedBy,
+          approvedAt: (updated as any).approvedAt,
+          createdAt: (updated as any).createdAt,
+          active: updated.active,
+          stripeAccountId: (updated as any).stripeAccountId,
+          stripeReady: (updated as any).stripeReady,
+        });
+      } catch (e) {
+        console.error("Update profile error:", e);
+        res.status(500).json({ message: "Failed to update profile" });
       }
+    },
+  );
 
-      return res.json({
-        player: {
-          ...updated,
-          password_hash: undefined,
-          passwordHash: undefined,
-        },
-      });
-    } catch (e) {
-      console.error("Update profile error:", e);
-      return res.status(500).json({ message: "Failed to update profile" });
-    }
-  },
-);
 
   // -------- PUBLIC: Browse players --------
   app.get("/api/players", async (_req: Request, res: Response) => {
@@ -560,6 +589,56 @@ app.put(
       res.status(500).json({ message: "Failed to get player" });
     }
   });
+
+  // -------- PUBLIC: Sponsor a player (Checkout) --------
+  app.post(
+    "/api/players/:id/sponsor-checkout",
+    async (req: Request, res: Response) => {
+      try {
+        const playerId = Number(req.params.id);
+        const body = req.body || {};
+        const { amount } = body;
+
+        if (!Number.isFinite(playerId)) {
+          return res.status(400).json({ message: "Invalid player id" });
+        }
+
+        const player: any = await storage.getPlayer(playerId);
+        if (!player || !player.published || player.active === false) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+
+        // If Stripe isn't ready for this player, let frontend fall back to the “interest” toast
+        if (!player.stripeAccountId || !player.stripeReady) {
+          return res.status(409).json({
+            message: "Player is not yet ready to receive Stripe payouts.",
+          });
+        }
+
+        // If no amount sent from frontend, default to $50
+        const amountCents =
+          typeof amount === "number" && amount > 0
+            ? Math.round(amount * 100)
+            : 5000; // 5000 cents = $50
+
+        const checkoutUrl = await stripeHelpers.createSponsorCheckoutSession({
+          playerId: player.id,
+          playerName: player.fullName,
+          stripeAccountId: player.stripeAccountId,
+          amountCents,
+          currency: "usd",
+        });
+
+        return res.json({ url: checkoutUrl });
+      } catch (e: any) {
+        console.error("Sponsor checkout (per-player) error:", e);
+        return res.status(500).json({
+          message: e.message || "Failed to start sponsorship",
+        });
+      }
+    },
+  );
+
 
   // -------- PLAYER: Upload verification --------
   app.post(
