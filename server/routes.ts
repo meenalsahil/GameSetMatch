@@ -987,12 +987,14 @@ app.get(
       const stripeReady = !!player.stripeReady;
 
       return res.json({
-        hasAccount,
-        stripeReady,
-        needsOnboarding: !hasAccount,
-        restricted: false,
-        requirementsDue: [],
-      });
+  hasAccount: true,
+  ready: payoutsReady,         // 👈 add this
+  stripeReady: payoutsReady,   // keep this for DB/UI consistency
+  accountId: player.stripeAccountId,
+  restricted: currentlyDue.length > 0,
+  requirementsDue: currentlyDue,
+});
+
     } catch (err: any) {
       console.error("Stripe status error:", err);
       return res

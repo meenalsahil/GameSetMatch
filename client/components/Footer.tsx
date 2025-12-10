@@ -14,7 +14,8 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Connecting tennis players with sponsors at all competitive levels
+              Connecting tennis players with supporters at all competitive
+              levels
             </p>
           </div>
 

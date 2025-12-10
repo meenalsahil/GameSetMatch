@@ -151,6 +151,7 @@ export class DbStorage implements IStorage {
     const values: any[] = [];
     let paramCount = 1;
 
+    // Allow editing ALL profile fields
     if (player.email !== undefined) {
       fields.push(`email = $${paramCount++}`);
       values.push(player.email);
@@ -191,13 +192,13 @@ export class DbStorage implements IStorage {
       fields.push(`video_url = $${paramCount++}`);
       values.push(player.videoUrl);
     }
-    if (player.photoUrl !== undefined) {
-      fields.push(`photo_url = $${paramCount++}`);
-      values.push(player.photoUrl);
-    }
     if (player.atpProfileUrl !== undefined) {
       fields.push(`atp_profile_url = $${paramCount++}`);
       values.push(player.atpProfileUrl);
+    }
+    if (player.photoUrl !== undefined) {
+      fields.push(`photo_url = $${paramCount++}`);
+      values.push(player.photoUrl);
     }
 
     if (fields.length === 0) {
