@@ -54,8 +54,6 @@ type StripeStatusResponse = {
   stripeReady: boolean;
   restricted?: boolean;
   requirementsDue?: string[];
-  // compatibility if backend still sends "ready"
-  ready?: boolean;
 };
 
 export default function Dashboard() {
@@ -171,7 +169,7 @@ export default function Dashboard() {
     isFetching: stripeStatusFetching,
   } = useQuery<StripeStatusResponse>({
     queryKey: ["/api/payments/stripe/status"],
-    enabled: !!player,
+    enabled: !!player,          // only when logged-in player loaded
     retry: false,
     queryFn: async () => {
       const res = await fetch("/api/payments/stripe/status");
@@ -218,7 +216,7 @@ export default function Dashboard() {
       return res.json();
     },
     onSuccess: () => {
-      // Refresh auth & Stripe status – no hard reload
+      // force refetch of auth & Stripe status
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       queryClient.invalidateQueries({ queryKey: ["/api/payments/stripe/status"] });
 
@@ -280,13 +278,10 @@ export default function Dashboard() {
     .join("")
     .toUpperCase();
 
-  const stripeReady =
-    stripeStatus?.stripeReady ??
-    stripeStatus?.ready ??
-    player.stripeReady ??
-    false;
-  const stripeHasAccount = stripeStatus?.hasAccount ?? !!player.stripeAccountId;
-  const stripeRestricted = stripeStatus?.restricted ?? false;
+  // IMPORTANT: Stripe readiness ONLY comes from stripeStatus,
+  // not from stale `player` data.
+  const stripeHasAccount = stripeStatus?.hasAccount ?? false;
+  const stripeReady = stripeStatus?.stripeReady ?? false;
 
   const handleFormChange = (field: keyof ProfileFormState, value: string) => {
     setForm((prev) => (prev ? { ...prev, [field]: value } : prev));
@@ -754,21 +749,14 @@ export default function Dashboard() {
                             ready.
                           </p>
                         )}
-                        {stripeHasAccount && !stripeReady && !stripeRestricted && (
+                        {stripeHasAccount && !stripeReady && (
                           <p>
                             Your Stripe Express account is created but payouts
                             are not fully enabled yet. Open Stripe onboarding to
                             finish any remaining steps.
                           </p>
                         )}
-                        {stripeRestricted && (
-                          <p className="text-amber-700">
-                            Your Stripe account is currently restricted. Open
-                            Stripe onboarding and complete the missing
-                            information shown there.
-                          </p>
-                        )}
-                        {stripeReady && !stripeRestricted && (
+                        {stripeReady && (
                           <p>
                             Your Stripe Express account looks ready in test
                             mode. You can re-run onboarding if you want to test
