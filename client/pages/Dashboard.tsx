@@ -194,37 +194,39 @@ export default function Dashboard() {
     },
   });
 
-  const resetStripeMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/players/me/reset-stripe", {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Failed to reset Stripe connection");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/payments/stripe/status"] });
-      toast({
-        title: "Stripe Connection Reset",
-        description: "Your Stripe account has been disconnected. Refreshing page...",
-      });
-      // Force a hard page reload to clear all state
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Reset failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+ const resetStripeMutation = useMutation({
+  mutationFn: async () => {
+    const res = await fetch("/api/players/me/reset-stripe", {
+      method: "POST",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || "Failed to reset Stripe connection");
+    }
+    return res.json();
+  },
+  onSuccess: () => {
+    // CLEAR ALL CACHED DATA before reload
+    queryClient.clear();
+    
+    toast({
+      title: "Stripe Connection Reset",
+      description: "Your Stripe account has been disconnected. Refreshing page...",
+    });
+    
+    // Reload after cache is cleared
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  },
+  onError: (error: Error) => {
+    toast({
+      title: "Reset failed",
+      description: error.message,
+      variant: "destructive",
+    });
+  },
+});
 
   const updateProfileMutation = useMutation({
     mutationFn: async (payload: ProfileFormState) => {
