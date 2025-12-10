@@ -304,7 +304,7 @@ app.post(
   isAdmin,
   async (req: Request, res: Response) => {
     try {
-      const playerId = req.params.playerId;
+      const playerId = Number(req.params.playerId);  // ← Convert to number here
       
       await db
         .update(players)
@@ -312,7 +312,7 @@ app.post(
           stripeAccountId: null,
           stripeReady: false,
         })
-        .where(eq(players.id, playerId));
+        .where(eq(players.id, playerId));  // ← Now it's a number, not a string
 
       res.json({ ok: true, message: "Stripe fields reset" });
     } catch (e: any) {
