@@ -298,6 +298,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // -------- ADMIN: Reset Stripe for a player --------
+app.post(
+  "/api/admin/reset-stripe/:playerId",
+  isAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const playerId = req.params.playerId;
+      
+      await db
+        .update(players)
+        .set({
+          stripeAccountId: null,
+          stripeReady: false,
+        })
+        .where(eq(players.id, playerId));
+
+      res.json({ ok: true, message: "Stripe fields reset" });
+    } catch (e: any) {
+      console.error("Reset stripe error:", e);
+      res.status(500).json({ message: e.message || "Failed to reset" });
+    }
+  },
+);
+
   // -------- AUTH: Signin --------
   app.post("/api/auth/signin", async (req: Request, res: Response) => {
     try {
