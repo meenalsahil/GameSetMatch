@@ -323,28 +323,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // -------- PLAYER: Reset own Stripe account (any logged-in player) --------
-  app.post(
-    "/api/players/me/reset-stripe",
-    isAuthenticated,
-    async (req: Request, res: Response) => {
-      try {
-        const playerId = req.session!.playerId!;
+app.post(
+  "/api/players/me/reset-stripe",
+  isAuthenticated,
+  async (req: Request, res: Response) => {
+    try {
+      const playerId = req.session!.playerId!;
 
-        await db
-          .update(players)
-          .set({
-            stripeAccountId: null,
-            stripeReady: false,
-          })
-          .where(eq(players.id, Number(playerId)));
+      // Hard reset the Stripe fields in DB
+      await db
+        .update(players)
+        .set({
+          stripeAccountId: null,
+          stripeReady: false,
+        })
+        .where(eq(players.id, Number(playerId)));
 
-        res.json({ ok: true, message: "Your Stripe account has been reset" });
-      } catch (e: any) {
-        console.error("Player self-reset stripe error:", e);
-        res.status(500).json({ message: e.message || "Failed to reset" });
-      }
-    },
-  );
+      console.log("✅ Player Stripe reset:", { playerId });
+
+      res.json({ ok: true, message: "Your Stripe account has been reset" });
+    } catch (e: any) {
+      console.error("Player self-reset stripe error:", e);
+      res.status(500).json({ message: e.message || "Failed to reset" });
+    }
+  },
+);
+
 
   // -------- AUTH: Signin --------
   app.post("/api/auth/signin", async (req: Request, res: Response) => {
@@ -910,55 +914,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  // -------- PAYMENTS: Stripe Connect onboarding --------
-  app.post(
-    "/api/payments/stripe/connect-link",
-    isAuthenticated,
-    async (req: Request, res: Response) => {
-      try {
-        const playerId = req.session!.playerId!;
-        const player: any = await storage.getPlayer(playerId);
+// -------- PAYMENTS: Stripe Connect onboarding --------
+app.post(
+  "/api/payments/stripe/connect-link",
+  isAuthenticated,
+  async (req: Request, res: Response) => {
+    try {
+      const playerId = req.session!.playerId!;
+      const player: any = await storage.getPlayer(playerId);
 
-        if (!player) {
-          return res.status(404).json({ message: "Player not found" });
-        }
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
 
-        if (player.approvalStatus !== "approved") {
-          return res.status(400).json({
-            message: "Profile must be approved before connecting Stripe",
-          });
-        }
-
-        const account = await stripeHelpers.createOrGetExpressAccount({
-          playerId: player.id,
-          fullName: player.fullName,
-          email: player.email,
-          country: player.country,
-          existingAccountId: player.stripeAccountId,
-        });
-
-        // Save account id if new
-        if (account.id !== player.stripeAccountId) {
-          await db
-            .update(players)
-            .set({ stripeAccountId: account.id })
-            .where(eq(players.id, Number(playerId)));
-        }
-
-        const url = await stripeHelpers.createOnboardingLink(account.id);
-
-        res.json({ url });
-      } catch (e: any) {
-        console.error("Stripe connect-link error:", e);
-        res.status(500).json({
-          message: e.message || "Failed to create Stripe onboarding link",
+      if (player.approvalStatus !== "approved") {
+        return res.status(400).json({
+          message: "Profile must be approved before connecting Stripe",
         });
       }
-    },
-  );
 
-  // -------- PAYMENTS: Stripe status (self-healing) --------
-  app.get(
+      // IMPORTANT:
+      // We do NOT reuse the old stripeAccountId if it was reset or is invalid.
+      // Always let Stripe/stripeHelpers create a *new* Express account.
+      const account = await stripeHelpers.createOrGetExpressAccount({
+        playerId: player.id,
+        fullName: player.fullName,
+        email: player.email,
+        country: player.country,
+        // existingAccountId: player.stripeAccountId,  <-- REMOVED
+        existingAccountId: undefined,
+      });
+
+      // Save (or overwrite) the account id in DB
+      if (account.id !== player.stripeAccountId) {
+        await db
+          .update(players)
+          .set({
+            stripeAccountId: account.id,
+            // don’t mark ready until Stripe says so after onboarding
+            stripeReady: false,
+          })
+          .where(eq(players.id, Number(playerId)));
+      }
+
+      const url = await stripeHelpers.createOnboardingLink(account.id);
+
+      res.json({ url });
+    } catch (e: any) {
+      console.error("Stripe connect-link error:", e);
+      res.status(500).json({
+        message: e.message || "Failed to create Stripe onboarding link",
+      });
+    }
+  },
+);
+
+
+  // -------- PAYMENTS: Stripe status (DB only) --------
+app.get(
   "/api/payments/stripe/status",
   isAuthenticated,
   async (req: Request, res: Response) => {
@@ -988,6 +1001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   },
 );
+
 
   const httpServer = createServer(app);
   return httpServer;
