@@ -962,44 +962,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   app.get(
-    "/api/payments/stripe/status",
-    isAuthenticated,
-    async (req: Request, res: Response) => {
-      try {
-        const playerId = req.session!.playerId!;
-        const player: any = await storage.getPlayer(playerId);
+  "/api/payments/stripe/status",
+  isAuthenticated,
+  async (req: Request, res: Response) => {
+    try {
+      const playerId = req.session!.playerId!;
+      const player = await db.query.players.findFirst({
+        where: (p, { eq }) => eq(p.id, Number(playerId)),
+      });
 
-        if (!player || !player.stripeAccountId) {
-          return res.json({ ready: false, hasAccount: false });
-        }
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
 
-        const status = await stripeHelpers.getPayoutStatus(
-          player.stripeAccountId,
-        );
-
-        // If Stripe says we're ready, mark in DB
-        if (status.ready && !player.stripeReady) {
-          await db
-            .update(players)
-            .set({ stripeReady: true })
-            .where(eq(players.id, Number(playerId)));
-        }
-
-        res.json({
-          ready: status.ready,
-          hasAccount: true,
-          chargesEnabled: status.chargesEnabled,
-          payoutsEnabled: status.payoutsEnabled,
-          detailsSubmitted: status.detailsSubmitted,
-        });
-      } catch (e: any) {
-        console.error("Stripe status error:", e);
-        res.status(500).json({
-          message: e.message || "Failed to fetch Stripe status",
+      // ✅ If we have no account id, just say "not connected" – no Stripe call at all
+      if (!player.stripeAccountId) {
+        return res.json({
+          hasAccount: false,
+          stripeReady: false,
+          needsOnboarding: true,
         });
       }
-    },
-  );
+
+      let account;
+      try {
+        account = await stripe.accounts.retrieve(player.stripeAccountId);
+      } catch (err: any) {
+        const isMissing =
+          err?.type === "StripeInvalidRequestError" &&
+          err?.code === "resource_missing";
+
+        // ✅ Account was deleted in Stripe → reset DB & treat as disconnected
+        if (isMissing) {
+          await db
+            .update(players)
+            .set({
+              stripeAccountId: null,
+              stripeReady: false,
+            })
+            .where(eq(players.id, player.id));
+
+          return res.json({
+            hasAccount: false,
+            stripeReady: false,
+            needsOnboarding: true,
+          });
+        }
+
+        console.error("Stripe status error:", err);
+        return res
+          .status(500)
+          .json({ message: "Failed to fetch Stripe account status" });
+      }
+
+      const payoutsReady =
+        !!account.charges_enabled &&
+        !!account.payouts_enabled &&
+        !!account.details_submitted;
+
+      // ✅ If Stripe says “ready” but DB says false, self-heal DB
+      if (payoutsReady && !player.stripeReady) {
+        await db
+          .update(players)
+          .set({ stripeReady: true })
+          .where(eq(players.id, player.id));
+      }
+
+      const currentlyDue = account.requirements?.currently_due ?? [];
+
+      return res.json({
+        hasAccount: true,
+        stripeReady: payoutsReady,
+        accountId: player.stripeAccountId,
+        restricted: currentlyDue.length > 0,
+        requirementsDue: currentlyDue,
+      });
+    } catch (err: any) {
+      console.error("Stripe status outer error:", err);
+      return res
+        .status(500)
+        .json({ message: "Unexpected error getting Stripe status" });
+    }
+  },
+);
 
   const httpServer = createServer(app);
   return httpServer;

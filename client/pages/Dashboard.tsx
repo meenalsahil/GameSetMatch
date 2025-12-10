@@ -49,6 +49,15 @@ type ProfileFormState = {
   photoUrl: string;
 };
 
+type StripeStatusResponse = {
+  hasAccount: boolean;
+  stripeReady: boolean;
+  restricted?: boolean;
+  requirementsDue?: string[];
+  // compatibility with older shape if backend still returns it
+  ready?: boolean;
+};
+
 export default function Dashboard() {
   const { player, isLoading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
@@ -132,7 +141,7 @@ export default function Dashboard() {
       });
 
       if (!res.ok) {
-        const error = await res.json();
+        const error = await res.json().catch(() => ({}));
         throw new Error(error.message || "Failed to publish profile");
       }
 
@@ -155,19 +164,22 @@ export default function Dashboard() {
   });
 
   // ---------- Stripe Connect client logic ----------
-  const stripeStatusQuery = useQuery({
+  const {
+    data: stripeStatus,
+    isLoading: stripeStatusLoading,
+    isError: stripeStatusError,
+    isFetching: stripeStatusFetching,
+  } = useQuery<StripeStatusResponse>({
     queryKey: ["/api/payments/stripe/status"],
-    enabled: !!player && !!player.stripeAccountId,
+    enabled: !!player, // always check status for logged-in player; backend handles null account
+    retry: false,
     queryFn: async () => {
       const res = await fetch("/api/payments/stripe/status");
-      if (!res.ok) throw new Error("Failed to fetch Stripe status");
-      return res.json() as Promise<{
-        ready: boolean;
-        hasAccount: boolean;
-        chargesEnabled: boolean;
-        payoutsEnabled: boolean;
-        detailsSubmitted: boolean;
-      }>;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to fetch Stripe status");
+      }
+      return res.json();
     },
   });
 
@@ -194,39 +206,35 @@ export default function Dashboard() {
     },
   });
 
- const resetStripeMutation = useMutation({
-  mutationFn: async () => {
-    const res = await fetch("/api/players/me/reset-stripe", {
-      method: "POST",
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || "Failed to reset Stripe connection");
-    }
-    return res.json();
-  },
-  onSuccess: () => {
-    // CLEAR ALL CACHED DATA before reload
-    queryClient.clear();
-    
-    toast({
-      title: "Stripe Connection Reset",
-      description: "Your Stripe account has been disconnected. Refreshing page...",
-    });
-    
-    // Reload after cache is cleared
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
-  },
-  onError: (error: Error) => {
-    toast({
-      title: "Reset failed",
-      description: error.message,
-      variant: "destructive",
-    });
-  },
-});
+  const resetStripeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/players/me/reset-stripe", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to reset Stripe connection");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      // Refresh auth & Stripe status – no hard reload
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments/stripe/status"] });
+
+      toast({
+        title: "Stripe Connection Reset",
+        description: "Your Stripe account has been disconnected.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Reset failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const updateProfileMutation = useMutation({
     mutationFn: async (payload: ProfileFormState) => {
@@ -272,12 +280,16 @@ export default function Dashboard() {
     .join("")
     .toUpperCase();
 
-  const stripeReady = player.stripeReady || stripeStatusQuery.data?.ready;
+  // Prefer Stripe status from server, fall back to player.stripeReady / old shape
+  const stripeReady =
+    stripeStatus?.stripeReady ??
+    stripeStatus?.ready ??
+    player.stripeReady ??
+    false;
+  const stripeHasAccount = stripeStatus?.hasAccount ?? !!player.stripeAccountId;
+  const stripeRestricted = stripeStatus?.restricted ?? false;
 
-  const handleFormChange = (
-    field: keyof ProfileFormState,
-    value: string,
-  ) => {
+  const handleFormChange = (field: keyof ProfileFormState, value: string) => {
     setForm((prev) => (prev ? { ...prev, [field]: value } : prev));
   };
 
@@ -679,9 +691,7 @@ export default function Dashboard() {
                               </Button>
                               <Button
                                 variant={player?.active ? "outline" : "default"}
-                                onClick={() =>
-                                  toggleActiveMutation.mutate()
-                                }
+                                onClick={() => toggleActiveMutation.mutate()}
                               >
                                 {player?.active
                                   ? "Make Profile Inactive"
@@ -720,24 +730,53 @@ export default function Dashboard() {
                       <strong>test mode</strong> for your own experimentation.
                     </CardDescription>
                   </div>
-                  {stripeStatusQuery.isFetching && (
+                  {stripeStatusFetching && (
                     <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
                   )}
                 </CardHeader>
                 <CardContent className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div className="text-sm text-muted-foreground max-w-xl">
-                    {!stripeReady ? (
+                  <div className="text-sm text-muted-foreground max-w-xl space-y-2">
+                    {stripeStatusLoading && (
+                      <p>Checking your Stripe payout status…</p>
+                    )}
+                    {stripeStatusError && (
+                      <p className="text-red-600">
+                        We couldn&apos;t check your Stripe status. You can try
+                        again or reset the connection below.
+                      </p>
+                    )}
+                    {!stripeStatusLoading && !stripeStatusError && (
                       <>
-                        When you click the button, you&apos;ll be taken to
-                        Stripe to complete onboarding. Use{" "}
-                        <strong>test details</strong> only. After you return,
-                        refresh this page and you should see &quot;Stripe
-                        payouts ready&quot; on your profile.
-                      </>
-                    ) : (
-                      <>
-                        Your Stripe Express account looks ready in test mode.
-                        You can re-run onboarding if you want to test again.
+                        {!stripeHasAccount && (
+                          <p>
+                            When you click the button, you&apos;ll be taken to
+                            Stripe to complete onboarding. Use{" "}
+                            <strong>test details</strong> only. After you
+                            return, this card will update when your payouts are
+                            ready.
+                          </p>
+                        )}
+                        {stripeHasAccount && !stripeReady && !stripeRestricted && (
+                          <p>
+                            Your Stripe Express account is created but payouts
+                            are not fully enabled yet. Open Stripe onboarding to
+                            finish any remaining steps.
+                          </p>
+                        )}
+                        {stripeRestricted && (
+                          <p className="text-amber-700">
+                            Your Stripe account is currently restricted. Open
+                            Stripe onboarding and complete the missing
+                            information shown there.
+                          </p>
+                        )}
+                        {stripeReady && !stripeRestricted && (
+                          <p>
+                            Your Stripe Express account looks ready in test
+                            mode. You can re-run onboarding if you want to test
+                            again.
+                          </p>
+                        )}
                       </>
                     )}
                   </div>
@@ -758,7 +797,7 @@ export default function Dashboard() {
                         "Set up Stripe payouts (test)"
                       )}
                     </Button>
-                    {stripeReady && (
+                    {stripeHasAccount && (
                       <Button
                         variant="destructive"
                         onClick={() => resetStripeMutation.mutate()}
