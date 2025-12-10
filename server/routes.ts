@@ -971,39 +971,103 @@ app.post(
 
 
   // -------- PAYMENTS: Stripe status (DB only) --------
-app.get(
-  "/api/payments/stripe/status",
-  isAuthenticated,
-  async (req: Request, res: Response) => {
-    try {
-      const playerId = req.session!.playerId!;
-      const player: any = await storage.getPlayer(playerId);
+  // -------- PAYMENTS: Stripe status for current player --------
+  app.get(
+    "/api/payments/stripe/status",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const playerId = req.session!.playerId!;
+        const player = await db.query.players.findFirst({
+          where: (p, { eq }) => eq(p.id, Number(playerId)),
+        });
 
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+
+        // If there is no connected account at all, we're clearly not ready
+        if (!player.stripeAccountId) {
+          return res.json({
+            hasAccount: false,
+            ready: false,
+            stripeReady: false,
+            needsOnboarding: true,
+            restricted: false,
+            requirementsDue: [],
+          });
+        }
+
+        let account: any;
+        try {
+          // use the Stripe instance from stripeHelpers
+          account = await stripeHelpers.stripe.accounts.retrieve(
+            player.stripeAccountId,
+          );
+        } catch (err: any) {
+          const isMissing =
+            err?.type === "StripeInvalidRequestError" &&
+            err?.code === "resource_missing";
+
+          // Account was deleted in Stripe → reset DB & treat as disconnected
+          if (isMissing) {
+            await db
+              .update(players)
+              .set({
+                stripeAccountId: null,
+                stripeReady: false,
+              })
+              .where(eq(players.id, player.id));
+
+            return res.json({
+              hasAccount: false,
+              ready: false,
+              stripeReady: false,
+              needsOnboarding: true,
+              restricted: false,
+              requirementsDue: [],
+            });
+          }
+
+          console.error("Stripe status error:", err);
+          return res
+            .status(500)
+            .json({ message: "Failed to fetch Stripe account status" });
+        }
+
+        const currentlyDue: string[] =
+          account.requirements?.currently_due ?? [];
+
+        const payoutsReady =
+          !!account.charges_enabled &&
+          !!account.payouts_enabled &&
+          !!account.details_submitted &&
+          currentlyDue.length === 0;
+
+        // If Stripe says “ready” but DB says false, self-heal DB
+        if (payoutsReady && !player.stripeReady) {
+          await db
+            .update(players)
+            .set({ stripeReady: true })
+            .where(eq(players.id, player.id));
+        }
+
+        return res.json({
+          hasAccount: true,
+          ready: payoutsReady,          // <-- what frontend expects
+          stripeReady: payoutsReady,    // <-- extra alias for safety
+          accountId: player.stripeAccountId,
+          restricted: currentlyDue.length > 0,
+          requirementsDue: currentlyDue,
+        });
+      } catch (err: any) {
+        console.error("Stripe status outer error:", err);
+        return res
+          .status(500)
+          .json({ message: "Unexpected error getting Stripe status" });
       }
-
-      const hasAccount = !!player.stripeAccountId;
-      const stripeReady = !!player.stripeReady;
-
-      return res.json({
-  hasAccount: true,
-  ready: payoutsReady,         // 👈 add this
-  stripeReady: payoutsReady,   // keep this for DB/UI consistency
-  accountId: player.stripeAccountId,
-  restricted: currentlyDue.length > 0,
-  requirementsDue: currentlyDue,
-});
-
-    } catch (err: any) {
-      console.error("Stripe status error:", err);
-      return res
-        .status(500)
-        .json({ message: "Failed to load Stripe status" });
-    }
-  },
-);
-
+    },
+  );
 
   const httpServer = createServer(app);
   return httpServer;
