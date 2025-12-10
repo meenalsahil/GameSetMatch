@@ -26,6 +26,7 @@ import {
   Edit3,
   Check,
   X,
+  RotateCcw,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -187,6 +188,34 @@ export default function Dashboard() {
     onError: (error: Error) => {
       toast({
         title: "Stripe setup failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resetStripeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/players/me/reset-stripe", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to reset Stripe connection");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments/stripe/status"] });
+      toast({
+        title: "Stripe Connection Reset",
+        description: "Your Stripe account has been disconnected. You can now set it up again.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Reset failed",
         description: error.message,
         variant: "destructive",
       });
@@ -706,7 +735,7 @@ export default function Dashboard() {
                       </>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       variant={stripeReady ? "outline" : "default"}
                       onClick={() => connectStripeMutation.mutate()}
@@ -723,6 +752,25 @@ export default function Dashboard() {
                         "Set up Stripe payouts (test)"
                       )}
                     </Button>
+                    {stripeReady && (
+                      <Button
+                        variant="destructive"
+                        onClick={() => resetStripeMutation.mutate()}
+                        disabled={resetStripeMutation.isPending}
+                      >
+                        {resetStripeMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Resetting...
+                          </>
+                        ) : (
+                          <>
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                            Reset Stripe Connection
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
