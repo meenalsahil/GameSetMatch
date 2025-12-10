@@ -298,29 +298,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  // -------- ADMIN: Reset Stripe for a player --------
-app.post(
-  "/api/admin/reset-stripe/:playerId",
-  isAdmin,
-  async (req: Request, res: Response) => {
-    try {
-      const playerId = Number(req.params.playerId);  // ← Convert to number here
-      
-      await db
-        .update(players)
-        .set({
-          stripeAccountId: null,
-          stripeReady: false,
-        })
-        .where(eq(players.id, playerId));  // ← Now it's a number, not a string
+  // -------- ADMIN: Reset Stripe for any player (admin only) --------
+  app.post(
+    "/api/admin/reset-stripe/:playerId",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const playerId = Number(req.params.playerId);
+        
+        await db
+          .update(players)
+          .set({
+            stripeAccountId: null,
+            stripeReady: false,
+          })
+          .where(eq(players.id, playerId));
 
-      res.json({ ok: true, message: "Stripe fields reset" });
-    } catch (e: any) {
-      console.error("Reset stripe error:", e);
-      res.status(500).json({ message: e.message || "Failed to reset" });
-    }
-  },
-);
+        res.json({ ok: true, message: "Stripe fields reset for player" });
+      } catch (e: any) {
+        console.error("Admin reset stripe error:", e);
+        res.status(500).json({ message: e.message || "Failed to reset" });
+      }
+    },
+  );
+
+  // -------- PLAYER: Reset own Stripe account (any logged-in player) --------
+  app.post(
+    "/api/players/me/reset-stripe",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const playerId = req.session!.playerId!;
+        
+        await db
+          .update(players)
+          .set({
+            stripeAccountId: null,
+            stripeReady: false,
+          })
+          .where(eq(players.id, Number(playerId)));
+
+        res.json({ ok: true, message: "Your Stripe account has been reset" });
+      } catch (e: any) {
+        console.error("Player self-reset stripe error:", e);
+        res.status(500).json({ message: e.message || "Failed to reset" });
+      }
+    },
+  );
 
   // -------- AUTH: Signin --------
   app.post("/api/auth/signin", async (req: Request, res: Response) => {
@@ -414,31 +438,31 @@ app.post(
         if (!p) return res.status(404).json({ message: "Player not found" });
 
         res.json({
-  id: p.id,
-  email: p.email,
-  fullName: p.fullName,
-  age: p.age,
-  country: p.country,
-  location: p.location,
-  ranking: p.ranking,
-  specialization: p.specialization,
-  bio: p.bio,
-  fundingGoals: p.fundingGoals,
-  videoUrl: p.videoUrl,
-  photoUrl: p.photoUrl,
-  published: p.published,
-  featured: p.featured,
-  priority: p.priority,
-  isAdmin: p.isAdmin,
-  approvalStatus: p.approvalStatus,
-  approvedBy: p.approvedBy,
-  approvedAt: p.approvedAt,
-  createdAt: p.createdAt,
-  active: p.active,
-  stripeAccountId: p.stripeAccountId,
-  stripeReady: p.stripeReady,
-  atpProfileUrl: p.atpProfileUrl,
-});
+          id: p.id,
+          email: p.email,
+          fullName: p.fullName,
+          age: p.age,
+          country: p.country,
+          location: p.location,
+          ranking: p.ranking,
+          specialization: p.specialization,
+          bio: p.bio,
+          fundingGoals: p.fundingGoals,
+          videoUrl: p.videoUrl,
+          photoUrl: p.photoUrl,
+          published: p.published,
+          featured: p.featured,
+          priority: p.priority,
+          isAdmin: p.isAdmin,
+          approvalStatus: p.approvalStatus,
+          approvedBy: p.approvedBy,
+          approvedAt: p.approvedAt,
+          createdAt: p.createdAt,
+          active: p.active,
+          stripeAccountId: p.stripeAccountId,
+          stripeReady: p.stripeReady,
+          atpProfileUrl: p.atpProfileUrl,
+        });
 
       } catch (e) {
         console.error("/api/auth/me error:", e);
@@ -447,9 +471,6 @@ app.post(
     },
   );
 
-  // Add this route to your routes.ts file
-
-// -------- PLAYER: Update own profile --------
   // -------- PLAYER: Update own profile --------
   app.put(
     "/api/players/me",
@@ -616,53 +637,52 @@ app.post(
   });
 
   // -------- PUBLIC: Sponsor a player (Checkout) --------
- // -------- PUBLIC: Sponsor a player (Checkout) --------
-app.post(
-  "/api/players/:id/sponsor-checkout",
-  async (req: Request, res: Response) => {
-    try {
-      const playerIdRaw = req.params.id; // keep as string (works for UUIDs too)
-      const body = req.body || {};
-      const { amount } = body;
+  app.post(
+    "/api/players/:id/sponsor-checkout",
+    async (req: Request, res: Response) => {
+      try {
+        const playerIdRaw = req.params.id;
+        const body = req.body || {};
+        const { amount } = body;
 
-      if (!playerIdRaw) {
-        return res.status(400).json({ message: "Invalid player id" });
-      }
+        if (!playerIdRaw) {
+          return res.status(400).json({ message: "Invalid player id" });
+        }
 
-      const player: any = await storage.getPlayer(playerIdRaw as any);
-      if (!player || !player.published || player.active === false) {
-        return res.status(404).json({ message: "Player not found" });
-      }
+        const player: any = await storage.getPlayer(playerIdRaw as any);
+        if (!player || !player.published || player.active === false) {
+          return res.status(404).json({ message: "Player not found" });
+        }
 
-      // If Stripe isn't ready for this player, let frontend show interest message
-      if (!player.stripeAccountId || !player.stripeReady) {
-        return res.status(409).json({
-          message: "Player is not yet ready to receive Stripe payouts.",
+        // If Stripe isn't ready for this player, let frontend show interest message
+        if (!player.stripeAccountId || !player.stripeReady) {
+          return res.status(409).json({
+            message: "Player is not yet ready to receive Stripe payouts.",
+          });
+        }
+
+        const amountCents =
+          typeof amount === "number" && amount > 0
+            ? Math.round(amount * 100)
+            : 5000; // default $50
+
+        const checkoutUrl = await stripeHelpers.createSponsorCheckoutSession({
+          playerId: player.id,
+          playerName: player.fullName,
+          stripeAccountId: player.stripeAccountId,
+          amountCents,
+          currency: "usd",
+        });
+
+        return res.json({ url: checkoutUrl });
+      } catch (e: any) {
+        console.error("Sponsor checkout (per-player) error:", e);
+        return res.status(500).json({
+          message: e.message || "Failed to start sponsorship",
         });
       }
-
-      const amountCents =
-        typeof amount === "number" && amount > 0
-          ? Math.round(amount * 100)
-          : 5000; // default $50
-
-      const checkoutUrl = await stripeHelpers.createSponsorCheckoutSession({
-        playerId: player.id,
-        playerName: player.fullName,
-        stripeAccountId: player.stripeAccountId,
-        amountCents,
-        currency: "usd",
-      });
-
-      return res.json({ url: checkoutUrl });
-    } catch (e: any) {
-      console.error("Sponsor checkout (per-player) error:", e);
-      return res.status(500).json({
-        message: e.message || "Failed to start sponsorship",
-      });
-    }
-  },
-);
+    },
+  );
 
 
   // -------- PLAYER: Upload verification --------
