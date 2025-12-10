@@ -210,8 +210,12 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/payments/stripe/status"] });
       toast({
         title: "Stripe Connection Reset",
-        description: "Your Stripe account has been disconnected. You can now set it up again.",
+        description: "Your Stripe account has been disconnected. Refreshing page...",
       });
+      // Force a hard page reload to clear all state
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     },
     onError: (error: Error) => {
       toast({
