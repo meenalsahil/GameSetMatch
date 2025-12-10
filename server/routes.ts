@@ -1,6 +1,6 @@
 // server/routes.ts
 import { stripeHelpers, isStripeEnabled } from "./stripe.js";
-import { and } from "drizzle-orm"; // if not already imported
+import { and, eq } from "drizzle-orm";
 import { emailService } from "./email.js";
 import { Express, Request, Response, NextFunction } from "express";
 import { createServer, Server } from "http";
@@ -15,8 +15,13 @@ import {
   signupPlayerSchema,
   type InsertPlayer,
 } from "../shared/schema.js";
-import { eq } from "drizzle-orm";
+import Stripe from "stripe";
 import { verifyPlayerAgainstATP } from "./atp-verification.js";
+
+// -------------------- Stripe instance --------------------
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+  apiVersion: "2022-11-15",
+});
 
 // -------------------- Session helpers --------------------
 declare module "express-session" {
@@ -305,7 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req: Request, res: Response) => {
       try {
         const playerId = Number(req.params.playerId);
-        
+
         await db
           .update(players)
           .set({
@@ -329,7 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req: Request, res: Response) => {
       try {
         const playerId = req.session!.playerId!;
-        
+
         await db
           .update(players)
           .set({
@@ -408,7 +413,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-
   // -------- AUTH: Logout --------
   app.post("/api/auth/logout", (req: Request, res: Response) => {
     if (!req.session) return res.json({ message: "Logged out" });
@@ -463,7 +467,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           stripeReady: p.stripeReady,
           atpProfileUrl: p.atpProfileUrl,
         });
-
       } catch (e) {
         console.error("/api/auth/me error:", e);
         res.status(500).json({ message: "Failed to get player" });
@@ -565,7 +568,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
-
 
   // -------- PUBLIC: Browse players --------
   app.get("/api/players", async (_req: Request, res: Response) => {
@@ -683,7 +685,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
-
 
   // -------- PLAYER: Upload verification --------
   app.post(
@@ -869,7 +870,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-   // -------- PUBLIC: Sponsor checkout (Stripe) --------
+  // -------- PUBLIC: Sponsor checkout (Stripe) --------
   app.post(
     "/api/payments/sponsor-checkout",
     async (req: Request, res: Response) => {
@@ -961,47 +962,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // -------- PAYMENTS: Stripe status (self-healing) --------
   app.get(
-  "/api/payments/stripe/status",
-  isAuthenticated,
-  async (req: Request, res: Response) => {
-    try {
-      const playerId = req.session!.playerId!;
-      const player = await db.query.players.findFirst({
-        where: (p, { eq }) => eq(p.id, Number(playerId)),
-      });
-
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
-
-      // ✅ If we have no account id, just say "not connected" – no Stripe call at all
-      if (!player.stripeAccountId) {
-        return res.json({
-          hasAccount: false,
-          stripeReady: false,
-          needsOnboarding: true,
-        });
-      }
-
-      let account;
+    "/api/payments/stripe/status",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
       try {
-        account = await stripe.accounts.retrieve(player.stripeAccountId);
-      } catch (err: any) {
-        const isMissing =
-          err?.type === "StripeInvalidRequestError" &&
-          err?.code === "resource_missing";
+        const playerId = req.session!.playerId!;
 
-        // ✅ Account was deleted in Stripe → reset DB & treat as disconnected
-        if (isMissing) {
-          await db
-            .update(players)
-            .set({
-              stripeAccountId: null,
-              stripeReady: false,
-            })
-            .where(eq(players.id, player.id));
+        const player: any = await storage.getPlayer(playerId);
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
 
+        // No account in DB → just report "not connected"
+        if (!player.stripeAccountId) {
           return res.json({
             hasAccount: false,
             stripeReady: false,
@@ -1009,42 +984,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        console.error("Stripe status error:", err);
+        let account: Stripe.Account;
+
+        try {
+          account = await stripe.accounts.retrieve(player.stripeAccountId);
+        } catch (err: any) {
+          const isMissing =
+            err?.type === "StripeInvalidRequestError" &&
+            err?.code === "resource_missing";
+
+          // account deleted in Stripe → reset DB & treat as disconnected
+          if (isMissing) {
+            await db
+              .update(players)
+              .set({
+                stripeAccountId: null,
+                stripeReady: false,
+              })
+              .where(eq(players.id, player.id as number));
+
+            return res.json({
+              hasAccount: false,
+              stripeReady: false,
+              needsOnboarding: true,
+            });
+          }
+
+          console.error("Stripe status error:", err);
+          return res
+            .status(500)
+            .json({ message: "Failed to fetch Stripe account status" });
+        }
+
+        const payoutsReady =
+          !!account.charges_enabled &&
+          !!account.payouts_enabled &&
+          !!account.details_submitted;
+
+        // keep DB in sync with Stripe truth
+        if (payoutsReady && !player.stripeReady) {
+          await db
+            .update(players)
+            .set({ stripeReady: true })
+            .where(eq(players.id, player.id as number));
+        }
+
+        const currentlyDue = account.requirements?.currently_due ?? [];
+
+        return res.json({
+          hasAccount: true,
+          stripeReady: payoutsReady,
+          restricted: currentlyDue.length > 0,
+          requirementsDue: currentlyDue,
+        });
+      } catch (err: any) {
+        console.error("Stripe status outer error:", err);
         return res
           .status(500)
-          .json({ message: "Failed to fetch Stripe account status" });
+          .json({ message: "Unexpected error getting Stripe status" });
       }
-
-      const payoutsReady =
-        !!account.charges_enabled &&
-        !!account.payouts_enabled &&
-        !!account.details_submitted;
-
-      // ✅ If Stripe says “ready” but DB says false, self-heal DB
-      if (payoutsReady && !player.stripeReady) {
-        await db
-          .update(players)
-          .set({ stripeReady: true })
-          .where(eq(players.id, player.id));
-      }
-
-      const currentlyDue = account.requirements?.currently_due ?? [];
-
-      return res.json({
-        hasAccount: true,
-        stripeReady: payoutsReady,
-        accountId: player.stripeAccountId,
-        restricted: currentlyDue.length > 0,
-        requirementsDue: currentlyDue,
-      });
-    } catch (err: any) {
-      console.error("Stripe status outer error:", err);
-      return res
-        .status(500)
-        .json({ message: "Unexpected error getting Stripe status" });
-    }
-  },
-);
+    },
+  );
 
   const httpServer = createServer(app);
   return httpServer;

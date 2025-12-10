@@ -54,7 +54,7 @@ type StripeStatusResponse = {
   stripeReady: boolean;
   restricted?: boolean;
   requirementsDue?: string[];
-  // compatibility with older shape if backend still returns it
+  // compatibility if backend still sends "ready"
   ready?: boolean;
 };
 
@@ -171,7 +171,7 @@ export default function Dashboard() {
     isFetching: stripeStatusFetching,
   } = useQuery<StripeStatusResponse>({
     queryKey: ["/api/payments/stripe/status"],
-    enabled: !!player, // always check status for logged-in player; backend handles null account
+    enabled: !!player,
     retry: false,
     queryFn: async () => {
       const res = await fetch("/api/payments/stripe/status");
@@ -280,7 +280,6 @@ export default function Dashboard() {
     .join("")
     .toUpperCase();
 
-  // Prefer Stripe status from server, fall back to player.stripeReady / old shape
   const stripeReady =
     stripeStatus?.stripeReady ??
     stripeStatus?.ready ??
@@ -300,7 +299,6 @@ export default function Dashboard() {
   };
 
   const handleCancelEdit = () => {
-    // reset form from player + close edit
     setForm({
       email: player.email || "",
       fullName: player.fullName || "",
