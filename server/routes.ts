@@ -1,5 +1,5 @@
 // server/routes.ts
-import { stripeHelpers, isStripeEnabled } from "./stripe.js";
+import { stripe, stripeHelpers, isStripeEnabled } from "./stripe.js";
 import { and, eq } from "drizzle-orm";
 import { emailService } from "./email.js";
 import { Express, Request, Response, NextFunction } from "express";
@@ -970,23 +970,21 @@ app.post(
 );
 
 
-  // -------- PAYMENTS: Stripe status (DB only) --------
-  // -------- PAYMENTS: Stripe status for current player --------
+  
+    // -------- PAYMENTS: Stripe status for current player --------
   app.get(
     "/api/payments/stripe/status",
     isAuthenticated,
     async (req: Request, res: Response) => {
       try {
         const playerId = req.session!.playerId!;
-        const player = await db.query.players.findFirst({
-          where: (p, { eq }) => eq(p.id, Number(playerId)),
-        });
+        const player: any = await storage.getPlayer(playerId);
 
         if (!player) {
           return res.status(404).json({ message: "Player not found" });
         }
 
-        // If there is no connected account at all, we're clearly not ready
+        // No connected account? Not ready, no Stripe call needed
         if (!player.stripeAccountId) {
           return res.json({
             hasAccount: false,
@@ -1000,16 +998,14 @@ app.post(
 
         let account: any;
         try {
-          // use the Stripe instance from stripeHelpers
-          account = await stripeHelpers.stripe.accounts.retrieve(
-            player.stripeAccountId,
-          );
+          // Use the raw Stripe client
+          account = await stripe.accounts.retrieve(player.stripeAccountId);
         } catch (err: any) {
           const isMissing =
             err?.type === "StripeInvalidRequestError" &&
             err?.code === "resource_missing";
 
-          // Account was deleted in Stripe → reset DB & treat as disconnected
+          // Account was deleted in Stripe → clear DB + treat as disconnected
           if (isMissing) {
             await db
               .update(players)
@@ -1017,7 +1013,7 @@ app.post(
                 stripeAccountId: null,
                 stripeReady: false,
               })
-              .where(eq(players.id, player.id));
+              .where(eq(players.id, Number(player.id)));
 
             return res.json({
               hasAccount: false,
@@ -1044,18 +1040,18 @@ app.post(
           !!account.details_submitted &&
           currentlyDue.length === 0;
 
-        // If Stripe says “ready” but DB says false, self-heal DB
+        // Self-heal DB flag if Stripe says it's ready
         if (payoutsReady && !player.stripeReady) {
           await db
             .update(players)
             .set({ stripeReady: true })
-            .where(eq(players.id, player.id));
+            .where(eq(players.id, Number(player.id)));
         }
 
         return res.json({
           hasAccount: true,
-          ready: payoutsReady,          // <-- what frontend expects
-          stripeReady: payoutsReady,    // <-- extra alias for safety
+          ready: payoutsReady,          // what frontend expects
+          stripeReady: payoutsReady,    // extra alias for safety
           accountId: player.stripeAccountId,
           restricted: currentlyDue.length > 0,
           requirementsDue: currentlyDue,
