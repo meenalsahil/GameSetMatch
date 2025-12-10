@@ -1031,14 +1031,12 @@ app.post(
             .json({ message: "Failed to fetch Stripe account status" });
         }
 
-        const currentlyDue: string[] =
-          account.requirements?.currently_due ?? [];
+const currentlyDue: string[] =
+  account.requirements?.currently_due ?? [];
 
-        const payoutsReady =
-          !!account.charges_enabled &&
-          !!account.payouts_enabled &&
-          !!account.details_submitted &&
-          currentlyDue.length === 0;
+// ✅ SIMPLE RULE: if payouts are enabled, we treat the account as ready
+const payoutsReady = !!account.payouts_enabled;
+
 
         // Self-heal DB flag if Stripe says it's ready
         if (payoutsReady && !player.stripeReady) {
