@@ -112,6 +112,18 @@ async function isAdmin(req: Request, res: Response, next: NextFunction) {
 
 // -------------------- Routes --------------------
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // ONE-TIME FIX: Mark all existing players as email verified
+app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) => {
+  try {
+    await db.update(players).set({ emailVerified: true });
+    res.json({ success: true, message: "All players marked as email verified" });
+  } catch (e) {
+    console.error("Fix error:", e);
+    res.status(500).json({ message: "Failed" });
+  }
+});
+  
   // -------- AUTH: Signup with ATP verification + Email Verification --------
   app.post(
     "/api/auth/signup",
