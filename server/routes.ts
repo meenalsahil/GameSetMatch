@@ -771,7 +771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const adminId = req.session!.playerId!;
         const playerIdParam = req.params.id;
         
-        const player = await storage.approvePlayer(playerIdParam, adminId);
+        const player = await storage.approvePlayer(playerIdParam, adminId as any);
         if (!player) {
           return res.status(404).json({ message: "Player not found" });
         }
@@ -857,7 +857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const adminId = req.session!.playerId!;
         const playerIdParam = req.params.id;
         
-        const player = await storage.rejectPlayer(playerIdParam, adminId);
+        const player = await storage.rejectPlayer(playerIdParam, adminId as any);
         if (!player) {
           return res.status(404).json({ message: "Player not found" });
         }
