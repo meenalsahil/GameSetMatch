@@ -15,15 +15,16 @@ if (!stripeSecretKey) {
 // ---- Types ----
 
 type CreateAccountArgs = {
-  playerId: number;
+  // can be number or UUID string, we only ever stringify it
+  playerId: number | string;
   email: string;
   fullName: string;
   country?: string;
-  existingAccountId?: string;
+  existingAccountId?: string | null;
 };
 
 type CreateSponsorCheckoutArgs = {
-  playerId: number;
+  playerId: number | string;
   playerName: string;
   amountCents: number;
   currency: string;
@@ -48,10 +49,12 @@ export const stripeHelpers = {
       throw new Error("Stripe is not configured (STRIPE_SECRET_KEY missing).");
     }
 
+    const { existingAccountId, email, fullName, country, playerId } = args;
+
     // Try to reuse existing account if the stored ID is valid
-    if (args.existingAccountId) {
+    if (existingAccountId) {
       try {
-        const existing = await stripe.accounts.retrieve(args.existingAccountId);
+        const existing = await stripe.accounts.retrieve(existingAccountId);
         return existing;
       } catch (err: any) {
         // If Stripe says "no such account", fall through and create a new one
@@ -69,16 +72,19 @@ export const stripeHelpers = {
     // Otherwise create a new Express account
     const account = await stripe.accounts.create({
       type: "express",
-      email: args.email,
-      country: args.country || "US",
+      email,
+      country: country || "US",
       business_type: "individual",
       capabilities: {
         card_payments: { requested: true },
         transfers: { requested: true },
       },
       metadata: {
-        playerId: String(args.playerId),
-        fullName: args.fullName,
+        playerId: String(playerId),
+        fullName,
+      },
+      business_profile: {
+        product_description: "Tennis sponsorship payouts via GameSetMatch",
       },
     });
 
@@ -106,7 +112,8 @@ export const stripeHelpers = {
   },
 
   /**
-   * Payout status helper – routes.ts checks `status.ready`.
+   * Payout status helper – routes.ts can check `status.ready`, and also
+   * see what requirements are still due.
    */
   async getPayoutStatus(accountId: string) {
     if (!stripeSecretKey || !stripe) {
@@ -119,11 +126,19 @@ export const stripeHelpers = {
     const chargesEnabled = (account as any).charges_enabled;
     const detailsSubmitted = (account as any).details_submitted;
 
+    const requirements = (account as any).requirements ?? {};
+    const currentlyDue: string[] = requirements.currently_due ?? [];
+
+    const ready = Boolean(
+      payoutsEnabled && chargesEnabled && detailsSubmitted,
+    );
+
     return {
-      payoutsEnabled,
-      chargesEnabled,
-      detailsSubmitted,
-      ready: Boolean(payoutsEnabled && chargesEnabled && detailsSubmitted),
+      payoutsEnabled: !!payoutsEnabled,
+      chargesEnabled: !!chargesEnabled,
+      detailsSubmitted: !!detailsSubmitted,
+      ready,
+      currentlyDue,
     };
   },
 

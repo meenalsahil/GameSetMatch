@@ -1015,7 +1015,7 @@ app.post(
             // don’t mark ready until Stripe says so after onboarding
             stripeReady: false,
           })
-          .where(eq(players.id, Number(playerId)));
+.where(eq(players.id, player.id));
       }
 
       const url = await stripeHelpers.createOnboardingLink(account.id);
@@ -1034,19 +1034,47 @@ app.post(
   
     // -------- PAYMENTS: Stripe status for current player --------
   app.get(
-    "/api/payments/stripe/status",
-    isAuthenticated,
-    async (req: Request, res: Response) => {
+  "/api/payments/stripe/status",
+  isAuthenticated,
+  async (req: Request, res: Response) => {
+    try {
+      const playerId = req.session!.playerId!;
+      const player: any = await storage.getPlayer(playerId);
+
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      // No Stripe account yet → tell frontend to show onboarding button
+      if (!player.stripeAccountId) {
+        return res.json({
+          hasAccount: false,
+          ready: false,
+          stripeReady: false,
+          needsOnboarding: true,
+          restricted: false,
+          requirementsDue: [],
+        });
+      }
+
+      let status;
       try {
-        const playerId = req.session!.playerId!;
-        const player: any = await storage.getPlayer(playerId);
+        status = await stripeHelpers.getPayoutStatus(player.stripeAccountId);
+      } catch (err: any) {
+        const isMissing =
+          err?.type === "StripeInvalidRequestError" &&
+          err?.code === "resource_missing";
 
-        if (!player) {
-          return res.status(404).json({ message: "Player not found" });
-        }
+        // Account was deleted at Stripe side → reset DB + act like no account
+        if (isMissing) {
+          await db
+            .update(players)
+            .set({
+              stripeAccountId: null,
+              stripeReady: false,
+            })
+            .where(eq(players.id, player.id));
 
-        // No connected account? Not ready, no Stripe call needed
-        if (!player.stripeAccountId) {
           return res.json({
             hasAccount: false,
             ready: false,
@@ -1057,40 +1085,41 @@ app.post(
           });
         }
 
-        let account: any;
-        try {
-          // Use the raw Stripe client
-          account = await stripe.accounts.retrieve(player.stripeAccountId);
-        } catch (err: any) {
-          const isMissing =
-            err?.type === "StripeInvalidRequestError" &&
-            err?.code === "resource_missing";
+        console.error("Stripe status error:", err);
+        return res
+          .status(500)
+          .json({ message: "Failed to fetch Stripe account status" });
+      }
 
-          // Account was deleted in Stripe → clear DB + treat as disconnected
-          if (isMissing) {
-            await db
-              .update(players)
-              .set({
-                stripeAccountId: null,
-                stripeReady: false,
-              })
-              .where(eq(players.id, Number(player.id)));
+      const payoutsReady = status.payoutsReady;
+      const currentlyDue = status.currentlyDue;
 
-            return res.json({
-              hasAccount: false,
-              ready: false,
-              stripeReady: false,
-              needsOnboarding: true,
-              restricted: false,
-              requirementsDue: [],
-            });
-          }
+      // Auto-heal DB flag when payouts become ready
+      if (payoutsReady && !player.stripeReady) {
+        await db
+          .update(players)
+          .set({ stripeReady: true })
+          .where(eq(players.id, player.id));
+        player.stripeReady = true;
+      }
 
-          console.error("Stripe status error:", err);
-          return res
-            .status(500)
-            .json({ message: "Failed to fetch Stripe account status" });
-        }
+      return res.json({
+        hasAccount: true,
+        ready: payoutsReady,
+        stripeReady: !!player.stripeReady,
+        needsOnboarding: !payoutsReady && currentlyDue.length > 0,
+        restricted: currentlyDue.length > 0,
+        requirementsDue: currentlyDue,
+      });
+    } catch (err) {
+      console.error("Stripe status outer error:", err);
+      return res
+        .status(500)
+        .json({ message: "Unexpected error getting Stripe status" });
+    }
+  },
+);
+
 
 const currentlyDue: string[] =
   account.requirements?.currently_due ?? [];
