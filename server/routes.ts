@@ -975,65 +975,54 @@ app.post(
     },
   );
 
-// -------- PAYMENTS: Stripe Connect onboarding --------
-app.post(
-  "/api/payments/stripe/connect-link",
-  isAuthenticated,
-  async (req: Request, res: Response) => {
-    try {
-      const playerId = req.session!.playerId!;
-      const player: any = await storage.getPlayer(playerId);
+  // -------- PAYMENTS: Stripe Connect onboarding --------
+  app.post(
+    "/api/payments/stripe/connect-link",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const playerId = req.session!.playerId!;
+        const player: any = await storage.getPlayer(playerId);
 
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
 
-      if (player.approvalStatus !== "approved") {
-        return res.status(400).json({
-          message: "Profile must be approved before connecting Stripe",
+        if (player.approvalStatus !== "approved") {
+          return res.status(400).json({
+            message: "Profile must be approved before connecting Stripe",
+          });
+        }
+
+        const account = await stripeHelpers.createOrGetExpressAccount({
+          playerId: player.id,
+          fullName: player.fullName,
+          email: player.email,
+          country: player.country,
+          existingAccountId: player.stripeAccountId,
+        });
+
+        // Save account id if new
+        if (account.id !== player.stripeAccountId) {
+          await db
+            .update(players)
+            .set({ stripeAccountId: account.id })
+            .where(eq(players.id, player.id));
+        }
+
+        const url = await stripeHelpers.createOnboardingLink(account.id);
+
+        return res.json({ url });
+      } catch (e: any) {
+        console.error("Stripe connect-link error:", e);
+        return res.status(500).json({
+          message: e.message || "Failed to create Stripe onboarding link",
         });
       }
+    },
+  );
 
-      // IMPORTANT:
-      // We do NOT reuse the old stripeAccountId if it was reset or is invalid.
-      // Always let Stripe/stripeHelpers create a *new* Express account.
-      const account = await stripeHelpers.createOrGetExpressAccount({
-        playerId: player.id,
-        fullName: player.fullName,
-        email: player.email,
-        country: player.country,
-        // existingAccountId: player.stripeAccountId,  <-- REMOVED
-        existingAccountId: undefined,
-      });
-
-      // Save (or overwrite) the account id in DB
-      if (account.id !== player.stripeAccountId) {
-        await db
-          .update(players)
-          .set({
-            stripeAccountId: account.id,
-            // don’t mark ready until Stripe says so after onboarding
-            stripeReady: false,
-          })
-.where(eq(players.id, player.id));
-      }
-
-      const url = await stripeHelpers.createOnboardingLink(account.id);
-
-      res.json({ url });
-    } catch (e: any) {
-      console.error("Stripe connect-link error:", e);
-      res.status(500).json({
-        message: e.message || "Failed to create Stripe onboarding link",
-      });
-    }
-  },
-);
-
-
-  
-    // -------- PAYMENTS: Stripe status for current player --------
-    // -------- PAYMENTS: Stripe status (is this player ready for payouts?) --------
+  // -------- PAYMENTS: Stripe status (is this player ready for payouts?) --------
   app.get(
     "/api/payments/stripe/status",
     isAuthenticated,
@@ -1088,40 +1077,6 @@ app.post(
         return res
           .status(500)
           .json({ message: "Failed to fetch Stripe account status" });
-      }
-    },
-  );
-
-
-
-const currentlyDue: string[] =
-  account.requirements?.currently_due ?? [];
-
-// ✅ SIMPLE RULE: if payouts are enabled, we treat the account as ready
-const payoutsReady = !!account.payouts_enabled;
-
-
-        // Self-heal DB flag if Stripe says it's ready
-        if (payoutsReady && !player.stripeReady) {
-          await db
-            .update(players)
-            .set({ stripeReady: true })
-            .where(eq(players.id, Number(player.id)));
-        }
-
-        return res.json({
-          hasAccount: true,
-          ready: payoutsReady,          // what frontend expects
-          stripeReady: payoutsReady,    // extra alias for safety
-          accountId: player.stripeAccountId,
-          restricted: currentlyDue.length > 0,
-          requirementsDue: currentlyDue,
-        });
-      } catch (err: any) {
-        console.error("Stripe status outer error:", err);
-        return res
-          .status(500)
-          .json({ message: "Unexpected error getting Stripe status" });
       }
     },
   );

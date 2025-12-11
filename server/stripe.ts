@@ -115,7 +115,7 @@ export const stripeHelpers = {
    * Payout status helper – routes.ts can check `status.ready`, and also
    * see what requirements are still due.
    */
-  async getPayoutStatus(accountId: string) {
+   async getPayoutStatus(accountId: string) {
     if (!stripeSecretKey || !stripe) {
       throw new Error("Stripe is not configured (STRIPE_SECRET_KEY missing).");
     }
@@ -125,22 +125,18 @@ export const stripeHelpers = {
     const payoutsEnabled = (account as any).payouts_enabled;
     const chargesEnabled = (account as any).charges_enabled;
     const detailsSubmitted = (account as any).details_submitted;
-
-    const requirements = (account as any).requirements ?? {};
-    const currentlyDue: string[] = requirements.currently_due ?? [];
-
-    const ready = Boolean(
-      payoutsEnabled && chargesEnabled && detailsSubmitted,
-    );
+    const currentlyDue =
+      (account as any).requirements?.currently_due ?? [];
 
     return {
-      payoutsEnabled: !!payoutsEnabled,
-      chargesEnabled: !!chargesEnabled,
-      detailsSubmitted: !!detailsSubmitted,
-      ready,
+      payoutsEnabled,
+      chargesEnabled,
+      detailsSubmitted,
       currentlyDue,
+      ready: Boolean(payoutsEnabled && chargesEnabled && detailsSubmitted),
     };
   },
+
 
   /**
    * Create a Checkout Session for sponsoring a player.
