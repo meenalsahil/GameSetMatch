@@ -1,4 +1,5 @@
 // client/src/pages/Dashboard.tsx
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,8 +28,9 @@ import {
   Check,
   X,
   RotateCcw,
+  DollarSign,
+  Heart,
 } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -54,6 +56,21 @@ type StripeStatusResponse = {
   stripeReady: boolean;
   restricted?: boolean;
   requirementsDue?: string[];
+};
+
+type EarningsData = {
+  totalEarnings: number;
+  availableBalance: number;
+  pendingBalance: number;
+  currency: string;
+  recentTransfers: Array<{
+    id: string;
+    amount: number;
+    currency: string;
+    created: string;
+    description: string | null;
+    sponsorEmail?: string;
+  }>;
 };
 
 export default function Dashboard() {
@@ -181,6 +198,20 @@ export default function Dashboard() {
     },
   });
 
+  // ---------- Earnings query ----------
+  const earningsQuery = useQuery<EarningsData>({
+    queryKey: ["/api/payments/stripe/earnings"],
+    enabled: !!(player && (stripeStatus?.hasAccount || stripeStatus?.stripeReady)),
+    queryFn: async () => {
+      const res = await fetch("/api/payments/stripe/earnings");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to fetch earnings");
+      }
+      return res.json();
+    },
+  });
+
   const connectStripeMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/payments/stripe/connect-link", {
@@ -219,6 +250,7 @@ export default function Dashboard() {
       // force refetch of auth & Stripe status
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       queryClient.invalidateQueries({ queryKey: ["/api/payments/stripe/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments/stripe/earnings"] });
 
       toast({
         title: "Stripe Connection Reset",
@@ -263,6 +295,22 @@ export default function Dashboard() {
       });
     },
   });
+
+  // Helper functions for earnings display
+  const formatCurrency = (cents: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(cents / 100);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
   if (isLoading || !form || !player) {
     return (
@@ -807,6 +855,103 @@ export default function Dashboard() {
               </Card>
             </div>
           )}
+
+          {/* ========== EARNINGS SECTION ========== */}
+          {stripeHasAccount && (
+            <div className="mt-8">
+              <Card className="border-2 border-green-200 bg-green-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-green-800">
+                    <DollarSign className="h-5 w-5" />
+                    Your Earnings
+                  </CardTitle>
+                  <CardDescription>
+                    Track your sponsorship income
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {earningsQuery.isLoading ? (
+                    <div className="text-center py-4 text-gray-500">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                      Loading earnings...
+                    </div>
+                  ) : earningsQuery.error ? (
+                    <div className="text-center py-4 text-red-500">
+                      Failed to load earnings
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Summary Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white rounded-lg p-4 border border-green-200">
+                          <div className="text-sm text-gray-500">Total Earned</div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {formatCurrency(earningsQuery.data?.totalEarnings || 0)}
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-lg p-4 border border-green-200">
+                          <div className="text-sm text-gray-500">Available</div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {formatCurrency(earningsQuery.data?.availableBalance || 0)}
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-lg p-4 border border-yellow-200">
+                          <div className="text-sm text-gray-500">Pending</div>
+                          <div className="text-2xl font-bold text-yellow-600">
+                            {formatCurrency(earningsQuery.data?.pendingBalance || 0)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Recent Contributions */}
+                      <div>
+                        <h4 className="font-semibold text-gray-700 mb-3">
+                          Recent Contributions
+                        </h4>
+                        {earningsQuery.data?.recentTransfers &&
+                        earningsQuery.data.recentTransfers.length > 0 ? (
+                          <div className="space-y-2">
+                            {earningsQuery.data.recentTransfers.map((transfer) => (
+                              <div
+                                key={transfer.id}
+                                className="flex items-center justify-between bg-white p-3 rounded-lg border"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                    <Heart className="h-5 w-5 text-green-600" />
+                                  </div>
+                                  <div>
+                                    <div className="font-medium">
+                                      {transfer.sponsorEmail || "Anonymous Sponsor"}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {formatDate(transfer.created)}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-lg font-semibold text-green-600">
+                                  +{formatCurrency(transfer.amount)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 bg-white rounded-lg border">
+                            <Heart className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                            <p className="text-gray-500">No contributions yet</p>
+                            <p className="text-sm text-gray-400">
+                              Share your profile to start receiving sponsorships!
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          {/* ========== END EARNINGS SECTION ========== */}
         </div>
       </div>
       <Footer />

@@ -143,6 +143,97 @@ export const stripeHelpers = {
   },
 
   /**
+   * Get earnings/transfers for a connected account
+   */
+  async getAccountEarnings(stripeAccountId: string): Promise<{
+    totalEarnings: number;
+    availableBalance: number;
+    pendingBalance: number;
+    recentTransfers: Array<{
+      id: string;
+      amount: number;
+      currency: string;
+      created: Date;
+      description: string | null;
+      sponsorEmail?: string;
+    }>;
+  }> {
+    if (!stripe) {
+      return {
+        totalEarnings: 0,
+        availableBalance: 0,
+        pendingBalance: 0,
+        recentTransfers: [],
+      };
+    }
+
+    try {
+      // Get balance for the connected account
+      const balance = await stripe.balance.retrieve({
+        stripeAccount: stripeAccountId,
+      });
+
+      // Get transfers TO this connected account (from platform)
+      const transfers = await stripe.transfers.list({
+        destination: stripeAccountId,
+        limit: 50,
+      });
+
+      // Calculate totals
+      const availableBalance = balance.available.reduce(
+        (sum, b) => sum + (b.currency === "usd" ? b.amount : 0),
+        0
+      );
+      const pendingBalance = balance.pending.reduce(
+        (sum, b) => sum + (b.currency === "usd" ? b.amount : 0),
+        0
+      );
+
+      const totalEarnings = transfers.data.reduce((sum, t) => sum + t.amount, 0);
+
+      // Format transfers for display
+      const recentTransfers = await Promise.all(
+        transfers.data.map(async (t) => {
+          // Try to get the original charge to find sponsor info
+          let sponsorEmail: string | undefined;
+          if (t.source_transaction) {
+            try {
+              const charge = await stripe.charges.retrieve(t.source_transaction as string);
+              sponsorEmail = charge.billing_details?.email || charge.receipt_email || undefined;
+            } catch (e) {
+              // Ignore - charge might not be accessible
+            }
+          }
+
+          return {
+            id: t.id,
+            amount: t.amount,
+            currency: t.currency,
+            created: new Date(t.created * 1000),
+            description: t.description,
+            sponsorEmail,
+          };
+        })
+      );
+
+      return {
+        totalEarnings,
+        availableBalance,
+        pendingBalance,
+        recentTransfers,
+      };
+    } catch (error) {
+      console.error("Error fetching account earnings:", error);
+      return {
+        totalEarnings: 0,
+        availableBalance: 0,
+        pendingBalance: 0,
+        recentTransfers: [],
+      };
+    }
+  },
+
+  /**
    * Create a Checkout Session for sponsoring a player.
    * Used by /api/payments/sponsor-checkout in routes.ts
    */

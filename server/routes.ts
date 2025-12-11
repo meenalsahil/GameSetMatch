@@ -1107,6 +1107,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // -------- PAYMENTS: Get player earnings --------
+app.get(
+  "/api/payments/stripe/earnings",
+  isAuthenticated,
+  async (req: Request, res: Response) => {
+    try {
+      const playerId = req.session!.playerId!;
+      const player: any = await storage.getPlayer(playerId);
+
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      if (!player.stripeAccountId) {
+        return res.json({
+          totalEarnings: 0,
+          availableBalance: 0,
+          pendingBalance: 0,
+          recentTransfers: [],
+          currency: "usd",
+        });
+      }
+
+      const earnings = await stripeHelpers.getAccountEarnings(
+        player.stripeAccountId
+      );
+
+      return res.json({
+        ...earnings,
+        currency: "usd",
+      });
+    } catch (err: any) {
+      console.error("Earnings fetch error:", err);
+      return res.status(500).json({ message: "Failed to fetch earnings" });
+    }
+  }
+);
+
   const httpServer = createServer(app);
   return httpServer;
 }
