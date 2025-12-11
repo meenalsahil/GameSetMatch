@@ -783,40 +783,64 @@ app.post(
   );
 
     // -------- ADMIN: Manually set Stripe account for a player --------
-  app.post(
-    "/api/admin/players/:id/set-stripe-account",
-    isAdmin,
-    async (req: Request, res: Response) => {
-      try {
-        const playerId = Number(req.params.id);
-        const accountId = String(req.body?.accountId || "").trim();
+  // -------- ADMIN: Manually attach a Stripe account to a player (one-off fix) --------
+app.post(
+  "/api/admin/players/:id/set-stripe-account",
+  isAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const rawId = req.params.id;
+      const { accountId } = req.body || {};
 
-        if (!accountId) {
-          return res.status(400).json({ message: "accountId is required" });
-        }
-
-        await db
-          .update(players)
-          .set({
-            stripeAccountId: accountId,
-            stripeReady: true,
-          })
-          .where(eq(players.id, playerId));
-
-        return res.json({
-          ok: true,
-          playerId,
-          accountId,
-          message: "Stripe account attached and marked ready",
-        });
-      } catch (err: any) {
-        console.error("Admin set-stripe-account error:", err);
+      const playerId = Number(rawId);
+      if (!playerId || !Number.isFinite(playerId)) {
         return res
-          .status(500)
-          .json({ message: err.message || "Failed to set Stripe account" });
+          .status(400)
+          .json({ ok: false, message: "Invalid player id", playerId: null });
       }
-    },
-  );
+
+      if (!accountId || typeof accountId !== "string") {
+        return res
+          .status(400)
+          .json({ ok: false, message: "accountId is required" });
+      }
+
+      const updated = await db
+        .update(players)
+        .set({
+          stripeAccountId: accountId,
+          stripeReady: false, // will be flipped to true by /stripe/status self-heal
+        })
+        .where(eq(players.id, playerId))
+        .returning({ id: players.id });
+
+      const row = updated[0];
+
+      if (!row) {
+        return res.status(404).json({
+          ok: false,
+          message: "Player not found",
+          playerId: null,
+        });
+      }
+
+      return res.json({
+        ok: true,
+        playerId: row.id,
+        accountId,
+        message:
+          "Stripe account attached. Next status check will mark it ready if payouts are active.",
+      });
+    } catch (err: any) {
+      console.error("admin set-stripe-account error:", err);
+      return res.status(500).json({
+        ok: false,
+        message: err?.message || "Unexpected error attaching Stripe account",
+      });
+    }
+  },
+);
+
 
 
   // -------- ADMIN: Reject player --------
