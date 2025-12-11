@@ -782,6 +782,43 @@ app.post(
     },
   );
 
+    // -------- ADMIN: Manually set Stripe account for a player --------
+  app.post(
+    "/api/admin/players/:id/set-stripe-account",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const playerId = Number(req.params.id);
+        const accountId = String(req.body?.accountId || "").trim();
+
+        if (!accountId) {
+          return res.status(400).json({ message: "accountId is required" });
+        }
+
+        await db
+          .update(players)
+          .set({
+            stripeAccountId: accountId,
+            stripeReady: true,
+          })
+          .where(eq(players.id, playerId));
+
+        return res.json({
+          ok: true,
+          playerId,
+          accountId,
+          message: "Stripe account attached and marked ready",
+        });
+      } catch (err: any) {
+        console.error("Admin set-stripe-account error:", err);
+        return res
+          .status(500)
+          .json({ message: err.message || "Failed to set Stripe account" });
+      }
+    },
+  );
+
+
   // -------- ADMIN: Reject player --------
   app.post(
     "/api/admin/players/:id/reject",
