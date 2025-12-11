@@ -14,13 +14,72 @@ if (RESEND_API_KEY) {
 }
 
 export const emailService = {
+  /**
+   * Send email verification link to new player
+   */
+  async sendVerificationEmail(player: {
+    fullName: string;
+    email: string;
+    verificationToken: string;
+  }) {
+    if (!resend) {
+      console.log('📧 [SKIPPED] Verification email for:', player.email);
+      return;
+    }
+
+    const appUrl = process.env.APP_URL || 'https://gamesetmatch-production.up.railway.app';
+    const verifyUrl = `${appUrl}/verify-email?token=${player.verificationToken}`;
+
+    try {
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        to: player.email,
+        subject: 'Verify Your Email - GameSetMatch',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 40px; text-align: center;">
+              <h1>Welcome to GameSetMatch!</h1>
+              <p style="font-size: 18px;">Please verify your email address</p>
+            </div>
+            <div style="background: #f9fafb; padding: 30px;">
+              <p>Hi ${player.fullName},</p>
+              <p>Thank you for signing up for GameSetMatch! To complete your registration and submit your profile for review, please verify your email address by clicking the button below:</p>
+              
+              <p style="text-align: center; margin: 30px 0;">
+                <a href="${verifyUrl}" style="background: #10b981; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">Verify My Email</a>
+              </p>
+              
+              <p style="color: #6b7280; font-size: 14px;">Or copy and paste this link into your browser:</p>
+              <p style="color: #6b7280; font-size: 14px; word-break: break-all;">${verifyUrl}</p>
+              
+              <div style="background: #fef3c7; padding: 15px; margin: 20px 0; border-radius: 6px;">
+                <p style="margin: 0; color: #92400e; font-size: 14px;">
+                  <strong>⏰ This link expires in 24 hours.</strong><br>
+                  If you didn't create an account on GameSetMatch, you can safely ignore this email.
+                </p>
+              </div>
+              
+              <p>Once verified, our team will review your profile and you'll receive another email when you're approved.</p>
+              
+              <p>Best regards,<br><strong>The GameSetMatch Team</strong></p>
+            </div>
+          </div>
+        `,
+      });
+      console.log('✅ Verification email sent to:', player.email);
+    } catch (error) {
+      console.error('❌ Failed to send verification email:', error);
+      throw error; // Re-throw so signup knows it failed
+    }
+  },
+
   async notifyAdminNewPlayer(player: {
     fullName: string;
     email: string;
     location: string;
     ranking?: string;
     specialization: string;
-    atpStatusHtml?: string; // ← ALREADY CORRECT
+    atpStatusHtml?: string;
   }) {
     if (!resend) {
       console.log('📧 [SKIPPED] Admin notification for:', player.fullName);
@@ -39,10 +98,10 @@ export const emailService = {
             </div>
             <div style="background: #f9fafb; padding: 30px;">
               <p>Hi Admin,</p>
-              <p>A new tennis player has registered on GameSetMatch:</p>
+              <p>A new tennis player has registered on GameSetMatch and <strong>verified their email</strong>:</p>
               <div style="background: white; padding: 20px; margin: 20px 0;">
                 <p><strong>Name:</strong> ${player.fullName}</p>
-                <p><strong>Email:</strong> ${player.email}</p>
+                <p><strong>Email:</strong> ${player.email} ✅ Verified</p>
                 <p><strong>Location:</strong> ${player.location}</p>
                 <p><strong>Ranking:</strong> #${player.ranking || 'Not specified'}</p>
                 <p><strong>Specialization:</strong> ${player.specialization}</p>
@@ -155,5 +214,16 @@ export const emailService = {
     } catch (error) {
       console.error('❌ Failed to send rejection email:', error);
     }
+  },
+
+  /**
+   * Resend verification email (for users who didn't receive it)
+   */
+  async resendVerificationEmail(player: {
+    fullName: string;
+    email: string;
+    verificationToken: string;
+  }) {
+    return this.sendVerificationEmail(player);
   },
 };

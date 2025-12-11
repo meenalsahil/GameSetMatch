@@ -1,4 +1,6 @@
-import { ArrowLeft } from "lucide-react";
+// client/src/pages/Signin.tsx
+import { useState } from "react";
+import { ArrowLeft, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,6 +31,8 @@ type SigninForm = z.infer<typeof signinSchema>;
 export default function Signin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [requiresVerification, setRequiresVerification] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   const form = useForm<SigninForm>({
     resolver: zodResolver(signinSchema),
@@ -46,12 +50,21 @@ export default function Signin() {
         body: JSON.stringify(data),
       });
 
+      const responseData = await res.json();
+
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Signin failed");
+        // Check if it's a verification required error
+        if (responseData.requiresVerification) {
+          throw { 
+            type: "verification_required", 
+            email: responseData.email,
+            message: responseData.message 
+          };
+        }
+        throw new Error(responseData.message || "Signin failed");
       }
 
-      return res.json();
+      return responseData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
@@ -61,17 +74,52 @@ export default function Signin() {
       });
       setLocation("/dashboard");
     },
+    onError: (error: any) => {
+      if (error.type === "verification_required") {
+        setRequiresVerification(true);
+        setUnverifiedEmail(error.email || form.getValues("email"));
+      } else {
+        toast({
+          title: "Signin Failed",
+          description: error.message || "Please check your credentials and try again.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to resend");
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Verification Email Sent",
+        description: "Please check your inbox for the verification link.",
+      });
+    },
     onError: (error: Error) => {
       toast({
-        title: "Signin Failed",
-        description:
-          error.message || "Please check your credentials and try again.",
+        title: "Error",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: SigninForm) => {
+    setRequiresVerification(false);
     signinMutation.mutate(data);
   };
 
@@ -93,6 +141,32 @@ export default function Signin() {
               Sign in to your GameSetMatch account
             </p>
           </div>
+
+          {/* Email Verification Required Banner */}
+          {requiresVerification && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <Mail className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-amber-900 mb-1">
+                    Email Verification Required
+                  </h3>
+                  <p className="text-sm text-amber-800 mb-3">
+                    Please verify your email address before signing in. Check your inbox for the verification link.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => resendMutation.mutate(unverifiedEmail)}
+                    disabled={resendMutation.isPending}
+                    className="border-amber-300 hover:bg-amber-100"
+                  >
+                    {resendMutation.isPending ? "Sending..." : "Resend Verification Email"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

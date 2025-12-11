@@ -1,4 +1,6 @@
 // client/src/pages/PlayerSignup.tsx
+import { useState } from "react";
+import { ArrowLeft, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,36 +8,123 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Footer from "@/components/Footer";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signupPlayerSchema, type SignupPlayer } from "@shared/schema";
-import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useState, useMemo } from "react";
-import { Link } from "wouter";
+import { z } from "zod";
+import { Link, useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-export default function PlayerSignup() {
-  const [step, setStep] = useState(1);
-  const { toast } = useToast();
+// Helper: is it ATP / ITF / WTA host?
+const isOfficialTourHost = (value: string) => {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    const allowedRoots = ["atptour.com", "itftennis.com", "wtatennis.com"];
+    return allowedRoots.some(
+      (root) => host === root || host.endsWith("." + root)
+    );
+  } catch {
+    return false;
+  }
+};
 
-  const form = useForm<SignupPlayer>({
-    resolver: zodResolver(signupPlayerSchema),
-    mode: "onTouched",
+const signupSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  fullName: z.string().min(2, "Please enter your full name"),
+  age: z.string().min(1, "Please enter your age"),
+  country: z.string().min(2, "Please enter your country"),
+  location: z.string().min(2, "Please enter your location"),
+  ranking: z.string().optional(),
+  specialization: z.string().min(2, "Please specify your court specialization"),
+  bio: z
+    .string()
+    .min(10, "Please tell us about your tennis journey (at least 10 characters)"),
+  fundingGoals: z
+    .string()
+    .min(10, "Please describe what you're raising funds for (at least 10 characters)"),
+  videoUrl: z.string().min(1, "Verification video link is required"),
+  atpProfileUrl: z
+    .string()
+    .trim()
+    .min(1, "ATP/ITF/WTA Profile URL is required")
+    .refine(
+      (value) => {
+        if (!value) return true;
+        return isOfficialTourHost(value);
+      },
+      {
+        message: "Please enter a link to an official ATP, ITF, or WTA player profile",
+      }
+    ),
+});
+
+type SignupForm = z.infer<typeof signupSchema>;
+
+const courtSpecializations = [
+  "All Courts",
+  "Hard Court",
+  "Clay Court",
+  "Grass Court",
+  "Indoor",
+];
+
+const countries = [
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "Australia",
+  "France",
+  "Germany",
+  "Spain",
+  "Italy",
+  "Japan",
+  "Argentina",
+  "Brazil",
+  "Mexico",
+  "India",
+  "China",
+  "South Korea",
+  "Russia",
+  "Switzerland",
+  "Netherlands",
+  "Belgium",
+  "Sweden",
+  "Other",
+];
+
+export default function PlayerSignup() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  const form = useForm<SignupForm>({
+    resolver: zodResolver(signupSchema),
     defaultValues: {
       email: "",
       password: "",
       fullName: "",
-      age: 18,
+      age: "",
       country: "",
       location: "",
-      ranking: undefined,
+      ranking: "",
       specialization: "",
       bio: "",
       fundingGoals: "",
@@ -44,492 +133,422 @@ export default function PlayerSignup() {
     },
   });
 
-  // --- Profile completeness logic ---
-  const watchedValues = form.watch();
-
-  const completion = useMemo(() => {
-    const requiredFields: (keyof SignupPlayer)[] = [
-      "email",
-      "password",
-      "fullName",
-      "age",
-      "country",
-      "location",
-      "specialization",
-      "bio",
-      "fundingGoals",
-      "videoUrl",
-      "atpProfileUrl",
-    ];
-
-    let filled = 0;
-
-    for (const field of requiredFields) {
-      const value = (watchedValues as any)[field];
-
-      if (typeof value === "number") {
-        if (!Number.isNaN(value) && value > 0) filled++;
-      } else if (typeof value === "string") {
-        if (value.trim().length > 0) filled++;
-      }
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
+  };
 
-    return Math.round((filled / requiredFields.length) * 100);
-  }, [watchedValues]);
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+  };
 
-  const onSubmit = async (values: SignupPlayer) => {
-    try {
+  const signupMutation = useMutation({
+    mutationFn: async (data: SignupForm) => {
       const formData = new FormData();
-
-      formData.append("email", values.email);
-      formData.append("password", values.password);
-      formData.append("fullName", values.fullName);
-      formData.append("age", values.age.toString());
-      formData.append("country", values.country);
-      formData.append("location", values.location);
-      if (values.ranking) formData.append("ranking", values.ranking.toString());
-      formData.append("specialization", values.specialization);
-      formData.append("bio", values.bio);
-      formData.append("fundingGoals", values.fundingGoals);
-      formData.append("videoUrl", values.videoUrl);
-      formData.append("atpProfileUrl", values.atpProfileUrl);
-
-      if ((values as any).photo) {
-        formData.append("photo", (values as any).photo);
+      formData.append("email", data.email);
+      formData.append("password", data.password);
+      formData.append("fullName", data.fullName);
+      formData.append("age", data.age);
+      formData.append("country", data.country);
+      formData.append("location", data.location);
+      if (data.ranking) formData.append("ranking", data.ranking);
+      formData.append("specialization", data.specialization);
+      formData.append("bio", data.bio);
+      formData.append("fundingGoals", data.fundingGoals);
+      formData.append("videoUrl", data.videoUrl);
+      formData.append("atpProfileUrl", data.atpProfileUrl);
+      if (photoFile) {
+        formData.append("photo", photoFile);
       }
 
-      const response = await fetch("/api/auth/signup", {
+      const res = await fetch("/api/auth/signup", {
         method: "POST",
         body: formData,
       });
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
+      if (!res.ok) {
+        const error = await res.json();
         throw new Error(error.message || "Signup failed");
       }
 
-      window.location.href = "/thank-you";
-    } catch (error: any) {
+      return res.json();
+    },
+    onSuccess: (data) => {
+      // Check if verification is required (new flow)
+      if (data.requiresVerification) {
+        toast({
+          title: "Account Created!",
+          description: "Please check your email to verify your account.",
+        });
+        // Redirect to signup success page with email
+        const email = encodeURIComponent(data.player?.email || "");
+        setLocation(`/signup-success?email=${email}`);
+      } else {
+        // Old flow (fallback) - direct login
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        toast({
+          title: "Account Created",
+          description: "Welcome to GameSetMatch!",
+        });
+        setLocation("/dashboard");
+      }
+    },
+    onError: (error: Error) => {
       toast({
         title: "Signup Failed",
-        description:
-          error.message || "Please check your information and try again",
+        description: error.message || "Please check your information and try again.",
         variant: "destructive",
       });
-    }
-  };
+    },
+  });
 
-  const nextStep = async () => {
-    let fieldsToValidate: (keyof SignupPlayer)[] = [];
-
-    if (step === 1) {
-      fieldsToValidate = ["email", "password", "fullName", "age", "country"];
-    } else if (step === 2) {
-      fieldsToValidate = ["location", "specialization"];
-    }
-
-    const isValid = await form.trigger(fieldsToValidate);
-
-    if (!isValid) {
-      toast({
-        title: "Please fill out all required fields",
-        description: "Check the fields marked in red",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setStep(step + 1);
+  const onSubmit = (data: SignupForm) => {
+    signupMutation.mutate(data);
   };
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="flex-1">
-        <div className="bg-gradient-to-b from-primary/10 to-background py-12">
-          <div className="container mx-auto px-6">
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="mb-4"
-              data-testid="button-back"
-            >
-              <Link href="/">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Home
-              </Link>
-            </Button>
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-              Player Application
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Join GameSetMatch and connect with supporters for your tennis
-              journey.
-            </p>
-          </div>
-        </div>
+      <div className="flex-1 py-12">
+        <div className="max-w-2xl mx-auto px-6">
+          <Button asChild variant="ghost" size="sm" className="mb-6">
+            <Link href="/">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Home
+            </Link>
+          </Button>
 
-        <div className="container mx-auto px-6 py-12 max-w-3xl">
-          {/* Step indicator */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              {[1, 2, 3].map((s) => (
-                <div
-                  key={s}
-                  className={`flex-1 h-2 rounded-full mx-1 ${
-                    s <= step ? "bg-primary" : "bg-muted"
-                  }`}
-                />
-              ))}
+          <Card className="p-8">
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-card-foreground mb-2">
+                Player Registration
+              </h1>
+              <p className="text-muted-foreground">
+                Create your GameSetMatch profile and start receiving sponsorships
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground text-center mb-2">
-              Step {step} of 3
-            </p>
 
-            {/* Profile completeness bar */}
-            <div className="mt-3">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>Profile completeness</span>
-                <span>{completion}%</span>
-              </div>
-              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all duration-300"
-                  style={{ width: `${completion}%` }}
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Photo Upload */}
+                <div className="space-y-2">
+                  <FormLabel>Profile Photo</FormLabel>
+                  <div className="flex items-center gap-4">
+                    {photoPreview ? (
+                      <div className="relative">
+                        <img
+                          src={photoPreview}
+                          alt="Profile preview"
+                          className="w-24 h-24 rounded-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={removePhoto}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                        <Upload className="h-6 w-6 text-gray-400" />
+                        <span className="text-xs text-gray-400 mt-1">Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoChange}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      Upload a professional photo (JPG, PNG, max 5MB)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Basic Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Roger Federer" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="your.email@example.com"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="At least 8 characters"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="age"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Age *</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="25" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="country"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Country *</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select country" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {countries.map((country) => (
+                              <SelectItem key={country} value={country}>
+                                {country}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City/Location *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Basel, Switzerland" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="ranking"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Ranking (Optional)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="150" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Your current ATP/WTA/ITF ranking
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="specialization"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Court Specialization *</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select court type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {courtSpecializations.map((spec) => (
+                              <SelectItem key={spec} value={spec}>
+                                {spec}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="bio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>About You *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Tell us about your tennis journey, achievements, and goals..."
+                          className="min-h-[100px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="fundingGoals"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Funding Goals *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="What will you use the sponsorship funds for? (e.g., tournament fees, coaching, travel, equipment)"
+                          className="min-h-[100px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Verification Section */}
+                <div className="border-t pt-6 mt-6">
+                  <h3 className="text-lg font-semibold mb-4">Verification</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    We verify all players to ensure authenticity. Please provide the
+                    following:
+                  </p>
+
+                  <FormField
+                    control={form.control}
+                    name="atpProfileUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ATP/ITF/WTA Profile URL *</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://www.atptour.com/en/players/..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Link to your official profile on atptour.com, itftennis.com,
+                          or wtatennis.com
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="videoUrl"
+                    render={({ field }) => (
+                      <FormItem className="mt-4">
+                        <FormLabel>Verification Video Link *</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://youtube.com/... or https://drive.google.com/..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Link to a short video introducing yourself (YouTube, Google
+                          Drive, Dropbox, etc.)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>What happens next?</strong>
+                    <br />
+                    1. You'll receive an email to verify your email address
+                    <br />
+                    2. After verification, our team will review your profile
+                    <br />
+                    3. Once approved, you can connect your Stripe account to receive
+                    sponsorships
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={signupMutation.isPending}
+                >
+                  {signupMutation.isPending
+                    ? "Creating Account..."
+                    : "Create Account"}
+                </Button>
+              </form>
+            </Form>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link href="/signin" className="text-primary hover:underline">
+                  Sign in here
+                </Link>
+              </p>
             </div>
-          </div>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {step === 1 && (
-                <Card className="p-6">
-                  <h2 className="text-2xl font-bold text-card-foreground mb-6">
-                    Account Information
-                  </h2>
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Address</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="email"
-                              placeholder="your.email@example.com"
-                              data-testid="input-email"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="••••••••"
-                              data-testid="input-password"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="fullName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Your full name"
-                              data-testid="input-fullname"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="age"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Age</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="Your age"
-                              data-testid="input-age"
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(
-                                  parseInt(e.target.value) || undefined,
-                                )
-                              }
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="country"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Country</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g., United States, Spain, Australia"
-                              data-testid="input-country"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </Card>
-              )}
-
-              {step === 2 && (
-                <Card className="p-6">
-                  <h2 className="text-2xl font-bold text-card-foreground mb-6">
-                    Player Profile
-                  </h2>
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Location</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="City, Country"
-                              data-testid="input-location"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="ranking"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Current Ranking (Optional)</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g., 234"
-                              data-testid="input-ranking"
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="specialization"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Specialization</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g., Clay Court, Hard Court, Grass Court"
-                              data-testid="input-specialization"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </Card>
-              )}
-
-              {step === 3 && (
-                <Card className="p-6">
-                  <h2 className="text-2xl font-bold text-card-foreground mb-6">
-                    About You & Verification
-                  </h2>
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="bio"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Your Story</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Tell supporters about your tennis journey, goals, and why you need support..."
-                              className="min-h-[150px]"
-                              data-testid="input-bio"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="fundingGoals"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>What are you raising funds for?</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="e.g., Travel to ATP Challenger series, new equipment, coaching, tournament entry fees..."
-                              className="min-h-[100px]"
-                              data-testid="input-funding-goals"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="videoUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Verification Video</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="url"
-                              placeholder="Paste a link to your video (YouTube, Google Drive, Dropbox, etc.)"
-                              data-testid="input-video-url"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Record on your phone, upload anywhere, then paste the
-                            share link here.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="atpProfileUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>ATP/ITF/WTA Profile URL</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="url"
-                              placeholder="https://www.atptour.com/en/players/..."
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Link to your official ATP Tour, ITF Tennis, or WTA
-                            profile.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="photo"
-                      render={({ field: { value, onChange, ...field } }) => (
-                        <FormItem>
-                          <FormLabel>Profile Photo (Optional)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="file"
-                              accept="image/jpeg,image/jpg,image/png,image/gif"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  if (file.size > 5 * 1024 * 1024) {
-                                    toast({
-                                      title: "File too large",
-                                      description:
-                                        "Profile photo must be less than 5MB",
-                                      variant: "destructive",
-                                    });
-                                    e.target.value = "";
-                                    return;
-                                  }
-                                  onChange(file);
-                                }
-                              }}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Upload a professional photo (JPG, PNG, GIF - max 5MB)
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </Card>
-              )}
-
-              <div className="flex justify-between gap-4">
-                {step > 1 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep(step - 1)}
-                    data-testid="button-previous"
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Previous
-                  </Button>
-                )}
-                {step < 3 ? (
-                  <Button
-                    type="button"
-                    onClick={nextStep}
-                    className="ml-auto"
-                    data-testid="button-next"
-                  >
-                    Next
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    className="ml-auto"
-                    data-testid="button-submit"
-                  >
-                    Submit Application
-                  </Button>
-                )}
-              </div>
-            </form>
-          </Form>
+          </Card>
         </div>
       </div>
       <Footer />

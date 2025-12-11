@@ -8,6 +8,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { storage } from "./storage.js";
 import { db } from "./db.js";
 import {
@@ -111,7 +112,7 @@ async function isAdmin(req: Request, res: Response, next: NextFunction) {
 
 // -------------------- Routes --------------------
 export async function registerRoutes(app: Express): Promise<Server> {
-  // -------- AUTH: Signup with ATP verification --------
+  // -------- AUTH: Signup with ATP verification + Email Verification --------
   app.post(
     "/api/auth/signup",
     uploadPhoto.single("photo"),
@@ -136,7 +137,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bio: String(raw.bio || "").trim(),
           fundingGoals: String(raw.fundingGoals || "").trim(),
           videoUrl: String(raw.videoUrl || "").trim(),
-          // always a string to match schema
           atpProfileUrl: String(raw.atpProfileUrl || "").trim(),
         };
 
@@ -146,8 +146,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({
             message: "Invalid input",
             errors: parsed.error.issues.map((i) => ({
-              path: i.path.join("."), // e.g. "videoUrl"
-              message: i.message, // e.g. "Video link is required"
+              path: i.path.join("."),
+              message: i.message,
             })),
           });
         }
@@ -163,6 +163,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const passwordHash = await bcrypt.hash(data.password, 10);
         const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
+        // Generate email verification token
+        const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+        const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
         // ATP AUTO-VERIFICATION
         let atpVerificationResult: any = null;
@@ -217,6 +221,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           priority: 0,
           active: true,
 
+          // Email verification - NOT verified yet
+          emailVerified: false,
+          emailVerificationToken,
+          emailVerificationExpires,
+
           // ATP Verification fields
           atpVerified,
           atpVerificationScore: atpScore,
@@ -237,58 +246,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const player = await storage.createPlayer(toCreate as any);
 
-        const atpStatusHtml = atpVerificationResult
-          ? `
-        <div style="background: white; padding: 20px; margin: 20px 0; border-left: 4px solid ${
-          atpVerified ? "#10b981" : "#f59e0b"
-        };">
-          <h3>ATP Verification Results</h3>
-          <p><strong>Status:</strong> ${
-            atpVerified ? "✅ AUTO-VERIFIED" : "⚠️ NEEDS REVIEW"
-          }</p>
-          <p><strong>Score:</strong> ${atpScore}/100</p>
-          <ul>
-            <li>First Name: ${
-              atpVerificationResult.matches.firstName ? "✅" : "❌"
-            }</li>
-            <li>Last Name: ${
-              atpVerificationResult.matches.lastName ? "✅" : "❌"
-            }</li>
-            <li>Country: ${
-              atpVerificationResult.matches.country ? "✅" : "❌"
-            }</li>
-            <li>Age: ${atpVerificationResult.matches.age ? "✅" : "❌"}</li>
-          </ul>
-          ${
-            atpVerificationResult.discrepancies.length > 0
-              ? `
-            <p><strong>Issues:</strong></p>
-            <ul>${atpVerificationResult.discrepancies
-              .map((d: string) => `<li>${d}</li>`)
-              .join("")}</ul>
-          `
-              : ""
-          }
-        </div>
-      `
-          : "";
+        // Send verification email (NOT admin notification yet!)
+        try {
+          await emailService.sendVerificationEmail({
+            fullName: data.fullName,
+            email: data.email,
+            verificationToken: emailVerificationToken,
+          });
+        } catch (emailError) {
+          console.error("Failed to send verification email:", emailError);
+          // Don't fail signup, but log the error
+        }
 
-        await emailService.notifyAdminNewPlayer({
-          fullName: data.fullName,
-          email: data.email,
-          location: data.location,
-          ranking: data.ranking || undefined,
-          specialization: data.specialization,
-          atpStatusHtml,
-        });
-
-        req.session!.playerId = player.id;
+        // DO NOT log them in yet - they need to verify email first
+        // DO NOT notify admin yet - wait until email is verified
 
         res.json({
+          success: true,
+          message: "Please check your email to verify your account",
+          requiresVerification: true,
           player: {
-            ...player,
-            password_hash: undefined,
-            passwordHash: undefined,
+            id: player.id,
+            email: player.email,
+            fullName: player.fullName,
+            emailVerified: false,
           },
         });
       } catch (e) {
@@ -297,6 +278,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  // -------- AUTH: Verify Email --------
+  app.get("/api/auth/verify-email/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+
+      if (!token) {
+        return res.status(400).json({ message: "Verification token is required" });
+      }
+
+      // Find player with this token
+      const result = await db
+        .select()
+        .from(players)
+        .where(eq(players.emailVerificationToken, token))
+        .limit(1);
+
+      const player = result[0];
+
+      if (!player) {
+        return res.status(400).json({ message: "Invalid or expired verification link" });
+      }
+
+      // Check if already verified
+      if (player.emailVerified) {
+        return res.json({ 
+          success: true, 
+          message: "Email already verified",
+          alreadyVerified: true 
+        });
+      }
+
+      // Check if token is expired
+      if (player.emailVerificationExpires && new Date() > new Date(player.emailVerificationExpires)) {
+        return res.status(400).json({ 
+          message: "Verification link has expired. Please request a new one.",
+          expired: true 
+        });
+      }
+
+      // Mark email as verified
+      await db
+        .update(players)
+        .set({
+          emailVerified: true,
+          emailVerificationToken: null,
+          emailVerificationExpires: null,
+        })
+        .where(eq(players.id, player.id));
+
+      // NOW notify admin about the new player (email is verified)
+      const atpVerificationResult = player.atpVerificationData 
+        ? (typeof player.atpVerificationData === 'string' 
+            ? JSON.parse(player.atpVerificationData) 
+            : player.atpVerificationData)
+        : null;
+
+      const atpStatusHtml = atpVerificationResult
+        ? `
+        <div style="background: white; padding: 20px; margin: 20px 0; border-left: 4px solid ${
+          player.atpVerified ? "#10b981" : "#f59e0b"
+        };">
+          <h3>ATP Verification Results</h3>
+          <p><strong>Status:</strong> ${
+            player.atpVerified ? "✅ AUTO-VERIFIED" : "⚠️ NEEDS REVIEW"
+          }</p>
+          <p><strong>Score:</strong> ${player.atpVerificationScore || 0}/100</p>
+        </div>
+      `
+        : "";
+
+      await emailService.notifyAdminNewPlayer({
+        fullName: player.fullName,
+        email: player.email,
+        location: player.location || "",
+        ranking: player.ranking?.toString(),
+        specialization: player.specialization || "",
+        atpStatusHtml,
+      });
+
+      console.log("✅ Email verified for:", player.email);
+
+      res.json({ 
+        success: true, 
+        message: "Email verified successfully! Your profile has been submitted for review." 
+      });
+    } catch (e) {
+      console.error("Email verification error:", e);
+      res.status(500).json({ message: "Failed to verify email" });
+    }
+  });
+
+  // -------- AUTH: Resend Verification Email --------
+  app.post("/api/auth/resend-verification", async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body || {};
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const player: any = await storage.getPlayerByEmail(String(email).toLowerCase());
+
+      if (!player) {
+        // Don't reveal if email exists or not for security
+        return res.json({ 
+          success: true, 
+          message: "If an account exists with this email, a verification link has been sent." 
+        });
+      }
+
+      if (player.emailVerified) {
+        return res.status(400).json({ 
+          message: "Email is already verified. You can sign in.",
+          alreadyVerified: true 
+        });
+      }
+
+      // Generate new token
+      const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+      const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      // Update player with new token
+      await db
+        .update(players)
+        .set({
+          emailVerificationToken,
+          emailVerificationExpires,
+        })
+        .where(eq(players.id, player.id));
+
+      // Send new verification email
+      await emailService.sendVerificationEmail({
+        fullName: player.fullName,
+        email: player.email,
+        verificationToken: emailVerificationToken,
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Verification email sent! Please check your inbox." 
+      });
+    } catch (e) {
+      console.error("Resend verification error:", e);
+      res.status(500).json({ message: "Failed to resend verification email" });
+    }
+  });
 
   // -------- ADMIN: Reset Stripe for any player (admin only) --------
   app.post(
@@ -387,6 +515,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      // Check if email is verified
+      if (!player.emailVerified) {
+        return res.status(403).json({ 
+          message: "Please verify your email before signing in",
+          requiresVerification: true,
+          email: player.email 
+        });
+      }
+
       req.session!.playerId = player.id;
       res.json({
         player: {
@@ -411,6 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           approvedAt: player.approvedAt,
           createdAt: player.createdAt,
           active: player.active,
+          emailVerified: player.emailVerified,
         },
       });
     } catch (e) {
@@ -472,6 +610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           stripeAccountId: p.stripeAccountId,
           stripeReady: p.stripeReady,
           atpProfileUrl: p.atpProfileUrl,
+          emailVerified: p.emailVerified,
         });
       } catch (e) {
         console.error("/api/auth/me error:", e);
@@ -1108,42 +1247,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // -------- PAYMENTS: Get player earnings --------
-app.get(
-  "/api/payments/stripe/earnings",
-  isAuthenticated,
-  async (req: Request, res: Response) => {
-    try {
-      const playerId = req.session!.playerId!;
-      const player: any = await storage.getPlayer(playerId);
+  app.get(
+    "/api/payments/stripe/earnings",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const playerId = req.session!.playerId!;
+        const player: any = await storage.getPlayer(playerId);
 
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+
+        // If no Stripe account, return empty earnings
+        if (!player.stripeAccountId) {
+          return res.json({
+            totalEarnings: 0,
+            availableBalance: 0,
+            pendingBalance: 0,
+            recentTransfers: [],
+            currency: "usd",
+          });
+        }
+
+        // Get earnings from Stripe
+        const earnings = await stripeHelpers.getAccountEarnings(player.stripeAccountId);
+
+        return res.json(earnings);
+      } catch (err: any) {
+        console.error("Get earnings error:", err);
+        return res.status(500).json({ message: "Failed to fetch earnings" });
       }
-
-      if (!player.stripeAccountId) {
-        return res.json({
-          totalEarnings: 0,
-          availableBalance: 0,
-          pendingBalance: 0,
-          recentTransfers: [],
-          currency: "usd",
-        });
-      }
-
-      const earnings = await stripeHelpers.getAccountEarnings(
-        player.stripeAccountId
-      );
-
-      return res.json({
-        ...earnings,
-        currency: "usd",
-      });
-    } catch (err: any) {
-      console.error("Earnings fetch error:", err);
-      return res.status(500).json({ message: "Failed to fetch earnings" });
-    }
-  }
-);
+    },
+  );
 
   const httpServer = createServer(app);
   return httpServer;

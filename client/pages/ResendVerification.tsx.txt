@@ -1,0 +1,144 @@
+// client/src/pages/ResendVerification.tsx
+import { useState } from "react";
+import { Link } from "wouter";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import Footer from "@/components/Footer";
+import { ArrowLeft, Mail, CheckCircle2, Loader2 } from "lucide-react";
+
+export default function ResendVerification() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      setStatus("error");
+      setMessage("Please enter your email address");
+      return;
+    }
+
+    setStatus("loading");
+
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      
+      const data = await res.json();
+
+      if (res.ok) {
+        setStatus("success");
+        setMessage(data.message || "Verification email sent!");
+      } else {
+        if (data.alreadyVerified) {
+          setStatus("success");
+          setMessage("Your email is already verified. You can sign in now.");
+        } else {
+          setStatus("error");
+          setMessage(data.message || "Failed to send verification email");
+        }
+      }
+    } catch (error) {
+      setStatus("error");
+      setMessage("An error occurred. Please try again later.");
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 flex items-center justify-center py-20">
+        <Card className="max-w-md w-full mx-6 p-8">
+          <Button asChild variant="ghost" size="sm" className="mb-4">
+            <Link href="/signin">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Sign In
+            </Link>
+          </Button>
+
+          {status === "success" ? (
+            <div className="text-center">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="h-12 w-12 text-green-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-card-foreground mb-2">
+                Check Your Email
+              </h1>
+              <p className="text-muted-foreground mb-6">
+                {message}
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-blue-800 text-sm">
+                  Don't see the email? Check your spam folder. The verification link expires in 24 hours.
+                </p>
+              </div>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/signin">Return to Sign In</Link>
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="mb-8 text-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Mail className="h-8 w-8 text-primary" />
+                </div>
+                <h1 className="text-2xl font-bold text-card-foreground mb-2">
+                  Resend Verification Email
+                </h1>
+                <p className="text-muted-foreground">
+                  Enter your email address and we'll send you a new verification link
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">
+                    Email Address
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your.email@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={status === "loading"}
+                  />
+                </div>
+
+                {status === "error" && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-red-800 text-sm">{message}</p>
+                  </div>
+                )}
+
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={status === "loading"}
+                >
+                  {status === "loading" ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="h-4 w-4 mr-2" />
+                      Send Verification Email
+                    </>
+                  )}
+                </Button>
+              </form>
+            </>
+          )}
+        </Card>
+      </div>
+      <Footer />
+    </div>
+  );
+}
