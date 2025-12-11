@@ -1,0 +1,72 @@
+// client/src/pages/SignupSuccess.tsx
+import { Link, useLocation } from "wouter";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Footer from "@/components/Footer";
+import { Mail, CheckCircle2, ArrowRight } from "lucide-react";
+
+export default function SignupSuccess() {
+  const [location] = useLocation();
+  const params = new URLSearchParams(window.location.search);
+  const email = params.get("email") || "";
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 flex items-center justify-center py-20">
+        <Card className="max-w-lg w-full mx-6 p-8 text-center">
+          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Mail className="h-10 w-10 text-primary" />
+          </div>
+          
+          <h1 className="text-3xl font-bold text-card-foreground mb-2">
+            Check Your Email
+          </h1>
+          
+          <p className="text-muted-foreground mb-6">
+            We've sent a verification link to{" "}
+            {email ? (
+              <strong className="text-foreground">{email}</strong>
+            ) : (
+              "your email address"
+            )}
+          </p>
+
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-left">
+            <h3 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" />
+              Next Steps
+            </h3>
+            <ol className="text-sm text-green-800 space-y-2 ml-7 list-decimal">
+              <li>Open the email from GameSetMatch</li>
+              <li>Click the verification link</li>
+              <li>Your profile will be submitted for admin review</li>
+              <li>We'll notify you once approved!</li>
+            </ol>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-amber-800">
+              <strong>Don't see the email?</strong> Check your spam/junk folder. 
+              The verification link expires in 24 hours.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button asChild variant="outline" className="flex-1">
+              <Link href="/resend-verification">
+                Resend Email
+              </Link>
+            </Button>
+            <Button asChild className="flex-1">
+              <Link href="/signin">
+                Go to Sign In
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Link>
+            </Button>
+          </div>
+        </Card>
+      </div>
+      <Footer />
+    </div>
+  );
+}
