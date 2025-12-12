@@ -261,7 +261,13 @@ export class DbStorage implements IStorage {
   }
 
   async deletePlayer(id: string): Promise<void> {
-    await pool.query(`DELETE FROM players WHERE id = $1`, [id]);
+    // Delete related records first
+    await pool.query(`DELETE FROM password_reset_tokens WHERE player_id = $1`, [id]);
+    // Delete the player - use the id directly as-is
+    const result = await pool.query(`DELETE FROM players WHERE id = $1`, [id]);
+    if (result.rowCount === 0) {
+      throw new Error(`No player found with id ${id}`);
+    }
   }
 
   async createPasswordResetToken(
