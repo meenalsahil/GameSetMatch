@@ -9,6 +9,7 @@ import {
   ArrowRight,
   CheckCircle2,
   PlayCircle,
+  Sparkles,
 } from "lucide-react";
 import Footer from "@/components/Footer";
 
@@ -51,27 +52,32 @@ export default function HomePage() {
         {/* Hero content */}
         <div className="relative z-10 container mx-auto px-6 py-24 flex items-center min-h-[70vh]">
           <div className="max-w-4xl">
-            {/* Small trust pill */}
-            <div className="inline-flex items-center gap-2 bg-emerald-900/40 border border-emerald-500/40 text-emerald-200 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide mb-5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Verified tennis players • ATP / ITF / WTA linked
+            {/* Trust pills - OPTION 1: Added AI badge */}
+            <div className="flex flex-wrap gap-3 mb-5">
+              <div className="inline-flex items-center gap-2 bg-emerald-900/40 border border-emerald-500/40 text-emerald-200 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Verified tennis players • ATP / ITF / WTA linked
+              </div>
+              <div className="inline-flex items-center gap-2 bg-purple-900/40 border border-purple-400/40 text-purple-200 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide">
+                <Sparkles className="w-3.5 h-3.5" />
+                AI-powered profile builder • FREE
+              </div>
             </div>
 
             {/* Headline */}
-<h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 leading-tight">
-  Connect{" "}
-  <span className="text-emerald-300">real tennis players</span>{" "}
-  with supporters who care.
-</h1>
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 leading-tight">
+              Connect{" "}
+              <span className="text-emerald-300">real tennis players</span>{" "}
+              with supporters who care.
+            </h1>
 
-{/* Subheadline */}
-<p className="text-base md:text-lg text-emerald-50/90 max-w-2xl mb-8">
-  GameSetMatch helps supporters connect with verified tennis
-  players using ATP/ITF/WTA profile links and verification
-  videos—so you know you're backing genuine athletes, not fake
-  profiles.
-</p>
-
+            {/* Subheadline */}
+            <p className="text-base md:text-lg text-emerald-50/90 max-w-2xl mb-8">
+              GameSetMatch helps supporters connect with verified tennis
+              players using ATP/ITF/WTA profile links and verification
+              videos—so you know you're backing genuine athletes, not fake
+              profiles.
+            </p>
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -82,7 +88,7 @@ export default function HomePage() {
                 data-testid="button-cta-player"
               >
                 <Link href="/signup/player">
-                  I’m a Player
+                  I'm a Player
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
@@ -162,10 +168,18 @@ export default function HomePage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg">
+              {/* OPTION 2: Updated "Build Your Profile" card with AI highlight */}
+              <Card className="border-2 border-purple-200 hover:border-purple-500 transition-all hover:shadow-lg relative">
+                {/* AI Badge */}
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                  <span className="inline-flex items-center gap-1.5 bg-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
+                    <Sparkles className="w-3 h-3" />
+                    AI-Powered
+                  </span>
+                </div>
                 <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="text-3xl font-bold text-blue-600">2</span>
+                  <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span className="text-3xl font-bold text-purple-600">2</span>
                   </div>
                   <h3 className="text-2xl font-bold mb-4">
                     Build Your Profile
@@ -182,14 +196,18 @@ export default function HomePage() {
                       <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                       <span>Training needs</span>
                     </li>
+                    <li className="flex items-start gap-2 text-purple-600 font-medium">
+                      <Sparkles className="h-5 w-5 text-purple-500 flex-shrink-0 mt-0.5" />
+                      <span>AI writes your bio - Free!</span>
+                    </li>
                   </ul>
                 </CardContent>
               </Card>
 
               <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg">
                 <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="text-3xl font-bold text-purple-600">
+                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span className="text-3xl font-bold text-blue-600">
                       3
                     </span>
                   </div>
