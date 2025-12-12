@@ -19,7 +19,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import SponsorSuccess from "@/pages/SponsorSuccess";
-import NotFound from "@/pages/NotFound";
+import NotFound from "@/pages/not-found";
 
 function MainHeader() {
   const [location] = useLocation();
