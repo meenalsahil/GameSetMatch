@@ -1,4 +1,5 @@
 // client/App.tsx
+import Header from "@/components/Header";
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -65,6 +66,15 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <Router />
+      <Toaster />
+    </QueryClientProvider>
+  );
+}
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Header />
       <Router />
       <Toaster />
     </QueryClientProvider>
