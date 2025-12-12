@@ -1,4 +1,5 @@
 // server/routes.ts
+import OpenAI from "openai";
 import { stripeHelpers, isStripeEnabled } from "./stripe.js";
 import { and, eq } from "drizzle-orm";
 import { emailService } from "./email.js";
@@ -1309,5 +1310,64 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
   );
 
   const httpServer = createServer(app);
+// -------- AI: Enhance bio with OpenAI --------
+  app.post("/api/ai/enhance-bio", async (req: Request, res: Response) => {
+    try {
+      const { text, type } = req.body;
+      
+      if (!text || text.trim().length < 10) {
+        return res.status(400).json({ message: "Please provide at least 10 characters to enhance" });
+      }
+
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "AI service not configured" });
+      }
+
+      const openai = new OpenAI({ apiKey });
+
+      const prompts: Record<string, string> = {
+        bio: `You are helping a tennis player write their profile bio for a sponsorship platform. 
+Take their rough input and transform it into a compelling, professional bio that:
+- Is written in first person
+- Highlights their tennis journey and achievements
+- Shows their personality and passion
+- Is 2-3 paragraphs, around 100-150 words
+- Sounds authentic, not overly salesy
+
+Player's input: "${text}"
+
+Return ONLY the enhanced bio text, nothing else.`,
+        
+        fundingGoals: `You are helping a tennis player describe their funding goals for a sponsorship platform.
+Take their rough input and transform it into a clear, compelling funding description that:
+- Explains specifically what the funds will be used for
+- Shows the impact sponsorship will have on their career
+- Is honest and specific about costs
+- Is 1-2 paragraphs, around 75-100 words
+- Sounds grateful and motivated
+
+Player's input: "${text}"
+
+Return ONLY the enhanced funding goals text, nothing else.`
+      };
+
+      const prompt = prompts[type] || prompts.bio;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_tokens: 500,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const enhanced = completion.choices[0]?.message?.content || "";
+      
+      res.json({ enhanced });
+    } catch (e: any) {
+      console.error("AI enhance error:", e);
+      res.status(500).json({ message: "Failed to enhance text" });
+    }
+  });
+
   return httpServer;
 }

@@ -1,6 +1,6 @@
 // client/src/pages/PlayerSignup.tsx
 import { useState, useMemo, useEffect } from "react";
-import { ArrowLeft, Upload, X, Check, ChevronsUpDown } from "lucide-react";
+import { ArrowLeft, Upload, X, Check, ChevronsUpDown, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -54,7 +54,7 @@ const signupSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   fullName: z.string().min(2, "Please enter your full name"),
-age: z.string().min(1, "Please enter your age").refine(
+  age: z.string().min(1, "Please enter your age").refine(
     (val) => !val || parseInt(val) >= 14,
     { message: "You must be at least 14 years old" }
   ),
@@ -371,11 +371,91 @@ function CountrySelect({
   );
 }
 
+// AI Enhance Button Component
+function AIEnhanceButton({ 
+  text, 
+  type, 
+  onEnhanced,
+  disabled 
+}: { 
+  text: string;
+  type: "bio" | "fundingGoals";
+  onEnhanced: (enhanced: string) => void;
+  disabled?: boolean;
+}) {
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const { toast } = useToast();
+
+  const handleEnhance = async () => {
+    if (!text || text.trim().length < 10) {
+      toast({
+        title: "Need more content",
+        description: "Please write at least 10 characters before enhancing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsEnhancing(true);
+    try {
+      const res = await fetch("/api/ai/enhance-bio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, type }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to enhance");
+      }
+
+      const data = await res.json();
+      onEnhanced(data.enhanced);
+      toast({
+        title: "Enhanced!",
+        description: "Your text has been improved by AI. Feel free to edit it further.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Enhancement failed",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={handleEnhance}
+      disabled={disabled || isEnhancing || !text || text.trim().length < 10}
+      className="gap-1.5 text-purple-600 border-purple-200 hover:bg-purple-50 hover:text-purple-700"
+    >
+      {isEnhancing ? (
+        <>
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          Enhancing...
+        </>
+      ) : (
+        <>
+          <Sparkles className="h-3.5 w-3.5" />
+          Enhance with AI
+        </>
+      )}
+    </Button>
+  );
+}
+
 export default function PlayerSignup() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -683,15 +763,23 @@ export default function PlayerSignup() {
                   />
                 </div>
 
+                {/* Bio with AI Enhance */}
                 <FormField
                   control={form.control}
                   name="bio"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>About You *</FormLabel>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>About You *</FormLabel>
+                        <AIEnhanceButton
+                          text={field.value}
+                          type="bio"
+                          onEnhanced={(enhanced) => form.setValue("bio", enhanced)}
+                        />
+                      </div>
                       <FormControl>
                         <Textarea
-                          placeholder="Tell us about your tennis journey, achievements, and goals..."
+                          placeholder="Tell us about your tennis journey, achievements, and goals... (Write a rough draft and click 'Enhance with AI' to polish it!)"
                           className="min-h-[100px]"
                           {...field}
                         />
@@ -701,12 +789,20 @@ export default function PlayerSignup() {
                   )}
                 />
 
+                {/* Funding Goals with AI Enhance */}
                 <FormField
                   control={form.control}
                   name="fundingGoals"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Funding Goals *</FormLabel>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Funding Goals *</FormLabel>
+                        <AIEnhanceButton
+                          text={field.value}
+                          type="fundingGoals"
+                          onEnhanced={(enhanced) => form.setValue("fundingGoals", enhanced)}
+                        />
+                      </div>
                       <FormControl>
                         <Textarea
                           placeholder="What will you use the sponsorship funds for? (e.g., tournament fees, coaching, travel, equipment)"
