@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { Link } from "wouter";
+import { useState, useEffect } from "react";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -19,7 +20,10 @@ export default function Contact() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-
+// Scroll to top when page loads
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);

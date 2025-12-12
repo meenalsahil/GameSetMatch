@@ -124,6 +124,21 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
   }
 });
   
+// ONE-TIME: Add email verification columns if missing
+  app.get("/api/admin/migrate-email-columns", async (_req: Request, res: Response) => {
+    try {
+      await pool.query(`
+        ALTER TABLE players 
+        ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false,
+        ADD COLUMN IF NOT EXISTS email_verification_token TEXT,
+        ADD COLUMN IF NOT EXISTS email_verification_expires TIMESTAMP
+      `);
+      res.json({ success: true, message: "Email columns added" });
+    } catch (e: any) {
+      console.error("Migration error:", e);
+      res.status(500).json({ message: e.message });
+    }
+  });
   // -------- AUTH: Signup with ATP verification + Email Verification --------
   app.post(
     "/api/auth/signup",
