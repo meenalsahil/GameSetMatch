@@ -44,6 +44,7 @@ function Router() {
       
       {/* Browse & Player Profiles */}
       <Route path="/browse" component={Players} />
+      <Route path="/player/:id" component={PlayerProfile} />
       <Route path="/players" component={Players} />
       <Route path="/players/:id" component={PlayerProfile} />
       
