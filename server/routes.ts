@@ -262,10 +262,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Send verification email
         await emailService.sendVerificationEmail({
-          to: player.email,
-          fullName: player.fullName,
-          token: emailVerificationToken,
-        });
+  fullName,
+  email,
+  verificationToken,
+});
+
 
         // Do NOT auto-login; ask them to verify email first
         res.json({
@@ -280,59 +281,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // -------- AUTH: Verify Email --------
-  app.get(
-    "/api/auth/verify-email/:token",
-    async (req: Request, res: Response) => {
-      try {
-        const { token } = req.params;
-        if (!token) {
-          return res.status(400).json({ message: "Invalid verification link" });
-        }
+  app.get("/api/auth/verify-email", async (req, res) => {
+  const token = (req.query.token as string | undefined)?.trim();
 
-        // Find player by token
-        const found: any = await storage.findPlayerByVerificationToken(token);
-        if (!found) {
-          return res
-            .status(400)
-            .json({ message: "Invalid or expired verification link" });
-        }
+  if (!token) {
+    return res.status(400).json({ ok: false, message: "Missing verification token." });
+  }
 
-        const expires = found.emailVerificationExpires
-          ? new Date(found.emailVerificationExpires)
-          : null;
-        if (expires && expires.getTime() < Date.now()) {
-          return res
-            .status(400)
-            .json({ message: "Verification link has expired" });
-        }
+  try {
+    // Look up player by verification token
+    const [player] = await db
+      .select()
+      .from(players)
+      .where(eq(players.emailVerificationToken, token))
+      .limit(1);
 
-        // Mark as verified
-        await db
-          .update(players)
-          .set({
-            emailVerified: true,
-            emailVerificationToken: null,
-            emailVerificationExpires: null,
-          })
-          .where(eq(players.id, found.id));
+    if (!player) {
+      return res
+        .status(400)
+        .json({ ok: false, message: "Invalid or expired verification token." });
+    }
 
-        // Send admin notification AFTER email is verified
-        await emailService.notifyAdminNewPlayer({
-          fullName: found.fullName,
-          email: found.email,
-          location: found.location || "",
-          ranking: found.ranking?.toString(),
-          specialization: found.specialization || "",
-          atpStatusHtml: "", // optional: can pull ATP data again if needed
-        });
+    // Optional: check expiry if you’re using emailVerificationExpires
+    if (player.emailVerificationExpires && player.emailVerificationExpires < new Date()) {
+      return res
+        .status(400)
+        .json({ ok: false, message: "Verification link has expired." });
+    }
 
-        res.json({ message: "Email verified successfully" });
-      } catch (e) {
-        console.error("Verify email error:", e);
-        res.status(500).json({ message: "Failed to verify email" });
-      }
-    },
-  );
+    // Mark email as verified + clear token
+    await db
+      .update(players)
+      .set({
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      })
+      .where(eq(players.id, player.id));
+
+    return res.json({
+      ok: true,
+      message: "Email verified successfully. You can now sign in.",
+    });
+  } catch (err) {
+    console.error("Error verifying email", err);
+    return res
+      .status(500)
+      .json({ ok: false, message: "Server error while verifying email." });
+  }
+});
 
   // -------- AUTH: Resend Verification Email --------
   app.post(
@@ -373,10 +370,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(players.id, player.id));
 
         await emailService.sendVerificationEmail({
-          to: player.email,
-          fullName: player.fullName,
-          token,
-        });
+  fullName: player.fullName,
+  email: player.email,
+  verificationToken,
+});
+
 
         res.json({ message: "Verification email resent. Please check your inbox." });
       } catch (e) {
