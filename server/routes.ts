@@ -10,7 +10,7 @@ import fs from "fs";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { storage } from "./storage.js";
-import { db } from "./db.js";
+import { db, pool } from "./db.js";
 import {
   players,
   signupPlayerSchema,
