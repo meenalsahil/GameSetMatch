@@ -76,11 +76,12 @@ export class DbStorage implements IStorage {
         ranking, specialization, bio, funding_goals, video_url,
         atp_profile_url, photo_url, published, featured, priority,
         approval_status, active,
+        email_verified, email_verification_token, email_verification_expires,
         atp_verified, atp_verification_score, atp_verification_data,
         atp_first_name_match, atp_last_name_match, atp_country_match, atp_age_match,
         atp_discrepancies, atp_last_checked, atp_current_ranking
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
       RETURNING *`,
       [
         player.email,
@@ -101,6 +102,9 @@ export class DbStorage implements IStorage {
         player.priority || 0,
         "pending", // approval_status
         true, // active
+        player.emailVerified || false,
+        player.emailVerificationToken || null,
+        player.emailVerificationExpires || null,
         player.atpVerified || false,
         player.atpVerificationScore || null,
         player.atpVerificationData || null,
