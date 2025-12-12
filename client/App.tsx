@@ -15,7 +15,7 @@ import ResendVerification from "@/pages/ResendVerification";
 import Dashboard from "@/pages/Dashboard";
 import BrowsePlayers from "@/pages/BrowsePlayers";
 import PlayerProfile from "@/pages/PlayerProfile";
-import Admin from "@/pages/Admin";
+import AdminDashboard from "@/pages/AdminDashboard";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import SponsorSuccess from "@/pages/SponsorSuccess";
@@ -98,7 +98,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
 
       {/* Admin Routes */}
-      <Route path="/admin" component={Admin} />
+<Route path="/admin" component={AdminDashboard} />
 
       {/* 404 */}
       <Route component={NotFound} />
