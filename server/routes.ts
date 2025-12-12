@@ -262,23 +262,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Send verification email
         await emailService.sendVerificationEmail({
-  fullName,
-  email,
-  verificationToken,
-});
-
+      fullName: data.fullName,
+      email: data.email,
+      verificationToken: emailVerificationToken,
+    });
 
         // Do NOT auto-login; ask them to verify email first
-        res.json({
-          message:
-            "Signup successful. Please check your email to verify your address.",
-        });
-      } catch (e) {
-        console.error("Signup error:", e);
-        res.status(500).json({ message: "Failed to create account" });
-      }
-    },
-  );
+    return res.json({
+      ok: true,
+      playerId: player.id,
+      message:
+        "Signup successful. Please check your email to verify your address before signing in.",
+    });
+  } catch (err) {
+    console.error("Signup failed:", err);
+    return res.status(500).json({ message: "Signup failed" });
+  }
+});
 
   // -------- AUTH: Verify Email --------
   app.get("/api/auth/verify-email", async (req, res) => {
