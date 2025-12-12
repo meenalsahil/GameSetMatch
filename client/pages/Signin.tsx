@@ -66,8 +66,9 @@ export default function Signin() {
 
       return responseData;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+   onSuccess: async () => {
+      // Wait for auth query to refetch before redirecting
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Success",
         description: "Welcome back!",

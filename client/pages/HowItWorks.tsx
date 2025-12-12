@@ -63,7 +63,7 @@ const faqs = [
   {
     question: "Who can join as a player?",
     answer:
-      "Any tennis player competing at ATP, Challenger, or ITF levels can create a profile. The platform supports players at all stages of their professional journey.",
+      "Any tennis player competing at ATP, WTA, Challenger, or ITF levels can create a profile. The platform supports players at all stages of their professional journey.",
   },
   {
     question: "How much does it cost for players?",

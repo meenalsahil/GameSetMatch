@@ -54,7 +54,10 @@ const signupSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   fullName: z.string().min(2, "Please enter your full name"),
-  age: z.string().min(1, "Please enter your age"),
+age: z.string().min(1, "Please enter your age").refine(
+    (val) => !val || parseInt(val) >= 14,
+    { message: "You must be at least 14 years old" }
+  ),
   country: z.string().min(2, "Please select your country"),
   location: z.string().min(2, "Please enter your location"),
   ranking: z.string().optional(),
