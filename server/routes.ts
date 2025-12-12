@@ -18,11 +18,10 @@ import {
 } from "../shared/schema.js";
 import { verifyPlayerAgainstATP } from "./atp-verification.js";
 
-
 // -------------------- Session helpers --------------------
 declare module "express-session" {
   interface SessionData {
-    playerId?: number | string; // Can be number or UUID string
+    playerId?: number | string;
   }
 }
 
@@ -114,15 +113,15 @@ async function isAdmin(req: Request, res: Response, next: NextFunction) {
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // ONE-TIME FIX: Mark all existing players as email verified
-app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) => {
-  try {
-    await db.update(players).set({ emailVerified: true });
-    res.json({ success: true, message: "All players marked as email verified" });
-  } catch (e) {
-    console.error("Fix error:", e);
-    res.status(500).json({ message: "Failed" });
-  }
-});
+  app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) => {
+    try {
+      await db.update(players).set({ emailVerified: true });
+      res.json({ success: true, message: "All players marked as email verified" });
+    } catch (e) {
+      console.error("Fix error:", e);
+      res.status(500).json({ message: "Failed" });
+    }
+  });
   
   // -------- AUTH: Signup with ATP verification + Email Verification --------
   app.post(
@@ -149,6 +148,7 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
           bio: String(raw.bio || "").trim(),
           fundingGoals: String(raw.fundingGoals || "").trim(),
           videoUrl: String(raw.videoUrl || "").trim(),
+          // always a string to match schema
           atpProfileUrl: String(raw.atpProfileUrl || "").trim(),
         };
 
@@ -158,8 +158,8 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
           return res.status(400).json({
             message: "Invalid input",
             errors: parsed.error.issues.map((i) => ({
-              path: i.path.join("."),
-              message: i.message,
+              path: i.path.join("."), // e.g. "videoUrl"
+              message: i.message, // e.g. "Video link is required"
             })),
           });
         }
@@ -175,10 +175,6 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
 
         const passwordHash = await bcrypt.hash(data.password, 10);
         const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
-
-        // Generate email verification token
-        const emailVerificationToken = crypto.randomBytes(32).toString("hex");
-        const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
         // ATP AUTO-VERIFICATION
         let atpVerificationResult: any = null;
@@ -213,6 +209,12 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
             console.error("❌ ATP verification failed:", error);
           }
         }
+
+        // Generate email verification token
+        const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+        const emailVerificationExpires = new Date(
+          Date.now() + 24 * 60 * 60 * 1000,
+        ); // 24 hours
 
         const toCreate = {
           email: data.email,
@@ -258,31 +260,17 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
 
         const player = await storage.createPlayer(toCreate as any);
 
-        // Send verification email (NOT admin notification yet!)
-        try {
-          await emailService.sendVerificationEmail({
-            fullName: data.fullName,
-            email: data.email,
-            verificationToken: emailVerificationToken,
-          });
-        } catch (emailError) {
-          console.error("Failed to send verification email:", emailError);
-          // Don't fail signup, but log the error
-        }
+        // Send verification email
+        await emailService.sendVerificationEmail({
+          to: player.email,
+          fullName: player.fullName,
+          token: emailVerificationToken,
+        });
 
-        // DO NOT log them in yet - they need to verify email first
-        // DO NOT notify admin yet - wait until email is verified
-
+        // Do NOT auto-login; ask them to verify email first
         res.json({
-          success: true,
-          message: "Please check your email to verify your account",
-          requiresVerification: true,
-          player: {
-            id: player.id,
-            email: player.email,
-            fullName: player.fullName,
-            emailVerified: false,
-          },
+          message:
+            "Signup successful. Please check your email to verify your address.",
         });
       } catch (e) {
         console.error("Signup error:", e);
@@ -292,210 +280,111 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
   );
 
   // -------- AUTH: Verify Email --------
-  app.get("/api/auth/verify-email/:token", async (req: Request, res: Response) => {
-    try {
-      const { token } = req.params;
-
-      if (!token) {
-        return res.status(400).json({ message: "Verification token is required" });
-      }
-
-      // Find player with this token
-      const result = await db
-        .select()
-        .from(players)
-        .where(eq(players.emailVerificationToken, token))
-        .limit(1);
-
-      const player = result[0];
-
-      if (!player) {
-        return res.status(400).json({ message: "Invalid or expired verification link" });
-      }
-
-      // Check if already verified
-      if (player.emailVerified) {
-        return res.json({ 
-          success: true, 
-          message: "Email already verified",
-          alreadyVerified: true 
-        });
-      }
-
-      // Check if token is expired
-      if (player.emailVerificationExpires && new Date() > new Date(player.emailVerificationExpires)) {
-        return res.status(400).json({ 
-          message: "Verification link has expired. Please request a new one.",
-          expired: true 
-        });
-      }
-
-      // Mark email as verified
-      await db
-        .update(players)
-        .set({
-          emailVerified: true,
-          emailVerificationToken: null,
-          emailVerificationExpires: null,
-        })
-        .where(eq(players.id, player.id));
-
-      // NOW notify admin about the new player (email is verified)
-      const atpVerificationResult = player.atpVerificationData 
-        ? (typeof player.atpVerificationData === 'string' 
-            ? JSON.parse(player.atpVerificationData) 
-            : player.atpVerificationData)
-        : null;
-
-      const atpStatusHtml = atpVerificationResult
-        ? `
-        <div style="background: white; padding: 20px; margin: 20px 0; border-left: 4px solid ${
-          player.atpVerified ? "#10b981" : "#f59e0b"
-        };">
-          <h3>ATP Verification Results</h3>
-          <p><strong>Status:</strong> ${
-            player.atpVerified ? "✅ AUTO-VERIFIED" : "⚠️ NEEDS REVIEW"
-          }</p>
-          <p><strong>Score:</strong> ${player.atpVerificationScore || 0}/100</p>
-        </div>
-      `
-        : "";
-
-      await emailService.notifyAdminNewPlayer({
-        fullName: player.fullName,
-        email: player.email,
-        location: player.location || "",
-        ranking: player.ranking?.toString(),
-        specialization: player.specialization || "",
-        atpStatusHtml,
-      });
-
-      console.log("✅ Email verified for:", player.email);
-
-      res.json({ 
-        success: true, 
-        message: "Email verified successfully! Your profile has been submitted for review." 
-      });
-    } catch (e) {
-      console.error("Email verification error:", e);
-      res.status(500).json({ message: "Failed to verify email" });
-    }
-  });
-
-  // -------- AUTH: Resend Verification Email --------
-  app.post("/api/auth/resend-verification", async (req: Request, res: Response) => {
-    try {
-      const { email } = req.body || {};
-
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-
-      const player: any = await storage.getPlayerByEmail(String(email).toLowerCase());
-
-      if (!player) {
-        // Don't reveal if email exists or not for security
-        return res.json({ 
-          success: true, 
-          message: "If an account exists with this email, a verification link has been sent." 
-        });
-      }
-
-      if (player.emailVerified) {
-        return res.status(400).json({ 
-          message: "Email is already verified. You can sign in.",
-          alreadyVerified: true 
-        });
-      }
-
-      // Generate new token
-      const emailVerificationToken = crypto.randomBytes(32).toString("hex");
-      const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-      // Update player with new token
-      await db
-        .update(players)
-        .set({
-          emailVerificationToken,
-          emailVerificationExpires,
-        })
-        .where(eq(players.id, player.id));
-
-      // Send new verification email
-      await emailService.sendVerificationEmail({
-        fullName: player.fullName,
-        email: player.email,
-        verificationToken: emailVerificationToken,
-      });
-
-      res.json({ 
-        success: true, 
-        message: "Verification email sent! Please check your inbox." 
-      });
-    } catch (e) {
-      console.error("Resend verification error:", e);
-      res.status(500).json({ message: "Failed to resend verification email" });
-    }
-  });
-
-  // -------- ADMIN: Reset Stripe for any player (admin only) --------
-  app.post(
-    "/api/admin/reset-stripe/:playerId",
-    isAdmin,
+  app.get(
+    "/api/auth/verify-email/:token",
     async (req: Request, res: Response) => {
       try {
-        // Keep as string - don't convert to Number (UUIDs break with Number())
-        const playerId = req.params.playerId;
+        const { token } = req.params;
+        if (!token) {
+          return res.status(400).json({ message: "Invalid verification link" });
+        }
 
+        // Find player by token
+        const found: any = await storage.findPlayerByVerificationToken(token);
+        if (!found) {
+          return res
+            .status(400)
+            .json({ message: "Invalid or expired verification link" });
+        }
+
+        const expires = found.emailVerificationExpires
+          ? new Date(found.emailVerificationExpires)
+          : null;
+        if (expires && expires.getTime() < Date.now()) {
+          return res
+            .status(400)
+            .json({ message: "Verification link has expired" });
+        }
+
+        // Mark as verified
         await db
           .update(players)
           .set({
-            stripeAccountId: null,
-            stripeReady: false,
+            emailVerified: true,
+            emailVerificationToken: null,
+            emailVerificationExpires: null,
           })
-          .where(eq(players.id, playerId as any));
+          .where(eq(players.id, found.id));
 
-        res.json({ ok: true, message: "Stripe fields reset for player" });
-      } catch (e: any) {
-        console.error("Admin reset stripe error:", e);
-        res.status(500).json({ message: e.message || "Failed to reset" });
+        // Send admin notification AFTER email is verified
+        await emailService.notifyAdminNewPlayer({
+          fullName: found.fullName,
+          email: found.email,
+          location: found.location || "",
+          ranking: found.ranking?.toString(),
+          specialization: found.specialization || "",
+          atpStatusHtml: "", // optional: can pull ATP data again if needed
+        });
+
+        res.json({ message: "Email verified successfully" });
+      } catch (e) {
+        console.error("Verify email error:", e);
+        res.status(500).json({ message: "Failed to verify email" });
       }
     },
   );
 
-  // -------- PLAYER: Reset own Stripe account (any logged-in player) --------
+  // -------- AUTH: Resend Verification Email --------
   app.post(
-    "/api/players/me/reset-stripe",
-    isAuthenticated,
+    "/api/auth/resend-verification",
     async (req: Request, res: Response) => {
       try {
-        const playerId = req.session!.playerId!;
-
-        // Get the player first to get their actual ID
-        const player: any = await storage.getPlayer(playerId);
-        if (!player) {
-          return res.status(404).json({ message: "Player not found" });
+        const { email } = req.body || {};
+        if (!email) {
+          return res
+            .status(400)
+            .json({ message: "Email is required to resend verification" });
         }
 
-        // Use player.id directly (already the correct type)
+        const player: any = await storage.getPlayerByEmail(
+          String(email).toLowerCase(),
+        );
+        if (!player) {
+          return res
+            .status(404)
+            .json({ message: "No account found with that email" });
+        }
+
+        if (player.emailVerified) {
+          return res.json({
+            message: "Email is already verified. You can sign in now.",
+          });
+        }
+
+        const token = crypto.randomBytes(32).toString("hex");
+        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
         await db
           .update(players)
           .set({
-            stripeAccountId: null,
-            stripeReady: false,
+            emailVerificationToken: token,
+            emailVerificationExpires: expires,
           })
           .where(eq(players.id, player.id));
 
-        console.log("✅ Player Stripe reset:", { playerId: player.id });
+        await emailService.sendVerificationEmail({
+          to: player.email,
+          fullName: player.fullName,
+          token,
+        });
 
-        res.json({ ok: true, message: "Your Stripe account has been reset" });
-      } catch (e: any) {
-        console.error("Player self-reset stripe error:", e);
-        res.status(500).json({ message: e.message || "Failed to reset" });
+        res.json({ message: "Verification email resent. Please check your inbox." });
+      } catch (e) {
+        console.error("Resend verification error:", e);
+        res.status(500).json({ message: "Failed to resend verification email" });
       }
     },
   );
-
 
   // -------- AUTH: Signin --------
   app.post("/api/auth/signin", async (req: Request, res: Response) => {
@@ -517,6 +406,13 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      if (!player.emailVerified) {
+        return res.status(403).json({
+          message:
+            "Please verify your email before signing in. Check your inbox for the verification link.",
+        });
+      }
+
       const hash = player.password_hash || player.passwordHash;
       if (!hash) {
         return res.status(401).json({ message: "Invalid credentials" });
@@ -525,15 +421,6 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
       const ok = await bcrypt.compare(String(password), String(hash));
       if (!ok) {
         return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      // Check if email is verified
-      if (!player.emailVerified) {
-        return res.status(403).json({ 
-          message: "Please verify your email before signing in",
-          requiresVerification: true,
-          email: player.email 
-        });
       }
 
       req.session!.playerId = player.id;
@@ -560,7 +447,9 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
           approvedAt: player.approvedAt,
           createdAt: player.createdAt,
           active: player.active,
-          emailVerified: player.emailVerified,
+          stripeAccountId: player.stripeAccountId,
+          stripeReady: player.stripeReady,
+          atpProfileUrl: player.atpProfileUrl,
         },
       });
     } catch (e) {
@@ -622,7 +511,6 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
           stripeAccountId: p.stripeAccountId,
           stripeReady: p.stripeReady,
           atpProfileUrl: p.atpProfileUrl,
-          emailVerified: p.emailVerified,
         });
       } catch (e) {
         console.error("/api/auth/me error:", e);
@@ -860,13 +748,13 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
           return res.status(400).json({ error: "Invalid method" });
         }
 
-        // Get the player to use their actual ID
+        const relativePath = `/uploads/verification/${req.file.filename}`;
+
         const player: any = await storage.getPlayer(playerId);
+
         if (!player) {
           return res.status(404).json({ error: "Player not found" });
         }
-
-        const relativePath = `/uploads/verification/${req.file.filename}`;
 
         if (method === "video") {
           await db
@@ -877,7 +765,7 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
               videoVerified: false,
               verificationStatus: "pending",
             })
-            .where(eq(players.id, player.id)); // Use player.id directly
+            .where(eq(players.id, player.id));
         } else {
           await db
             .update(players)
@@ -887,7 +775,7 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
               tournamentDocVerified: false,
               verificationStatus: "pending",
             })
-            .where(eq(players.id, player.id)); // Use player.id directly
+            .where(eq(players.id, player.id));
         }
 
         return res.json({ ok: true, method, fileUrl: relativePath });
@@ -921,13 +809,12 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
       try {
         const adminId = req.session!.playerId!;
         const playerIdParam = req.params.id;
-        
+
         const player = await storage.approvePlayer(playerIdParam, adminId as any);
         if (!player) {
           return res.status(404).json({ message: "Player not found" });
         }
 
-        // Use player.id from the returned player object
         await db
           .update(players)
           .set({
@@ -949,56 +836,6 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
     },
   );
 
-  // -------- ADMIN: Manually attach a Stripe account to a player (one-off fix) --------
-  app.post(
-    "/api/admin/players/:id/set-stripe-account",
-    isAdmin,
-    async (req: Request, res: Response) => {
-      try {
-        const playerIdParam = req.params.id; // Keep as string (UUID)
-        const { accountId } = req.body || {};
-
-        if (!accountId || typeof accountId !== "string") {
-          return res
-            .status(400)
-            .json({ ok: false, message: "accountId is required" });
-        }
-
-        // First get the player to verify they exist and get their ID
-        const player: any = await storage.getPlayer(playerIdParam);
-        if (!player) {
-          return res.status(404).json({
-            ok: false,
-            message: "Player not found",
-            playerId: null,
-          });
-        }
-
-        // Use player.id directly (already the correct type)
-        await db
-          .update(players)
-          .set({
-            stripeAccountId: accountId,
-            stripeReady: true, // Mark as ready immediately for test purposes
-          })
-          .where(eq(players.id, player.id));
-
-        return res.json({
-          ok: true,
-          playerId: player.id,
-          accountId,
-          message: "Stripe account attached and marked ready.",
-        });
-      } catch (err: any) {
-        console.error("admin set-stripe-account error:", err);
-        return res.status(500).json({
-          ok: false,
-          message: err?.message || "Unexpected error attaching Stripe account",
-        });
-      }
-    },
-  );
-
   // -------- ADMIN: Reject player --------
   app.post(
     "/api/admin/players/:id/reject",
@@ -1007,7 +844,7 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
       try {
         const adminId = req.session!.playerId!;
         const playerIdParam = req.params.id;
-        
+
         const player = await storage.rejectPlayer(playerIdParam, adminId as any);
         if (!player) {
           return res.status(404).json({ message: "Player not found" });
@@ -1016,7 +853,6 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
         const reason =
           (req.body && (req.body.reason as string)) || "Not approved";
 
-        // Use player.id from the returned player object
         await db
           .update(players)
           .set({
@@ -1161,7 +997,7 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
           existingAccountId: player.stripeAccountId,
         });
 
-        // Save account id if new - use player.id directly (already correct type)
+        // Save account id if new
         if (account.id !== player.stripeAccountId) {
           await db
             .update(players)
@@ -1171,10 +1007,10 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
 
         const url = await stripeHelpers.createOnboardingLink(account.id);
 
-        return res.json({ url });
+        res.json({ url });
       } catch (e: any) {
         console.error("Stripe connect-link error:", e);
-        return res.status(500).json({
+        res.status(500).json({
           message: e.message || "Failed to create Stripe onboarding link",
         });
       }
@@ -1188,8 +1024,6 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
     async (req: Request, res: Response) => {
       try {
         const playerId = req.session!.playerId!;
-        
-        // Use storage.getPlayer instead of db.query.players (which doesn't exist)
         const player: any = await storage.getPlayer(playerId);
 
         if (!player) {
@@ -1209,33 +1043,11 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
         }
 
         // Ask Stripe about this account using the helper
-        let status;
-        try {
-          status = await stripeHelpers.getPayoutStatus(player.stripeAccountId);
-        } catch (stripeErr: any) {
-          // If the account was deleted in Stripe, reset our DB
-          if (stripeErr?.code === "resource_missing") {
-            await db
-              .update(players)
-              .set({
-                stripeAccountId: null,
-                stripeReady: false,
-              })
-              .where(eq(players.id, player.id));
+        const status = await stripeHelpers.getPayoutStatus(
+          player.stripeAccountId,
+        );
 
-            return res.json({
-              hasAccount: false,
-              ready: false,
-              stripeReady: false,
-              needsOnboarding: true,
-              restricted: false,
-              requirementsDue: [],
-            });
-          }
-          throw stripeErr;
-        }
-
-        // If Stripe says "ready" but DB flag is false, self-heal DB
+        // If Stripe says “ready” but DB flag is false, self-heal DB
         if (status.ready && !player.stripeReady) {
           await db
             .update(players)
@@ -1245,20 +1057,22 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
 
         return res.json({
           hasAccount: true,
-          ready: status.ready,           // Frontend expects this field
-          stripeReady: status.ready,     // Alias for compatibility
+          ready: status.ready,
+          stripeReady: status.ready,
           needsOnboarding: !status.ready,
-          restricted: status.currentlyDue.length > 0,
-          requirementsDue: status.currentlyDue,
+          restricted: status.currentlyDue?.length > 0,
+          requirementsDue: status.currentlyDue ?? [],
         });
       } catch (err: any) {
         console.error("Stripe status error:", err);
-        return res.status(500).json({ message: "Failed to fetch Stripe account status" });
+        return res
+          .status(500)
+          .json({ message: "Failed to fetch Stripe account status" });
       }
     },
   );
 
-  // -------- PAYMENTS: Get player earnings --------
+  // -------- PLAYER: Earnings overview --------
   app.get(
     "/api/payments/stripe/earnings",
     isAuthenticated,
@@ -1271,19 +1085,16 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
           return res.status(404).json({ message: "Player not found" });
         }
 
-        // If no Stripe account, return empty earnings
         if (!player.stripeAccountId) {
-          return res.json({
-            totalEarnings: 0,
-            availableBalance: 0,
-            pendingBalance: 0,
-            recentTransfers: [],
-            currency: "usd",
+          return res.status(400).json({
+            message: "No Stripe account connected",
           });
         }
 
         // Get earnings from Stripe
-        const earnings = await stripeHelpers.getAccountEarnings(player.stripeAccountId);
+        const earnings = await stripeHelpers.getAccountEarnings(
+          player.stripeAccountId,
+        );
 
         return res.json(earnings);
       } catch (err: any) {
