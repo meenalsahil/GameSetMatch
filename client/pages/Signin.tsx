@@ -1,5 +1,5 @@
 // client/src/pages/Signin.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,6 +33,10 @@ export default function Signin() {
   const { toast } = useToast();
   const [requiresVerification, setRequiresVerification] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  // Scroll to top when page loads
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const form = useForm<SigninForm>({
     resolver: zodResolver(signinSchema),
