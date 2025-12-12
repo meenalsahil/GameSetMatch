@@ -270,7 +270,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Do NOT auto-login; ask them to verify email first
     return res.json({
       ok: true,
+      requiresVerification: true,
       playerId: player.id,
+      player: { email: data.email },
       message:
         "Signup successful. Please check your email to verify your address before signing in.",
     });
@@ -281,8 +283,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 });
 
   // -------- AUTH: Verify Email --------
-  app.get("/api/auth/verify-email", async (req, res) => {
-  const token = (req.query.token as string | undefined)?.trim();
+  app.get("/api/auth/verify-email/:token?", async (req, res) => {
+    // Support both /api/auth/verify-email?token=xxx AND /api/auth/verify-email/xxx
+    const token = (req.params.token || req.query.token as string | undefined)?.trim();
 
   if (!token) {
     return res.status(400).json({ ok: false, message: "Missing verification token." });
@@ -302,6 +305,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .json({ ok: false, message: "Invalid or expired verification token." });
     }
 
+
+    // Check if already verified
+    if (player.emailVerified) {
+      return res.json({
+        ok: true,
+        alreadyVerified: true,
+        message: "Your email is already verified. You can sign in now.",
+      });
+    }
     // Optional: check expiry if you’re using emailVerificationExpires
     if (player.emailVerificationExpires && player.emailVerificationExpires < new Date()) {
       return res
@@ -370,10 +382,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(players.id, player.id));
 
         await emailService.sendVerificationEmail({
-  fullName: player.fullName,
-  email: player.email,
-  verificationToken,
-});
+          fullName: player.fullName,
+          email: player.email,
+          verificationToken: token,
+        });
 
 
         res.json({ message: "Verification email resent. Please check your inbox." });
@@ -406,6 +418,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!player.emailVerified) {
         return res.status(403).json({
+          requiresVerification: true,
+          email: player.email,
           message:
             "Please verify your email before signing in. Check your inbox for the verification link.",
         });
