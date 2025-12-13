@@ -1,4 +1,5 @@
 // client/App.tsx
+import Testimonials from "@/pages/Testimonials";
 import Header from "@/components/Header";
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -25,6 +26,7 @@ import FAQ from "@/pages/FAQ";
 import Contact from "@/pages/Contact";
 import SponsorSignup from "@/pages/SponsorSignup";
 
+
 function Router() {
   return (
     <Switch>
@@ -39,6 +41,7 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/how-it-works" component={HowItWorks} />
+      <Route path="/testimonials" component={Testimonials} />
       <Route path="/faq" component={FAQ} />
       <Route path="/contact" component={Contact} />
       

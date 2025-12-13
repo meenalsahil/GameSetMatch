@@ -51,6 +51,15 @@ export default function Header() {
           >
             How It Works
           </a>
+
+          {/* Testimonials Link (New) */}
+          <Link
+            href="/testimonials"
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+            data-testid="link-testimonials"
+          >
+            Testimonials
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2">
