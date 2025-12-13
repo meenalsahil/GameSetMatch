@@ -1413,7 +1413,6 @@ Return ONLY the enhanced funding goals text, nothing else.`
   });
 
   // -------- AI: Search/Match Players --------
-  // -------- AI: Search/Match Players --------
   app.post("/api/ai/search-players", async (req: Request, res: Response) => {
     try {
       const { query } = req.body;
@@ -1427,30 +1426,37 @@ Return ONLY the enhanced funding goals text, nothing else.`
         return res.status(500).json({ message: "AI service not configured" });
       }
 
-      // Get all published players
+      // 1. Get all published players
       const players = await storage.getPublishedPlayers();
       
       if (players.length === 0) {
         return res.json({ matchedPlayerIds: [] });
       }
 
-      // Create a summary of players for AI - FORCE NUMBERS for math accuracy
+      // 2. FORCE FETCH: Get sponsor counts using Raw SQL (Same fix as Browse page)
+      const countsResult = await pool.query("SELECT id, sponsor_count FROM players");
+      const countMap = new Map();
+      countsResult.rows.forEach((row: any) => {
+        countMap.set(row.id, row.sponsor_count);
+      });
+
+      // 3. Create a summary of players for AI - Now with ACCURATE sponsor counts
       const playerSummaries = players.map((p: any) => ({
         id: p.id,
         name: p.fullName,
-        age: Number(p.age), // Ensure number
+        age: Number(p.age),
         country: p.country,
         location: p.location,
-        ranking: p.ranking ? Number(p.ranking) : null, // Ensure number for comparisons
+        ranking: p.ranking ? Number(p.ranking) : null,
         specialization: p.specialization,
         bio: p.bio?.substring(0, 200),
         fundingGoals: p.fundingGoals?.substring(0, 150),
-        sponsorCount: p.sponsorCount || 0,
+        // FIX: Use the map to get the real count from DB
+        sponsorCount: countMap.get(p.id) || 0,
       }));
 
       const openai = new OpenAI({ apiKey });
 
-      // UPDATED PROMPT: Strict math logic + Ranking context
       const prompt = `You are an expert tennis consultant. A sponsor is searching for players.
 
 CONTEXT ON TENNIS RANKINGS:
@@ -1462,8 +1468,9 @@ CONTEXT ON TENNIS RANKINGS:
 INSTRUCTIONS:
 1. Analyze the Sponsor's Query: "${query}"
 2. Filter the players list below.
-3. CRITICAL: If the query specifies a number (e.g. "Age 20+", "Rank > 800"), include EVERY player that mathematically fits. Do not arbitrarily filter them out.
-4. Return a JSON array of the matching Player IDs.
+3. CRITICAL: If the query specifies a number (e.g. "Age 20+", "Rank > 800", "Has > 0 sponsors"), include EVERY player that mathematically fits.
+4. If the user asks for "Sponsored players", look for sponsorCount > 0.
+5. If the user asks for "Unsponsored" or "Not sponsored", look for sponsorCount == 0.
 
 Available Players:
 ${JSON.stringify(playerSummaries, null, 2)}
@@ -1474,12 +1481,11 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
         model: "gpt-4o-mini",
         max_tokens: 500,
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.1, // Lower temperature = more precise/less creative
+        temperature: 0.1, 
       });
 
       const responseText = completion.choices[0]?.message?.content || "[]";
       
-      // Parse the response
       let matchedPlayerIds: string[] = [];
       try {
         const jsonMatch = responseText.match(/\[[\s\S]*\]/);
@@ -1491,7 +1497,6 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
         matchedPlayerIds = [];
       }
 
-      // Validate IDs
       const validPlayerIds = players.map((p: any) => p.id);
       matchedPlayerIds = matchedPlayerIds.filter((id: string) => validPlayerIds.includes(id));
 
