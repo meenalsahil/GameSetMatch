@@ -1377,7 +1377,7 @@ Return ONLY the enhanced funding goals text, nothing else.`
       
       res.json({ enhanced });
     } catch (e: any) {
-      cons// ============================================
+      const// ============================================
 // ADD THIS ROUTE TO server/routes.ts
 // Place it after the /api/ai/enhance-bio route
 // ============================================
