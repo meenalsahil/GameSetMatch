@@ -1470,6 +1470,6 @@ IMPORTANT: Return ONLY a valid JSON array of IDs, nothing else. Example: ["id1",
       console.error("AI search error:", e);
       res.status(500).json({ message: "Failed to search players" });
     }
-
+  });
   return httpServer;
 }
