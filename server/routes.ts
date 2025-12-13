@@ -124,7 +124,22 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
     res.status(500).json({ message: "Failed" });
   }
 });
-  
+
+app.get("/api/admin/update-sponsor-count", async (_req: Request, res: Response) => {
+  try {
+    // Update Family Tennis sponsor count (or use actual player ID)
+    await pool.query(`
+      UPDATE players 
+      SET sponsor_count = 1 
+      WHERE full_name ILIKE '%Family Tennis%'
+    `);
+    res.json({ success: true, message: "Sponsor count updated" });
+  } catch (e: any) {
+    console.error("Update error:", e);
+    res.status(500).json({ message: e.message });
+  }
+});
+
 app.get("/api/admin/add-sponsor-count", async (_req: Request, res: Response) => {
   try {
     await pool.query(`

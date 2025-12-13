@@ -159,14 +159,12 @@ export default function BrowsePlayers() {
   });
 
   // If AI search was performed, reorder based on AI matches
-  if (aiMatchedIds && aiMatchedIds.length > 0) {
+if (aiMatchedIds && aiMatchedIds.length > 0) {
     const matchedPlayers = aiMatchedIds
       .map((id) => filteredPlayers.find((p) => p.id === id))
       .filter(Boolean) as Player[];
-    const unmatchedPlayers = filteredPlayers.filter(
-      (p) => !aiMatchedIds.includes(p.id)
-    );
-    filteredPlayers = [...matchedPlayers, ...unmatchedPlayers];
+    filteredPlayers = matchedPlayers; // Only show matches, not all players
+  }
   } else {
     // Sort players
     filteredPlayers.sort((a, b) => {
