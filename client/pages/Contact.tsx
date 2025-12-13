@@ -1,5 +1,5 @@
-import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Mail, Phone, MapPin } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
-import { Mail, Phone, MapPin } from "lucide-react";
 import { Link } from "wouter";
-import { useState, useEffect } from "react";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -20,10 +18,12 @@ export default function Contact() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-// Scroll to top when page loads
+
+  // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -101,7 +101,7 @@ export default function Contact() {
                       Email
                     </h3>
                     <p className="text-muted-foreground">
-                      suvirabeer@gmail.com
+                      Please use the contact form to reach us
                     </p>
                   </div>
                 </div>
