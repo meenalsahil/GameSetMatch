@@ -643,7 +643,7 @@ playStyle: data.playStyle || null,
     });
   });
 
-  // -------- AUTH: Me --------
+// -------- AUTH: Me --------
   app.get(
     "/api/auth/me",
     isAuthenticated,
@@ -664,8 +664,6 @@ playStyle: data.playStyle || null,
           email: p.email,
           fullName: p.fullName,
           age: p.age,
-         gender: p.gender,
-playStyle: p.playStyle || p.play_style,
           country: p.country,
           location: p.location,
           ranking: p.ranking,
@@ -687,6 +685,9 @@ playStyle: p.playStyle || p.play_style,
           stripeReady: p.stripeReady,
           atpProfileUrl: p.atpProfileUrl,
           emailVerified: p.emailVerified,
+          // FIX: Use 'p' instead of 'player'
+          gender: p.gender,
+          playStyle: p.playStyle || p.play_style,
         });
       } catch (e) {
         console.error("/api/auth/me error:", e);
@@ -750,7 +751,9 @@ playStyle: p.playStyle || p.play_style,
             body.photoUrl === undefined
               ? undefined
               : String(body.photoUrl).trim(),
-             gender: body.gender === undefined ? undefined : String(body.gender).trim(),
+          
+          // FIX: Don't use 'player.gender', just check body
+          gender: body.gender === undefined ? undefined : String(body.gender).trim(),
           playStyle: body.playStyle === undefined ? undefined : String(body.playStyle).trim(),
         };
 
@@ -759,7 +762,7 @@ playStyle: p.playStyle || p.play_style,
           return res.status(404).json({ message: "Player not found" });
         }
 
-        // Return a safe subset (same shape as /api/auth/me)
+        // Return a safe subset
         res.json({
           id: updated.id,
           email: updated.email,
@@ -784,6 +787,8 @@ playStyle: p.playStyle || p.play_style,
           active: updated.active,
           stripeAccountId: (updated as any).stripeAccountId,
           stripeReady: (updated as any).stripeReady,
+          gender: updated.gender,
+          playStyle: updated.playStyle || (updated as any).play_style,
         });
       } catch (e) {
         console.error("Update profile error:", e);
@@ -791,7 +796,6 @@ playStyle: p.playStyle || p.play_style,
       }
     },
   );
-
   // -------- PUBLIC: Browse players --------
   app.get("/api/players", async (_req: Request, res: Response) => {
     try {

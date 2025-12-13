@@ -16,6 +16,11 @@ export const players = pgTable("players", {
   passwordHash: text("password_hash").notNull(),
   fullName: text("full_name").notNull(),
   age: integer("age"),
+  
+  // FIXED: Added these two missing columns
+  gender: text("gender"),
+  playStyle: text("play_style"),
+
   country: text("country"),
   location: text("location"),
   ranking: integer("ranking"),
@@ -96,10 +101,10 @@ export const signupPlayerSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   fullName: z.string().min(2, "Please enter your full name"),
-age: z.number().min(14, "You must be at least 14 years old"),
-gender: z.enum(["male", "female"]).optional(),
-playStyle: z.enum(["singles", "doubles", "both"]).optional(), 
-country: z.string().min(2, "Please enter your country"),
+  age: z.number().min(14, "You must be at least 14 years old"),
+  gender: z.enum(["male", "female"]).optional(),
+  playStyle: z.enum(["singles", "doubles", "both"]).optional(), 
+  country: z.string().min(2, "Please enter your country"),
   location: z.string().min(2, "Please enter your location"),
   ranking: z.string().optional(),
   specialization: z
