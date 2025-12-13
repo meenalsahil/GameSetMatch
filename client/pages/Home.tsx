@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -239,9 +240,13 @@ export default function HomePage() {
 
           {/* For Supporters */}
           <div>
-            <h3 className="text-3xl font-bold text-center mb-12">
-              For Supporters
-            </h3>
+            <div className="text-center mb-12">
+  <h3 className="text-3xl font-bold mb-3">For Supporters</h3>
+  <div className="inline-flex items-center gap-2 bg-purple-100 border border-purple-200 text-purple-700 px-4 py-1.5 rounded-full text-sm font-medium">
+    <Sparkles className="w-4 h-4" />
+    AI-powered player matching • FREE
+  </div>
+</div>
             <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
               <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg">
                 <CardContent className="p-8 text-center">
