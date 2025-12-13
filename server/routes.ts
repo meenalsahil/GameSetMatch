@@ -125,6 +125,19 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
   }
 });
   
+app.get("/api/admin/add-sponsor-count", async (_req: Request, res: Response) => {
+  try {
+    await pool.query(`
+      ALTER TABLE players 
+      ADD COLUMN IF NOT EXISTS sponsor_count INTEGER DEFAULT 0
+    `);
+    res.json({ success: true, message: "sponsor_count column added" });
+  } catch (e: any) {
+    console.error("Migration error:", e);
+    res.status(500).json({ message: e.message });
+  }
+});
+
 // ONE-TIME: Add email verification columns if missing
   app.get("/api/admin/migrate-email-columns", async (_req: Request, res: Response) => {
     try {
