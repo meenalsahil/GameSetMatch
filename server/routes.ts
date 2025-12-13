@@ -821,8 +821,6 @@ playStyle: data.playStyle || null,
     age: p.age,
     gender: p.gender,
     playStyle: p.playStyle || p.play_style,
-    sponsorCount: p.sponsorCount || p.sponsor_count || 0,
-
           // verification info
           atpProfileUrl: p.atpProfileUrl,
           atpVerified: p.atpVerified,
