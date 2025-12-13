@@ -29,6 +29,7 @@ interface Player {
   sponsorCount?: number;
   gender?: string;
   playStyle?: string;
+  createdAt?: string;
 }
 
 // Generate gradient colors based on name
@@ -118,6 +119,15 @@ function formatGender(gender: string | undefined): string {
   return gender === "male" ? "Male" : gender === "female" ? "Female" : gender;
 }
 
+// Check if player joined within last 30 days
+function isNewPlayer(player: Player): boolean {
+  if (!player.createdAt) return false;
+  const createdDate = new Date(player.createdAt);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  return createdDate >= thirtyDaysAgo;
+}
+
 export default function Players() {
   const [searchQuery, setSearchQuery] = useState("");
   const [aiSearchQuery, setAiSearchQuery] = useState("");
@@ -142,12 +152,6 @@ export default function Players() {
 
   // Find max sponsor count for "Top Sponsored" badge
   const maxSponsorCount = Math.max(...players.map((p) => p.sponsorCount || 0), 0);
-
-  // Check if player is new (you could add createdAt field later)
-  const isNewPlayer = (player: Player) => {
-    // For now, mark players with 0-2 sponsors as "new"
-    return (player.sponsorCount || 0) <= 2;
-  };
 
   // Filter and sort players
   let filteredPlayers = players.filter((player) => {

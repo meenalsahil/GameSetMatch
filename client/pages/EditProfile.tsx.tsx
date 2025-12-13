@@ -12,6 +12,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Footer from "@/components/Footer";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,10 +34,12 @@ import { useEffect } from "react";
 const editProfileSchema = z.object({
   fullName: z.string().min(2, "Please enter your full name"),
   age: z.number().min(13, "You must be at least 13 years old"),
+  gender: z.string().min(1, "Please select your gender"),
   country: z.string().min(2, "Please enter your country"),
   location: z.string().min(2, "Please enter your location"),
   ranking: z.string().optional(),
   specialization: z.string().min(2, "Please specify your court specialization"),
+  playStyle: z.string().min(1, "Please select your play style"),
   bio: z.string().min(10, "Please tell us about your tennis journey (at least 10 characters)"),
   fundingGoals: z.string().min(10, "Please describe what you're raising funds for (at least 10 characters)"),
   videoUrl: z.string().min(1, "Video link is required"),
@@ -50,10 +59,12 @@ export default function EditProfile() {
     defaultValues: {
       fullName: "",
       age: 18,
+      gender: "",
       country: "",
       location: "",
       ranking: "",
       specialization: "",
+      playStyle: "",
       bio: "",
       fundingGoals: "",
       videoUrl: "",
@@ -67,10 +78,12 @@ export default function EditProfile() {
       form.reset({
         fullName: player.fullName || "",
         age: player.age || 18,
+        gender: player.gender || "",
         country: player.country || "",
         location: player.location || "",
         ranking: player.ranking?.toString() || "",
         specialization: player.specialization || "",
+        playStyle: player.playStyle || "",
         bio: player.bio || "",
         fundingGoals: player.fundingGoals || "",
         videoUrl: player.videoUrl || "",
@@ -85,10 +98,12 @@ export default function EditProfile() {
 
       formData.append("fullName", values.fullName);
       formData.append("age", values.age.toString());
+      formData.append("gender", values.gender);
       formData.append("country", values.country);
       formData.append("location", values.location);
       if (values.ranking) formData.append("ranking", values.ranking);
       formData.append("specialization", values.specialization);
+      formData.append("playStyle", values.playStyle);
       formData.append("bio", values.bio);
       formData.append("fundingGoals", values.fundingGoals);
       formData.append("videoUrl", values.videoUrl);
@@ -185,84 +200,147 @@ export default function EditProfile() {
                       </FormItem>
                     )}
                   />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="age"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Age</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="Your age"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(parseInt(e.target.value) || undefined)
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {/* Gender Field */}
+                    <FormField
+                      control={form.control}
+                      name="gender"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Gender</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="male">Male</SelectItem>
+                              <SelectItem value="female">Female</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="country"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Country</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your country" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Location</FormLabel>
+                          <FormControl>
+                            <Input placeholder="City, Country" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="ranking"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Current Ranking (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="e.g., 234"
+                              {...field}
+                              value={field.value || ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="specialization"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Court Specialization</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select court type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="All Courts">All Courts</SelectItem>
+                              <SelectItem value="Hard Court">Hard Court</SelectItem>
+                              <SelectItem value="Clay Court">Clay Court</SelectItem>
+                              <SelectItem value="Grass Court">Grass Court</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Play Style Field */}
                   <FormField
                     control={form.control}
-                    name="age"
+                    name="playStyle"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Age</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="Your age"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseInt(e.target.value) || undefined)
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Country</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g., United States, Spain, Australia"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Location</FormLabel>
-                        <FormControl>
-                          <Input placeholder="City, Country" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="ranking"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Current Ranking (Optional)</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g., 234"
-                            {...field}
-                            value={field.value || ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="specialization"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Specialization</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g., Clay Court, Hard Court, Grass Court"
-                            {...field}
-                          />
-                        </FormControl>
+                        <FormLabel>Play Style</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="md:w-1/2">
+                              <SelectValue placeholder="Select play style" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="singles">Singles</SelectItem>
+                            <SelectItem value="doubles">Doubles</SelectItem>
+                            <SelectItem value="both">Both Singles & Doubles</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          What type of matches do you primarily compete in?
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
