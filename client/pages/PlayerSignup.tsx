@@ -1,19 +1,12 @@
-// client/src/pages/PlayerSignup.tsx
-import { useState, useMemo, useEffect } from "react";
-import { ArrowLeft, Upload, X, Check, ChevronsUpDown, Sparkles, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { Link, useLocation } from "wouter";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -22,456 +15,72 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import Footer from "@/components/Footer";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Link, useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { ArrowLeft, Upload, Sparkles, Loader2 } from "lucide-react";
 
-// Helper: is it ATP / ITF / WTA host?
-const isOfficialTourHost = (value: string) => {
-  try {
-    const url = new URL(value);
-    const host = url.hostname.toLowerCase();
-    const allowedRoots = ["atptour.com", "itftennis.com", "wtatennis.com"];
-    return allowedRoots.some(
-      (root) => host === root || host.endsWith("." + root)
-    );
-  } catch {
-    return false;
-  }
-};
+const COUNTRIES = [
+  "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Canada", 
+  "Chile", "China", "Colombia", "Croatia", "Czech Republic", "Denmark",
+  "Egypt", "Finland", "France", "Germany", "Greece", "Hungary", "India",
+  "Ireland", "Israel", "Italy", "Japan", "Mexico", "Netherlands", 
+  "New Zealand", "Norway", "Poland", "Portugal", "Romania", "Russia",
+  "Serbia", "Slovakia", "South Africa", "South Korea", "Spain", 
+  "Sweden", "Switzerland", "Thailand", "Turkey", "Ukraine", 
+  "United Kingdom", "United States", "Uruguay", "Venezuela"
+];
 
-const signupSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
+const playerSignupSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  fullName: z.string().min(2, "Please enter your full name"),
-  age: z.string().min(1, "Please enter your age").refine(
-    (val) => !val || parseInt(val) >= 14,
-    { message: "You must be at least 14 years old" }
-  ),
-  country: z.string().min(2, "Please select your country"),
-  location: z.string().min(2, "Please enter your location"),
+  fullName: z.string().min(2, "Name must be at least 2 characters"),
+  age: z.number().min(14, "Must be at least 14 years old").max(100),
+  gender: z.enum(["male", "female"], { required_error: "Please select your gender" }),
+  country: z.string().min(1, "Please select a country"),
+  location: z.string().min(2, "Please enter your city/location"),
   ranking: z.string().optional(),
-  specialization: z.string().min(2, "Please specify your court specialization"),
-  bio: z
-    .string()
-    .min(10, "Please tell us about your tennis journey (at least 10 characters)"),
-  fundingGoals: z
-    .string()
-    .min(10, "Please describe what you're raising funds for (at least 10 characters)"),
-  videoUrl: z.string().min(1, "Verification video link is required"),
-  atpProfileUrl: z
-    .string()
-    .trim()
-    .min(1, "ATP/ITF/WTA Profile URL is required")
-    .refine(
-      (value) => {
-        if (!value) return true;
-        return isOfficialTourHost(value);
-      },
-      {
-        message: "Please enter a link to an official ATP, ITF, or WTA player profile",
-      }
-    ),
+  specialization: z.string().min(1, "Please select court specialization"),
+  playStyle: z.enum(["singles", "doubles", "both"], { required_error: "Please select your play style" }),
+  bio: z.string().min(50, "Please write at least 50 characters about yourself"),
+  fundingGoals: z.string().min(30, "Please describe your funding goals (at least 30 characters)"),
+  videoUrl: z.string().url("Please enter a valid URL").or(z.literal("")),
+  atpProfileUrl: z.string().url("Please enter a valid ATP/ITF/WTA profile URL"),
 });
 
-type SignupForm = z.infer<typeof signupSchema>;
-
-const courtSpecializations = [
-  "All Courts",
-  "Hard Court",
-  "Clay Court",
-  "Grass Court",
-  "Indoor",
-];
-
-// Complete list of all countries
-const countries = [
-  "Afghanistan",
-  "Albania",
-  "Algeria",
-  "Andorra",
-  "Angola",
-  "Antigua and Barbuda",
-  "Argentina",
-  "Armenia",
-  "Australia",
-  "Austria",
-  "Azerbaijan",
-  "Bahamas",
-  "Bahrain",
-  "Bangladesh",
-  "Barbados",
-  "Belarus",
-  "Belgium",
-  "Belize",
-  "Benin",
-  "Bhutan",
-  "Bolivia",
-  "Bosnia and Herzegovina",
-  "Botswana",
-  "Brazil",
-  "Brunei",
-  "Bulgaria",
-  "Burkina Faso",
-  "Burundi",
-  "Cambodia",
-  "Cameroon",
-  "Canada",
-  "Cape Verde",
-  "Central African Republic",
-  "Chad",
-  "Chile",
-  "China",
-  "Colombia",
-  "Comoros",
-  "Congo",
-  "Costa Rica",
-  "Croatia",
-  "Cuba",
-  "Cyprus",
-  "Czech Republic",
-  "Denmark",
-  "Djibouti",
-  "Dominica",
-  "Dominican Republic",
-  "East Timor",
-  "Ecuador",
-  "Egypt",
-  "El Salvador",
-  "Equatorial Guinea",
-  "Eritrea",
-  "Estonia",
-  "Eswatini",
-  "Ethiopia",
-  "Fiji",
-  "Finland",
-  "France",
-  "Gabon",
-  "Gambia",
-  "Georgia",
-  "Germany",
-  "Ghana",
-  "Greece",
-  "Grenada",
-  "Guatemala",
-  "Guinea",
-  "Guinea-Bissau",
-  "Guyana",
-  "Haiti",
-  "Honduras",
-  "Hungary",
-  "Iceland",
-  "India",
-  "Indonesia",
-  "Iran",
-  "Iraq",
-  "Ireland",
-  "Israel",
-  "Italy",
-  "Ivory Coast",
-  "Jamaica",
-  "Japan",
-  "Jordan",
-  "Kazakhstan",
-  "Kenya",
-  "Kiribati",
-  "Kosovo",
-  "Kuwait",
-  "Kyrgyzstan",
-  "Laos",
-  "Latvia",
-  "Lebanon",
-  "Lesotho",
-  "Liberia",
-  "Libya",
-  "Liechtenstein",
-  "Lithuania",
-  "Luxembourg",
-  "Madagascar",
-  "Malawi",
-  "Malaysia",
-  "Maldives",
-  "Mali",
-  "Malta",
-  "Marshall Islands",
-  "Mauritania",
-  "Mauritius",
-  "Mexico",
-  "Micronesia",
-  "Moldova",
-  "Monaco",
-  "Mongolia",
-  "Montenegro",
-  "Morocco",
-  "Mozambique",
-  "Myanmar",
-  "Namibia",
-  "Nauru",
-  "Nepal",
-  "Netherlands",
-  "New Zealand",
-  "Nicaragua",
-  "Niger",
-  "Nigeria",
-  "North Korea",
-  "North Macedonia",
-  "Norway",
-  "Oman",
-  "Pakistan",
-  "Palau",
-  "Palestine",
-  "Panama",
-  "Papua New Guinea",
-  "Paraguay",
-  "Peru",
-  "Philippines",
-  "Poland",
-  "Portugal",
-  "Qatar",
-  "Romania",
-  "Russia",
-  "Rwanda",
-  "Saint Kitts and Nevis",
-  "Saint Lucia",
-  "Saint Vincent and the Grenadines",
-  "Samoa",
-  "San Marino",
-  "Sao Tome and Principe",
-  "Saudi Arabia",
-  "Senegal",
-  "Serbia",
-  "Seychelles",
-  "Sierra Leone",
-  "Singapore",
-  "Slovakia",
-  "Slovenia",
-  "Solomon Islands",
-  "Somalia",
-  "South Africa",
-  "South Korea",
-  "South Sudan",
-  "Spain",
-  "Sri Lanka",
-  "Sudan",
-  "Suriname",
-  "Sweden",
-  "Switzerland",
-  "Syria",
-  "Taiwan",
-  "Tajikistan",
-  "Tanzania",
-  "Thailand",
-  "Togo",
-  "Tonga",
-  "Trinidad and Tobago",
-  "Tunisia",
-  "Turkey",
-  "Turkmenistan",
-  "Tuvalu",
-  "Uganda",
-  "Ukraine",
-  "United Arab Emirates",
-  "United Kingdom",
-  "United States",
-  "Uruguay",
-  "Uzbekistan",
-  "Vanuatu",
-  "Vatican City",
-  "Venezuela",
-  "Vietnam",
-  "Yemen",
-  "Zambia",
-  "Zimbabwe",
-];
-
-// Searchable Country Select Component
-function CountrySelect({ 
-  value, 
-  onChange 
-}: { 
-  value: string; 
-  onChange: (value: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const filteredCountries = useMemo(() => {
-    if (!searchQuery) return countries;
-    const query = searchQuery.toLowerCase();
-    return countries.filter(country => 
-      country.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between font-normal"
-        >
-          {value || "Select country..."}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
-        <div className="p-2 border-b">
-          <Input
-            placeholder="Search countries..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8"
-            autoFocus
-          />
-        </div>
-        <div className="max-h-[300px] overflow-y-auto">
-          {filteredCountries.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              No country found.
-            </div>
-          ) : (
-            filteredCountries.map((country) => (
-              <div
-                key={country}
-                className={cn(
-                  "flex items-center px-3 py-2 cursor-pointer hover:bg-accent",
-                  value === country && "bg-accent"
-                )}
-                onClick={() => {
-                  onChange(country);
-                  setOpen(false);
-                  setSearchQuery("");
-                }}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    value === country ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                {country}
-              </div>
-            ))
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-// AI Enhance Button Component
-function AIEnhanceButton({ 
-  text, 
-  type, 
-  onEnhanced,
-  disabled 
-}: { 
-  text: string;
-  type: "bio" | "fundingGoals";
-  onEnhanced: (enhanced: string) => void;
-  disabled?: boolean;
-}) {
-  const [isEnhancing, setIsEnhancing] = useState(false);
-  const { toast } = useToast();
-
-  const handleEnhance = async () => {
-    if (!text || text.trim().length < 10) {
-      toast({
-        title: "Need more content",
-        description: "Please write at least 10 characters before enhancing.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsEnhancing(true);
-    try {
-      const res = await fetch("/api/ai/enhance-bio", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, type }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to enhance");
-      }
-
-      const data = await res.json();
-      onEnhanced(data.enhanced);
-      toast({
-        title: "Enhanced!",
-        description: "Your text has been improved by AI. Feel free to edit it further.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Enhancement failed",
-        description: error.message || "Please try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
-
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={handleEnhance}
-      disabled={disabled || isEnhancing || !text || text.trim().length < 10}
-      className="gap-1.5 text-purple-600 border-purple-200 hover:bg-purple-50 hover:text-purple-700"
-    >
-      {isEnhancing ? (
-        <>
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Enhancing...
-        </>
-      ) : (
-        <>
-          <Sparkles className="h-3.5 w-3.5" />
-          Enhance with AI
-        </>
-      )}
-    </Button>
-  );
-}
+type PlayerSignupForm = z.infer<typeof playerSignupSchema>;
 
 export default function PlayerSignup() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isEnhancingBio, setIsEnhancingBio] = useState(false);
+  const [isEnhancingGoals, setIsEnhancingGoals] = useState(false);
 
-  // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  const form = useForm<SignupForm>({
-    resolver: zodResolver(signupSchema),
+  const form = useForm<PlayerSignupForm>({
+    resolver: zodResolver(playerSignupSchema),
     defaultValues: {
       email: "",
       password: "",
       fullName: "",
-      age: "",
+      age: undefined,
+      gender: undefined,
       country: "",
       location: "",
       ranking: "",
       specialization: "",
+      playStyle: undefined,
       bio: "",
       fundingGoals: "",
       videoUrl: "",
@@ -479,38 +88,14 @@ export default function PlayerSignup() {
     },
   });
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removePhoto = () => {
-    setPhotoFile(null);
-    setPhotoPreview(null);
-  };
-
   const signupMutation = useMutation({
-    mutationFn: async (data: SignupForm) => {
+    mutationFn: async (data: PlayerSignupForm) => {
       const formData = new FormData();
-      formData.append("email", data.email);
-      formData.append("password", data.password);
-      formData.append("fullName", data.fullName);
-      formData.append("age", data.age);
-      formData.append("country", data.country);
-      formData.append("location", data.location);
-      if (data.ranking) formData.append("ranking", data.ranking);
-      formData.append("specialization", data.specialization);
-      formData.append("bio", data.bio);
-      formData.append("fundingGoals", data.fundingGoals);
-      formData.append("videoUrl", data.videoUrl);
-      formData.append("atpProfileUrl", data.atpProfileUrl);
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          formData.append(key, String(value));
+        }
+      });
       if (photoFile) {
         formData.append("photo", photoFile);
       }
@@ -528,99 +113,158 @@ export default function PlayerSignup() {
       return res.json();
     },
     onSuccess: (data) => {
-      // Check if verification is required (new flow)
       if (data.requiresVerification) {
         toast({
-          title: "Account Created!",
-          description: "Please check your email to verify your account.",
+          title: "Check your email!",
+          description: "We've sent you a verification link. Please verify your email to continue.",
         });
-        // Redirect to signup success page with email
-        const email = encodeURIComponent(data.player?.email || "");
-        setLocation(`/signup-success?email=${email}`);
+        setLocation("/signin?verify=pending");
       } else {
-        // Old flow (fallback) - direct login
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-        toast({
-          title: "Account Created",
-          description: "Welcome to GameSetMatch!",
-        });
         setLocation("/dashboard");
       }
     },
     onError: (error: Error) => {
       toast({
-        title: "Signup Failed",
-        description: error.message || "Please check your information and try again.",
+        title: "Signup failed",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const onSubmit = (data: SignupForm) => {
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select an image under 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const enhanceWithAI = async (type: "bio" | "fundingGoals") => {
+    const text = form.getValues(type);
+    if (!text || text.trim().length < 10) {
+      toast({
+        title: "Write something first",
+        description: "Please write at least 10 characters, then click enhance.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (type === "bio") setIsEnhancingBio(true);
+    else setIsEnhancingGoals(true);
+
+    try {
+      const res = await fetch("/api/ai/enhance-bio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, type }),
+      });
+
+      if (!res.ok) throw new Error("Enhancement failed");
+
+      const data = await res.json();
+      form.setValue(type, data.enhanced);
+      toast({
+        title: "✨ Enhanced!",
+        description: "Your text has been polished by AI.",
+      });
+    } catch (error) {
+      toast({
+        title: "Enhancement failed",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      if (type === "bio") setIsEnhancingBio(false);
+      else setIsEnhancingGoals(false);
+    }
+  };
+
+  const onSubmit = (data: PlayerSignupForm) => {
     signupMutation.mutate(data);
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="flex-1 py-12">
-        <div className="max-w-2xl mx-auto px-6">
-          <Button asChild variant="ghost" size="sm" className="mb-6">
-            <Link href="/">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
-            </Link>
-          </Button>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-purple-50 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+        {/* Back Link */}
+        <Link href="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
 
-          <Card className="p-8">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-card-foreground mb-2">
-                Player Registration
-              </h1>
-              <p className="text-muted-foreground">
-                Create your GameSetMatch profile and start receiving sponsorships
-              </p>
+        {/* Main Card */}
+        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+          {/* Header with Gradient */}
+          <div className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 px-6 sm:px-8 py-8 text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Player Registration</h1>
+            <p className="text-emerald-100">Create your GameSetMatch profile and start receiving sponsorships</p>
+            
+            {/* AI Badge */}
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium mt-4">
+              <Sparkles className="w-4 h-4" />
+              AI-powered bio writing • FREE
             </div>
+          </div>
 
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Photo Upload */}
-                <div className="space-y-2">
-                  <FormLabel>Profile Photo</FormLabel>
-                  <div className="flex items-center gap-4">
+          {/* Form Content */}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 sm:p-8">
+              
+              {/* Section 1: Profile Photo */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                  Profile Photo
+                </h2>
+                <div className="flex items-center gap-6">
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all overflow-hidden"
+                  >
                     {photoPreview ? (
-                      <div className="relative">
-                        <img
-                          src={photoPreview}
-                          alt="Profile preview"
-                          className="w-24 h-24 rounded-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={removePhoto}
-                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
+                      <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
-                      <label className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                        <Upload className="h-6 w-6 text-gray-400" />
-                        <span className="text-xs text-gray-400 mt-1">Upload</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handlePhotoChange}
-                          className="hidden"
-                        />
-                      </label>
+                      <div className="text-center">
+                        <Upload className="w-6 h-6 text-gray-400 mx-auto" />
+                        <span className="text-xs text-gray-500 mt-1">Upload</span>
+                      </div>
                     )}
-                    <p className="text-sm text-muted-foreground">
-                      Upload a professional photo (JPG, PNG, max 5MB)
-                    </p>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                  />
+                  <div>
+                    <p className="text-sm text-gray-600">Upload a professional photo</p>
+                    <p className="text-xs text-gray-400">JPG, PNG, max 5MB</p>
                   </div>
                 </div>
+              </div>
 
-                {/* Basic Info */}
+              {/* Section 2: Basic Information */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                  Basic Information
+                </h2>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -629,7 +273,7 @@ export default function PlayerSignup() {
                       <FormItem>
                         <FormLabel>Full Name *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Roger Federer" {...field} />
+                          <Input placeholder="Roger Federer" className="rounded-xl py-3" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -642,37 +286,38 @@ export default function PlayerSignup() {
                       <FormItem>
                         <FormLabel>Email *</FormLabel>
                         <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="your.email@example.com"
-                            {...field}
-                          />
+                          <Input type="email" placeholder="your.email@example.com" className="rounded-xl py-3" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  <div className="md:col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password *</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="At least 8 characters" className="rounded-xl py-3" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="At least 8 characters"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Section 3: Player Details */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                  Player Details
+                </h2>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                   <FormField
                     control={form.control}
                     name="age"
@@ -680,79 +325,58 @@ export default function PlayerSignup() {
                       <FormItem>
                         <FormLabel>Age *</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="25" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Country *</FormLabel>
-                        <FormControl>
-                          <CountrySelect
-                            value={field.value}
-                            onChange={field.onChange}
+                          <Input 
+                            type="number" 
+                            placeholder="25" 
+                            className="rounded-xl py-3"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  
+                  {/* Gender Field */}
                   <FormField
                     control={form.control}
-                    name="location"
+                    name="gender"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City/Location *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Basel, Switzerland" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="ranking"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Current Ranking (Optional)</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="150" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Your current ATP/WTA/ITF ranking
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="specialization"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Court Specialization *</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                        <FormLabel>Gender *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select court type" />
+                            <SelectTrigger className="rounded-xl py-3">
+                              <SelectValue placeholder="Select gender" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {courtSpecializations.map((spec) => (
-                              <SelectItem key={spec} value={spec}>
-                                {spec}
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="country"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Country *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="rounded-xl py-3">
+                              <SelectValue placeholder="Select country" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {COUNTRIES.map((country) => (
+                              <SelectItem key={country} value={country}>
+                                {country}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -763,66 +387,177 @@ export default function PlayerSignup() {
                   />
                 </div>
 
-                {/* Bio with AI Enhance */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City/Location *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Basel, Switzerland" className="rounded-xl py-3" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="ranking"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Ranking</FormLabel>
+                        <FormControl>
+                          <Input placeholder="150 (optional)" className="rounded-xl py-3" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="specialization"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Court Specialization *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="rounded-xl py-3">
+                              <SelectValue placeholder="Select court type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="All Courts">All Courts</SelectItem>
+                            <SelectItem value="Hard Court">Hard Court</SelectItem>
+                            <SelectItem value="Clay Court">Clay Court</SelectItem>
+                            <SelectItem value="Grass Court">Grass Court</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Play Style Field */}
                 <FormField
                   control={form.control}
-                  name="bio"
+                  name="playStyle"
                   render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center justify-between">
-                        <FormLabel>About You *</FormLabel>
-                        <AIEnhanceButton
-                          text={field.value}
-                          type="bio"
-                          onEnhanced={(enhanced) => form.setValue("bio", enhanced)}
-                        />
-                      </div>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Tell us about your tennis journey, achievements, and goals... (Write a rough draft and click 'Enhance with AI' to polish it!)"
-                          className="min-h-[100px]"
-                          {...field}
-                        />
-                      </FormControl>
+                    <FormItem className="md:w-1/3">
+                      <FormLabel>Play Style *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl py-3">
+                            <SelectValue placeholder="Select play style" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="singles">Singles</SelectItem>
+                          <SelectItem value="doubles">Doubles</SelectItem>
+                          <SelectItem value="both">Both Singles & Doubles</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-400 mt-1">What type of matches do you primarily compete in?</p>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
-                {/* Funding Goals with AI Enhance */}
-                <FormField
-                  control={form.control}
-                  name="fundingGoals"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center justify-between">
-                        <FormLabel>Funding Goals *</FormLabel>
-                        <AIEnhanceButton
-                          text={field.value}
-                          type="fundingGoals"
-                          onEnhanced={(enhanced) => form.setValue("fundingGoals", enhanced)}
-                        />
-                      </div>
-                      <FormControl>
-                        <Textarea
-                          placeholder="What will you use the sponsorship funds for? (e.g., tournament fees, coaching, travel, equipment)"
-                          className="min-h-[100px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Section 4: Tell Your Story (AI) */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="w-8 h-8 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm font-bold">4</span>
+                  Tell Your Story
+                  <span className="ml-2 inline-flex items-center gap-1 bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full text-xs font-medium">
+                    <Sparkles className="w-3 h-3" />
+                    AI-Powered
+                  </span>
+                </h2>
+                
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="bio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>About You *</FormLabel>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => enhanceWithAI("bio")}
+                            disabled={isEnhancingBio}
+                            className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                          >
+                            {isEnhancingBio ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-4 h-4 mr-1" />
+                            )}
+                            Enhance with AI
+                          </Button>
+                        </div>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Tell us about your tennis journey, achievements, and goals... (Write a rough draft and click 'Enhance with AI' to polish it!)"
+                            className="rounded-xl min-h-[140px] resize-none focus:border-purple-500 focus:ring-purple-500/20"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="fundingGoals"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>Funding Goals *</FormLabel>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => enhanceWithAI("fundingGoals")}
+                            disabled={isEnhancingGoals}
+                            className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                          >
+                            {isEnhancingGoals ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-4 h-4 mr-1" />
+                            )}
+                            Enhance with AI
+                          </Button>
+                        </div>
+                        <FormControl>
+                          <Textarea
+                            placeholder="What will you use the sponsorship funds for? (e.g., tournament fees, coaching, travel, equipment)"
+                            className="rounded-xl min-h-[120px] resize-none focus:border-purple-500 focus:ring-purple-500/20"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
 
-                {/* Verification Section */}
-                <div className="border-t pt-6 mt-6">
-                  <h3 className="text-lg font-semibold mb-4">Verification</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    We verify all players to ensure authenticity. Please provide the
-                    following:
-                  </p>
-
+              {/* Section 5: Verification */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">5</span>
+                  Verification
+                </h2>
+                <p className="text-sm text-gray-600 mb-4">We verify all players to ensure authenticity. Please provide the following:</p>
+                
+                <div className="space-y-4">
                   <FormField
                     control={form.control}
                     name="atpProfileUrl"
@@ -830,79 +565,85 @@ export default function PlayerSignup() {
                       <FormItem>
                         <FormLabel>ATP/ITF/WTA Profile URL *</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="https://www.atptour.com/en/players/..."
-                            {...field}
+                          <Input 
+                            placeholder="https://www.atptour.com/en/players/..." 
+                            className="rounded-xl py-3"
+                            {...field} 
                           />
                         </FormControl>
-                        <FormDescription>
-                          Link to your official profile on atptour.com, itftennis.com,
-                          or wtatennis.com
-                        </FormDescription>
+                        <p className="text-xs text-gray-400 mt-1">Link to your official profile on atptour.com, itftennis.com, or wtatennis.com</p>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-
+                  
                   <FormField
                     control={form.control}
                     name="videoUrl"
                     render={({ field }) => (
-                      <FormItem className="mt-4">
+                      <FormItem>
                         <FormLabel>Verification Video Link *</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="https://youtube.com/... or https://drive.google.com/..."
-                            {...field}
+                          <Input 
+                            placeholder="https://youtube.com/... or https://drive.google.com/..." 
+                            className="rounded-xl py-3"
+                            {...field} 
                           />
                         </FormControl>
-                        <FormDescription>
-                          Link to a short video introducing yourself (YouTube, Google
-                          Drive, Dropbox, etc.)
-                        </FormDescription>
+                        <p className="text-xs text-gray-400 mt-1">Link to a short video introducing yourself (YouTube, Google Drive, Dropbox, etc.)</p>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
+              </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-800">
-                    <strong>What happens next?</strong>
-                    <br />
-                    1. You'll receive an email to verify your email address
-                    <br />
-                    2. After verification, our team will review your profile
-                    <br />
-                    3. Once approved, you can connect your Stripe account to receive
-                    sponsorships
-                  </p>
-                </div>
+              {/* What Happens Next */}
+              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-6 mb-8 border border-emerald-100">
+                <h3 className="font-semibold text-gray-900 mb-3">What happens next?</h3>
+                <ol className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
+                    You'll receive an email to verify your email address
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
+                    After verification, our team will review your profile
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
+                    Once approved, you can connect your Stripe account to receive sponsorships
+                  </li>
+                </ol>
+              </div>
 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={signupMutation.isPending}
-                >
-                  {signupMutation.isPending
-                    ? "Creating Account..."
-                    : "Create Account"}
-                </Button>
-              </form>
-            </Form>
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                disabled={signupMutation.isPending}
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-6 rounded-xl font-semibold text-lg shadow-lg shadow-emerald-500/30 transition-all"
+              >
+                {signupMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
+              </Button>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
+              {/* Sign In Link */}
+              <p className="text-center text-gray-600 mt-6">
                 Already have an account?{" "}
-                <Link href="/signin" className="text-primary hover:underline">
+                <Link href="/signin" className="text-emerald-600 hover:text-emerald-700 font-medium">
                   Sign in here
                 </Link>
               </p>
-            </div>
-          </Card>
+            </form>
+          </Form>
         </div>
       </div>
-      <Footer />
     </div>
   );
 }

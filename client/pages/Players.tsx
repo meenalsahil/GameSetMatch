@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Search, ExternalLink, Loader2, Flame } from "lucide-react";
+import { Sparkles, Search, ExternalLink, Loader2, Flame, User, Users } from "lucide-react";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,6 +27,8 @@ interface Player {
   photoUrl: string | null;
   atpProfileUrl: string | null;
   sponsorCount?: number;
+  gender?: string;
+  playStyle?: string;
 }
 
 // Generate gradient colors based on name
@@ -99,7 +101,24 @@ function getCountryFlag(country: string): string {
   return flags[country] || "🌍";
 }
 
-export default function BrowsePlayers() {
+// Format play style for display
+function formatPlayStyle(playStyle: string | undefined): string {
+  if (!playStyle) return "";
+  const styles: Record<string, string> = {
+    "singles": "Singles",
+    "doubles": "Doubles",
+    "both": "Singles & Doubles",
+  };
+  return styles[playStyle] || playStyle;
+}
+
+// Format gender for display
+function formatGender(gender: string | undefined): string {
+  if (!gender) return "";
+  return gender === "male" ? "Male" : gender === "female" ? "Female" : gender;
+}
+
+export default function Players() {
   const [searchQuery, setSearchQuery] = useState("");
   const [aiSearchQuery, setAiSearchQuery] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
@@ -158,7 +177,7 @@ export default function BrowsePlayers() {
     return true;
   });
 
- // If AI search was performed, only show matched players
+  // If AI search was performed, only show matched players
   if (aiMatchedIds && aiMatchedIds.length > 0) {
     const matchedPlayers = aiMatchedIds
       .map((id) => filteredPlayers.find((p) => p.id === id))
@@ -348,7 +367,7 @@ export default function BrowsePlayers() {
           {/* Results count */}
           <p className="text-gray-500 text-sm mb-4">
             {aiMatchedIds
-              ? `Showing ${aiMatchedIds.length} AI matches out of ${filteredPlayers.length} players`
+              ? `Showing ${aiMatchedIds.length} AI matches`
               : `Showing ${filteredPlayers.length} players`}
           </p>
 
@@ -421,24 +440,42 @@ export default function BrowsePlayers() {
                           {getCountryFlag(player.country)} {player.country}
                         </span>
                       </div>
+                      
+                      {/* Main info line */}
                       <p className="text-sm text-gray-500">
                         {player.location} • {player.specialization}
                         {player.ranking && ` • Rank #${player.ranking}`}
                       </p>
                       
-                      {/* ATP Profile Link */}
-                      {player.atpProfileUrl && (
-                        <a
-                          href={player.atpProfileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          View ATP Profile
-                        </a>
-                      )}
+                      {/* Gender & Play Style badges */}
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {player.gender && (
+                          <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                            <User className="w-3 h-3" />
+                            {formatGender(player.gender)}
+                          </span>
+                        )}
+                        {player.playStyle && (
+                          <span className="inline-flex items-center gap-1 text-xs bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full">
+                            <Users className="w-3 h-3" />
+                            {formatPlayStyle(player.playStyle)}
+                          </span>
+                        )}
+                        
+                        {/* ATP Profile Link */}
+                        {player.atpProfileUrl && (
+                          <a
+                            href={player.atpProfileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            View ATP Profile
+                          </a>
+                        )}
+                      </div>
                     </div>
 
                     {/* Sponsor Count */}

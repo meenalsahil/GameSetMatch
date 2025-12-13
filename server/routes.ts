@@ -125,6 +125,20 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
   }
 });
 
+app.get("/api/admin/add-player-fields", async (_req: Request, res: Response) => {
+  try {
+    await pool.query(`
+      ALTER TABLE players 
+      ADD COLUMN IF NOT EXISTS gender TEXT,
+      ADD COLUMN IF NOT EXISTS play_style TEXT
+    `);
+    res.json({ success: true, message: "gender and play_style columns added" });
+  } catch (e: any) {
+    console.error("Migration error:", e);
+    res.status(500).json({ message: e.message });
+  }
+});
+
 app.get("/api/admin/update-sponsor-count", async (_req: Request, res: Response) => {
   try {
     // Update Family Tennis sponsor count (or use actual player ID)
@@ -183,7 +197,9 @@ app.get("/api/admin/add-sponsor-count", async (_req: Request, res: Response) => 
             raw.age === "" || raw.age === undefined
               ? undefined
               : Number.parseInt(String(raw.age), 10),
-          country: String(raw.country || "").trim(),
+         gender: String(raw.gender || "").trim(),
+playStyle: String(raw.playStyle || "").trim(),
+              country: String(raw.country || "").trim(),
           location: String(raw.location || "").trim(),
           ranking:
             raw.ranking === undefined || raw.ranking === ""
@@ -263,6 +279,8 @@ app.get("/api/admin/add-sponsor-count", async (_req: Request, res: Response) => 
           passwordHash,
           fullName: data.fullName,
           age: data.age,
+         gender: data.gender || null,
+playStyle: data.playStyle || null,
           country: data.country,
           location: data.location,
           ranking: data.ranking ?? null,
@@ -788,19 +806,22 @@ app.get("/api/admin/add-sponsor-count", async (_req: Request, res: Response) => 
 
       // 4. Merge the data
       const transformed = list
-        .filter((p: any) => p.active !== false)
-        .map((p: any) => ({
-          id: p.id,
-          fullName: p.fullName,
-          location: p.location,
-          ranking: p.ranking,
-          specialization: p.specialization,
-          bio: p.bio,
-          fundingGoals: p.fundingGoals,
-          videoUrl: p.videoUrl,
-          photoUrl: p.photoUrl,
-          country: p.country,
-          age: p.age,
+  .filter((p: any) => p.active !== false)
+  .map((p: any) => ({
+    id: p.id,
+    fullName: p.fullName,
+    location: p.location,
+    ranking: p.ranking,
+    specialization: p.specialization,
+    bio: p.bio,
+    fundingGoals: p.fundingGoals,
+    videoUrl: p.videoUrl,
+    photoUrl: p.photoUrl,
+    country: p.country,
+    age: p.age,
+    gender: p.gender,
+    playStyle: p.playStyle || p.play_style,
+    sponsorCount: p.sponsorCount || p.sponsor_count || 0,
 
           // verification info
           atpProfileUrl: p.atpProfileUrl,

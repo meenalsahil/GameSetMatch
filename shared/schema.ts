@@ -97,7 +97,9 @@ export const signupPlayerSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   fullName: z.string().min(2, "Please enter your full name"),
 age: z.number().min(14, "You must be at least 14 years old"),
-  country: z.string().min(2, "Please enter your country"),
+gender: z.enum(["male", "female"]).optional(),
+playStyle: z.enum(["singles", "doubles", "both"]).optional(), 
+country: z.string().min(2, "Please enter your country"),
   location: z.string().min(2, "Please enter your location"),
   ranking: z.string().optional(),
   specialization: z
