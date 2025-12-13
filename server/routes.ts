@@ -1000,6 +1000,30 @@ playStyle: data.playStyle || null,
     },
   );
 
+// EMERGENCY FIX: Add columns if missing AND set default values for existing players
+  app.get("/api/admin/emergency-fix", async (_req: Request, res: Response) => {
+    try {
+      // 1. Ensure columns exist (just in case)
+      await pool.query(`
+        ALTER TABLE players 
+        ADD COLUMN IF NOT EXISTS gender TEXT,
+        ADD COLUMN IF NOT EXISTS play_style TEXT
+      `);
+
+      // 2. Set default values for anyone who has NULL (Backfill)
+      await pool.query(`
+        UPDATE players 
+        SET gender = 'Male', play_style = 'Singles' 
+        WHERE gender IS NULL OR play_style IS NULL
+      `);
+      
+      res.json({ success: true, message: "Fixed: Columns added and defaults set to Male/Singles" });
+    } catch (e: any) {
+      console.error("Emergency fix error:", e);
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   // -------- ADMIN: Approve player --------
   app.post(
     "/api/admin/players/:id/approve",
