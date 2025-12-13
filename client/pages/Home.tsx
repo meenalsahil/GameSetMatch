@@ -51,7 +51,9 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/65 to-emerald-900/50" />
 
         {/* Hero content */}
-        {/* Trust pills - UPDATED: Consolidated AI badge */}
+        <div className="relative z-10 container mx-auto px-6 py-24 flex items-center min-h-[70vh]">
+          <div className="max-w-4xl">
+            {/* Trust pills - UPDATED: Consolidated AI badge */}
             <div className="flex flex-wrap gap-3 mb-5">
               <div className="inline-flex items-center gap-2 bg-emerald-900/40 border border-emerald-500/40 text-emerald-200 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
