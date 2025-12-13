@@ -1377,10 +1377,10 @@ Return ONLY the enhanced funding goals text, nothing else.`
       
       res.json({ enhanced });
     } catch (e: any) {
-      const// ============================================
-// ADD THIS ROUTE TO server/routes.ts
-// Place it after the /api/ai/enhance-bio route
-// ============================================
+      console.error("AI enhance error:", e);
+      res.status(500).json({ message: "Failed to enhance text" });
+    }
+  });
 
   // -------- AI: Search/Match Players --------
   app.post("/api/ai/search-players", async (req: Request, res: Response) => {
@@ -1470,12 +1470,6 @@ IMPORTANT: Return ONLY a valid JSON array of IDs, nothing else. Example: ["id1",
       console.error("AI search error:", e);
       res.status(500).json({ message: "Failed to search players" });
     }
-  });console.error("AI enhance error:", e);
-      res.status(500).json({ message: "Failed to enhance text" });
-    }
-  });
-
-
 
   return httpServer;
 }
