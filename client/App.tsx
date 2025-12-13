@@ -1,4 +1,6 @@
 // client/App.tsx
+import PrivacyPolicy from "@/pages/Privacy";
+import TermsOfService from "@/pages/Terms";
 import Testimonials from "@/pages/Testimonials";
 import Header from "@/components/Header";
 import { Switch, Route } from "wouter";
@@ -44,6 +46,8 @@ function Router() {
       <Route path="/testimonials" component={Testimonials} />
       <Route path="/faq" component={FAQ} />
       <Route path="/contact" component={Contact} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/terms" component={TermsOfService} />
       
       {/* Browse & Player Profiles */}
       <Route path="/browse" component={Players} />
