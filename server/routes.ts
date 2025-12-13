@@ -1398,11 +1398,12 @@ Return ONLY the enhanced funding goals text, nothing else.`
   });
 
   // -------- AI: Search/Match Players --------
+  // -------- AI: Search/Match Players --------
   app.post("/api/ai/search-players", async (req: Request, res: Response) => {
     try {
       const { query } = req.body;
       
-      if (!query || query.trim().length < 5) {
+      if (!query || query.trim().length < 2) {
         return res.status(400).json({ message: "Please provide a more detailed search query" });
       }
 
@@ -1418,55 +1419,54 @@ Return ONLY the enhanced funding goals text, nothing else.`
         return res.json({ matchedPlayerIds: [] });
       }
 
-      // Create a summary of players for AI
+      // Create a summary of players for AI - FORCE NUMBERS for math accuracy
       const playerSummaries = players.map((p: any) => ({
         id: p.id,
         name: p.fullName,
-        age: p.age,
+        age: Number(p.age), // Ensure number
         country: p.country,
         location: p.location,
-        ranking: p.ranking,
+        ranking: p.ranking ? Number(p.ranking) : null, // Ensure number for comparisons
         specialization: p.specialization,
-        bio: p.bio?.substring(0, 200), // Limit bio length
+        bio: p.bio?.substring(0, 200),
         fundingGoals: p.fundingGoals?.substring(0, 150),
         sponsorCount: p.sponsorCount || 0,
       }));
 
       const openai = new OpenAI({ apiKey });
 
-      const prompt = `You are a helpful assistant for a tennis player sponsorship platform. A sponsor is searching for players to support.
+      // UPDATED PROMPT: Strict math logic + Ranking context
+      const prompt = `You are an expert tennis consultant. A sponsor is searching for players.
 
-Sponsor's search query: "${query}"
+CONTEXT ON TENNIS RANKINGS:
+- Rank #1 is the BEST. Rank #1000 is lower.
+- "Top 100" means ranks 1-100.
+- "Rank 800 and up" or "Above 800" is ambiguous. Default to the NUMERIC interpretation (Rank > 800) unless the user implies "better" (e.g. "Top 800").
+- "Under 500" means ranks < 500 (Better players).
 
-Here are the available players:
+INSTRUCTIONS:
+1. Analyze the Sponsor's Query: "${query}"
+2. Filter the players list below.
+3. CRITICAL: If the query specifies a number (e.g. "Age 20+", "Rank > 800"), include EVERY player that mathematically fits. Do not arbitrarily filter them out.
+4. Return a JSON array of the matching Player IDs.
+
+Available Players:
 ${JSON.stringify(playerSummaries, null, 2)}
 
-Based on the sponsor's query, identify which players are the BEST matches. Consider:
-- Country/region preferences
-- Playing surface specialization (clay, hard, grass)
-- Age or career stage
-- Ranking level
-- Funding needs mentioned
-- Any other relevant criteria from the query
-
-Return a JSON array of player IDs ordered from best match to worst match. Only include players that reasonably match the criteria (don't include everyone).
-
-If no players match the criteria well, return an empty array.
-
-IMPORTANT: Return ONLY a valid JSON array of IDs, nothing else. Example: ["id1", "id2", "id3"]`;
+Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         max_tokens: 500,
         messages: [{ role: "user", content: prompt }],
+        temperature: 0.1, // Lower temperature = more precise/less creative
       });
 
       const responseText = completion.choices[0]?.message?.content || "[]";
       
-      // Parse the response - extract JSON array
+      // Parse the response
       let matchedPlayerIds: string[] = [];
       try {
-        // Try to find JSON array in response
         const jsonMatch = responseText.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           matchedPlayerIds = JSON.parse(jsonMatch[0]);
@@ -1476,7 +1476,7 @@ IMPORTANT: Return ONLY a valid JSON array of IDs, nothing else. Example: ["id1",
         matchedPlayerIds = [];
       }
 
-      // Validate that IDs actually exist
+      // Validate IDs
       const validPlayerIds = players.map((p: any) => p.id);
       matchedPlayerIds = matchedPlayerIds.filter((id: string) => validPlayerIds.includes(id));
 
