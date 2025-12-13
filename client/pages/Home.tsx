@@ -51,17 +51,17 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/65 to-emerald-900/50" />
 
         {/* Hero content */}
-        <div className="relative z-10 container mx-auto px-6 py-24 flex items-center min-h-[70vh]">
-          <div className="max-w-4xl">
-            {/* Trust pills - OPTION 1: Added AI badge */}
+        <{/* Trust pills - UPDATED: Consolidated AI badge */}
             <div className="flex flex-wrap gap-3 mb-5">
               <div className="inline-flex items-center gap-2 bg-emerald-900/40 border border-emerald-500/40 text-emerald-200 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 Verified tennis players • ATP / ITF / WTA linked
               </div>
-              <div className="inline-flex items-center gap-2 bg-purple-900/40 border border-purple-400/40 text-purple-200 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide">
-                <Sparkles className="w-3.5 h-3.5" />
-                AI-powered profile builder • FREE
+              
+              {/* NEW: Unified AI Badge with Glow Effect */}
+              <div className="inline-flex items-center gap-2 bg-purple-900/60 border border-purple-400/50 text-purple-100 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide shadow-[0_0_15px_rgba(168,85,247,0.3)] backdrop-blur-sm">
+                <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+                AI-Powered Platform • Smart Search & Bio Builder
               </div>
             </div>
 
