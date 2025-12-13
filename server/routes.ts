@@ -793,6 +793,9 @@ app.get("/api/admin/add-sponsor-count", async (_req: Request, res: Response) => 
           atpProfileUrl: p.atpProfileUrl,
           atpVerified: p.atpVerified,
           atpVerificationScore: p.atpVerificationScore,
+          
+          // ADD THIS LINE:
+          sponsorCount: p.sponsor_count || p.sponsorCount || 0, 
         }));
 
       res.json(transformed);
@@ -801,7 +804,6 @@ app.get("/api/admin/add-sponsor-count", async (_req: Request, res: Response) => 
       res.status(500).json({ message: "Failed to get players" });
     }
   });
-
   // -------- PUBLIC: Get single player --------
   app.get("/api/players/:id", async (req: Request, res: Response) => {
     try {
