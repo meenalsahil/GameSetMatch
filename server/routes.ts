@@ -1377,10 +1377,105 @@ Return ONLY the enhanced funding goals text, nothing else.`
       
       res.json({ enhanced });
     } catch (e: any) {
-      console.error("AI enhance error:", e);
+      cons// ============================================
+// ADD THIS ROUTE TO server/routes.ts
+// Place it after the /api/ai/enhance-bio route
+// ============================================
+
+  // -------- AI: Search/Match Players --------
+  app.post("/api/ai/search-players", async (req: Request, res: Response) => {
+    try {
+      const { query } = req.body;
+      
+      if (!query || query.trim().length < 5) {
+        return res.status(400).json({ message: "Please provide a more detailed search query" });
+      }
+
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "AI service not configured" });
+      }
+
+      // Get all published players
+      const players = await storage.getPublishedPlayers();
+      
+      if (players.length === 0) {
+        return res.json({ matchedPlayerIds: [] });
+      }
+
+      // Create a summary of players for AI
+      const playerSummaries = players.map((p: any) => ({
+        id: p.id,
+        name: p.fullName,
+        age: p.age,
+        country: p.country,
+        location: p.location,
+        ranking: p.ranking,
+        specialization: p.specialization,
+        bio: p.bio?.substring(0, 200), // Limit bio length
+        fundingGoals: p.fundingGoals?.substring(0, 150),
+        sponsorCount: p.sponsorCount || 0,
+      }));
+
+      const openai = new OpenAI({ apiKey });
+
+      const prompt = `You are a helpful assistant for a tennis player sponsorship platform. A sponsor is searching for players to support.
+
+Sponsor's search query: "${query}"
+
+Here are the available players:
+${JSON.stringify(playerSummaries, null, 2)}
+
+Based on the sponsor's query, identify which players are the BEST matches. Consider:
+- Country/region preferences
+- Playing surface specialization (clay, hard, grass)
+- Age or career stage
+- Ranking level
+- Funding needs mentioned
+- Any other relevant criteria from the query
+
+Return a JSON array of player IDs ordered from best match to worst match. Only include players that reasonably match the criteria (don't include everyone).
+
+If no players match the criteria well, return an empty array.
+
+IMPORTANT: Return ONLY a valid JSON array of IDs, nothing else. Example: ["id1", "id2", "id3"]`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_tokens: 500,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const responseText = completion.choices[0]?.message?.content || "[]";
+      
+      // Parse the response - extract JSON array
+      let matchedPlayerIds: string[] = [];
+      try {
+        // Try to find JSON array in response
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          matchedPlayerIds = JSON.parse(jsonMatch[0]);
+        }
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", responseText);
+        matchedPlayerIds = [];
+      }
+
+      // Validate that IDs actually exist
+      const validPlayerIds = players.map((p: any) => p.id);
+      matchedPlayerIds = matchedPlayerIds.filter((id: string) => validPlayerIds.includes(id));
+
+      res.json({ matchedPlayerIds });
+    } catch (e: any) {
+      console.error("AI search error:", e);
+      res.status(500).json({ message: "Failed to search players" });
+    }
+  });console.error("AI enhance error:", e);
       res.status(500).json({ message: "Failed to enhance text" });
     }
   });
+
+
 
   return httpServer;
 }
