@@ -773,7 +773,20 @@ app.get("/api/admin/add-sponsor-count", async (_req: Request, res: Response) => 
   // -------- PUBLIC: Browse players --------
   app.get("/api/players", async (_req: Request, res: Response) => {
     try {
+      // 1. Get the standard player data
       const list: any[] = await storage.getPublishedPlayers();
+
+      // 2. FORCE FETCH: Get sponsor counts using Raw SQL 
+      // This bypasses Drizzle/Schema limitations to ensure we see the new column
+      const countsResult = await pool.query("SELECT id, sponsor_count FROM players");
+      
+      // 3. Create a lookup map: PlayerID -> Count
+      const countMap = new Map();
+      countsResult.rows.forEach((row: any) => {
+        countMap.set(row.id, row.sponsor_count);
+      });
+
+      // 4. Merge the data
       const transformed = list
         .filter((p: any) => p.active !== false)
         .map((p: any) => ({
@@ -794,8 +807,8 @@ app.get("/api/admin/add-sponsor-count", async (_req: Request, res: Response) => 
           atpVerified: p.atpVerified,
           atpVerificationScore: p.atpVerificationScore,
           
-          // ADD THIS LINE:
-          sponsorCount: p.sponsor_count || p.sponsorCount || 0, 
+          // 5. Use the Map to get the correct count
+          sponsorCount: countMap.get(p.id) || 0, 
         }));
 
       res.json(transformed);
