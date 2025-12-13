@@ -664,8 +664,8 @@ playStyle: data.playStyle || null,
           email: p.email,
           fullName: p.fullName,
           age: p.age,
-         gender: player.gender,
-playStyle: player.playStyle || player.play_style,
+         gender: p.gender,
+playStyle: p.playStyle || p.play_style,
           country: p.country,
           location: p.location,
           ranking: p.ranking,
@@ -750,8 +750,8 @@ playStyle: player.playStyle || player.play_style,
             body.photoUrl === undefined
               ? undefined
               : String(body.photoUrl).trim(),
-              gender: body.gender || player.gender,
-playStyle: body.playStyle || player.playStyle,
+             gender: body.gender === undefined ? undefined : String(body.gender).trim(),
+          playStyle: body.playStyle === undefined ? undefined : String(body.playStyle).trim(),
         };
 
         const updated = await storage.updatePlayer(String(playerId), update);
