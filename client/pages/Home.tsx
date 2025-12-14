@@ -61,7 +61,7 @@ export default function HomePage() {
               
               <div className="inline-flex items-center gap-2 bg-purple-900/60 border border-purple-400/50 text-purple-100 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide shadow-[0_0_15px_rgba(168,85,247,0.3)] backdrop-blur-sm">
                 <Sparkles className="w-3.5 h-3.5 text-purple-300" />
-                AI-Powered Platform • Smart Search & Bio Builder
+                AI-Powered Platform • Smart Player Browse & Player Profile Builder
               </div>
             </div>
 
