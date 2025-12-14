@@ -24,9 +24,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload, Sparkles, Loader2, Search, UserCheck } from "lucide-react";
+import { ArrowLeft, Upload, Sparkles, Loader2, Search, UserCheck, Trash2, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-// --- NEW COMPONENT: Smart Player Search ---
+// --- COMPONENT: Smart Player Search ---
 function PlayerLookup({ onSelect }: { onSelect: (player: any) => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
@@ -59,9 +60,10 @@ function PlayerLookup({ onSelect }: { onSelect: (player: any) => void }) {
           <UserCheck className="w-6 h-6 text-purple-600" />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold text-lg text-purple-900 mb-1">Claim your Profile</h3>
+          {/* UPDATED: Better Wording */}
+          <h3 className="font-semibold text-lg text-purple-900 mb-1">Find Your Player Record</h3>
           <p className="text-sm text-purple-700 mb-4">
-            Start typing your name to auto-fill your details (Name, Age, Country) from our official database.
+            If you have an ATP/WTA ranking, search your name to auto-fill your details.
           </p>
           
           <div className="relative">
@@ -78,6 +80,12 @@ function PlayerLookup({ onSelect }: { onSelect: (player: any) => void }) {
               </div>
             )}
           </div>
+
+          {/* UPDATED: "Not Found" Helper Text */}
+          <p className="text-xs text-purple-600 mt-2 ml-1">
+            <span className="font-semibold">Note:</span> Don't see your name? No problem! 
+            You can skip this and fill out the form manually below.
+          </p>
 
           {results.length > 0 && (
             <div className="mt-2 bg-white rounded-md border shadow-sm divide-y max-h-48 overflow-y-auto">
@@ -105,8 +113,8 @@ function PlayerLookup({ onSelect }: { onSelect: (player: any) => void }) {
     </Card>
   );
 }
-// ------------------------------------------
 
+// --- Country Select Component ---
 const COUNTRIES = [
   "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Canada", 
   "Chile", "China", "Colombia", "Croatia", "Czech Republic", "Denmark",
@@ -117,6 +125,25 @@ const COUNTRIES = [
   "Sweden", "Switzerland", "Thailand", "Turkey", "Ukraine", 
   "United Kingdom", "United States", "Uruguay", "Venezuela"
 ];
+
+function CountrySelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <Select onValueChange={onChange} value={value}>
+      <FormControl>
+        <SelectTrigger className="rounded-xl py-3">
+          <SelectValue placeholder="Select country" />
+        </SelectTrigger>
+      </FormControl>
+      <SelectContent>
+          {COUNTRIES.map((country) => (
+            <SelectItem key={country} value={country}>
+              {country}
+            </SelectItem>
+          ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 // Helper: is it ATP / ITF / WTA host?
 const isOfficialTourHost = (value: string) => {
@@ -187,24 +214,29 @@ export default function PlayerSignup() {
     },
   });
 
-  // --- NEW: Handle profile selection from smart search ---
   const handleClaimProfile = (playerData: any) => {
     form.setValue("fullName", playerData.fullName);
-    
-    // Check if the country from DB exists in our COUNTRIES list to avoid dropdown errors
     if (COUNTRIES.includes(playerData.country)) {
        form.setValue("country", playerData.country);
     }
-    
     if (playerData.age) form.setValue("age", playerData.age);
     if (playerData.gender) form.setValue("gender", playerData.gender);
     
     toast({
-      title: "Profile Found!",
-      description: "We've auto-filled your Name, Age, Gender, and Country. Please complete the rest.",
+      title: "Record Found",
+      description: "We've auto-filled your basic details. Please complete the rest of the form.",
     });
   };
-  // -----------------------------------------------------
+
+  // --- NEW: Handle Clear Form ---
+  const handleClearForm = () => {
+    if(confirm("Are you sure you want to clear all fields?")) {
+      form.reset();
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      toast({ title: "Form Cleared", description: "All fields have been reset." });
+    }
+  };
 
   const signupMutation = useMutation({
     mutationFn: async (data: PlayerSignupForm) => {
@@ -324,7 +356,7 @@ export default function PlayerSignup() {
           Back to Home
         </Link>
 
-        {/* --- 1. NEW: Claim Profile Section --- */}
+        {/* 1. SMART SEARCH SECTION */}
         <PlayerLookup onSelect={handleClaimProfile} />
 
         {/* Main Card */}
@@ -334,7 +366,7 @@ export default function PlayerSignup() {
             <h1 className="text-2xl sm:text-3xl font-bold mb-2">Player Registration</h1>
             <p className="text-emerald-100">Create your GameSetMatch profile and start receiving sponsorships</p>
             
-            {/* AI Badge - PRESERVED */}
+            {/* AI Badge */}
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium mt-4">
               <Sparkles className="w-4 h-4" />
               AI-powered bio writing • FREE
@@ -345,12 +377,27 @@ export default function PlayerSignup() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 sm:p-8">
               
-              {/* Section 1: Profile Photo */}
+              {/* Section 1: Profile Photo & Clear Button */}
               <div className="mb-8">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-sm font-bold">1</span>
-                  Profile Photo
-                </h2>
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <span className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                    Profile Photo
+                  </h2>
+                  
+                  {/* UPDATED: Clear Button */}
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleClearForm}
+                    className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Reset Form
+                  </Button>
+                </div>
+
                 <div className="flex items-center gap-6">
                   <div
                     onClick={() => fileInputRef.current?.click()}
@@ -458,6 +505,8 @@ export default function PlayerSignup() {
                       </FormItem>
                     )}
                   />
+                  
+                  {/* Gender Field */}
                   <FormField
                     control={form.control}
                     name="gender"
@@ -479,26 +528,14 @@ export default function PlayerSignup() {
                       </FormItem>
                     )}
                   />
+                  
                   <FormField
                     control={form.control}
                     name="country"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Country *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="rounded-xl py-3">
-                              <SelectValue placeholder="Select country" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {COUNTRIES.map((country) => (
-                              <SelectItem key={country} value={country}>
-                                {country}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <CountrySelect value={field.value} onChange={field.onChange} />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -526,7 +563,7 @@ export default function PlayerSignup() {
                       <FormItem>
                         <FormLabel>Current Ranking (Optional)</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter ranking" className="rounded-xl py-3" {...field} />
+                          <Input placeholder="150" className="rounded-xl py-3" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -716,7 +753,7 @@ export default function PlayerSignup() {
                 </div>
               </div>
 
-              {/* What Happens Next - PRESERVED */}
+              {/* What Happens Next */}
               <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-6 mb-8 border border-emerald-100">
                 <h3 className="font-semibold text-gray-900 mb-3">What happens next?</h3>
                 <ol className="space-y-2 text-sm text-gray-600">
