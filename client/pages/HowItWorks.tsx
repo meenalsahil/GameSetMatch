@@ -14,6 +14,7 @@ import {
   Users,
   DollarSign,
   Shield,
+  HelpCircle, // Added Icon
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -97,6 +98,31 @@ const faqs = [
   },
 ];
 
+// Reusable Help Card Component
+function HelpCard() {
+  return (
+    <Card className="p-8 text-center bg-slate-50 border-2 border-dashed border-slate-200 hover:border-primary/50 transition-all">
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white shadow-sm mb-6">
+        <HelpCircle className="h-8 w-8 text-slate-500" />
+      </div>
+      <h3 className="text-2xl font-bold text-card-foreground mb-3">
+        Have Questions?
+      </h3>
+      <p className="text-muted-foreground mb-6 text-sm">
+        Not sure where to start? Check our FAQ or get in touch with our team.
+      </p>
+      <div className="flex flex-col gap-3">
+        <Button asChild variant="outline" className="w-full bg-white">
+          <Link href="/faq">Read FAQ</Link>
+        </Button>
+        <Button asChild variant="ghost" className="w-full text-primary hover:text-primary/80">
+          <Link href="/contact">Contact Us</Link>
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 export default function HowItWorks() {
   return (
     <div className="min-h-screen flex flex-col">
@@ -124,9 +150,11 @@ export default function HowItWorks() {
               Get the support you need to compete at ATP, Challenger, and ITF
               tournaments.
             </p>
-            <div className="grid md:grid-cols-3 gap-8 mb-8">
+            
+            {/* UPDATED GRID LAYOUT: 1 col mobile, 2 col tablet, 4 col desktop */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {playerSteps.map((step, index) => (
-                <Card key={index} className="p-8 text-center">
+                <Card key={index} className="p-8 text-center h-full">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
                     <step.icon className="h-8 w-8 text-primary" />
                   </div>
@@ -136,7 +164,11 @@ export default function HowItWorks() {
                   <p className="text-muted-foreground">{step.description}</p>
                 </Card>
               ))}
+              
+              {/* 4th Card: Help */}
+              <HelpCard />
             </div>
+
             <div className="text-center">
               <Button
                 asChild
@@ -158,9 +190,11 @@ export default function HowItWorks() {
               with additional safeguards to help you feel confident in who
               you&apos;re supporting.
             </p>
-            <div className="grid md:grid-cols-3 gap-8 mb-8">
+            
+            {/* UPDATED GRID LAYOUT */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {sponsorSteps.map((step, index) => (
-                <Card key={index} className="p-8 text-center">
+                <Card key={index} className="p-8 text-center h-full">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/10 mb-6">
                     <step.icon className="h-8 w-8 text-accent" />
                   </div>
@@ -170,7 +204,11 @@ export default function HowItWorks() {
                   <p className="text-muted-foreground">{step.description}</p>
                 </Card>
               ))}
+
+              {/* 4th Card: Help */}
+              <HelpCard />
             </div>
+
             <div className="text-center">
               <Button
                 asChild
