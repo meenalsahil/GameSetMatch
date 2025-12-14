@@ -108,7 +108,7 @@ export default function HomePage() {
               </Button>
             </div>
 
-            {/* Trust strip bullets (Restored & Visible) */}
+            {/* Trust strip bullets */}
             <div className="flex flex-wrap gap-4 text-xs md:text-sm text-emerald-100/90 font-medium">
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -116,11 +116,11 @@ export default function HomePage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Video verification for player identity
+                Video verification
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Manual review before profiles go live
+                Manual review
               </div>
             </div>
           </div>
@@ -147,10 +147,9 @@ export default function HomePage() {
               For Players
             </h3>
             
-            {/* UPDATED GRID: 4 Equal Columns */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
               
-              {/* Step 1 */}
+              {/* Player Card 1 */}
               <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg h-full">
                 <CardContent className="p-8 text-center h-full flex flex-col justify-between">
                   <div>
@@ -175,7 +174,7 @@ export default function HomePage() {
                 </CardContent>
               </Card>
 
-              {/* Step 2 */}
+              {/* Player Card 2 */}
               <Card className="border-2 border-purple-200 hover:border-purple-500 transition-all hover:shadow-lg relative h-full">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
                   <span className="inline-flex items-center gap-1.5 bg-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
@@ -190,7 +189,7 @@ export default function HomePage() {
                     </div>
                     <h3 className="text-2xl font-bold mb-4">Build Profile</h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
-                      Showcase your achievements and funding goals
+                      Showcase your achievements and funding goals.
                     </p>
                     <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
                       <li className="flex items-start gap-2">
@@ -210,8 +209,8 @@ export default function HomePage() {
                 </CardContent>
               </Card>
 
-              {/* Step 3 */}
-              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg h-full">
+              {/* Player Card 3 */}
+              <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg h-full">
                 <CardContent className="p-8 text-center h-full flex flex-col justify-between">
                   <div>
                     <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -219,7 +218,7 @@ export default function HomePage() {
                     </div>
                     <h3 className="text-2xl font-bold mb-4">Get Support</h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
-                      Connect with supporters who want to back your journey
+                      Connect with supporters who want to back your journey.
                     </p>
                     <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
                       <li className="flex items-start gap-2">
@@ -235,7 +234,7 @@ export default function HomePage() {
                 </CardContent>
               </Card>
 
-              {/* Step 4 (Help) - Now MATCHING STYLE */}
+              {/* Player Card 4 (Help) */}
               <Card className="border-2 hover:border-gray-400 transition-all hover:shadow-lg h-full bg-gray-50/50">
                 <CardContent className="p-8 text-center h-full flex flex-col justify-between">
                   <div>
@@ -277,54 +276,92 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* UPDATED GRID: 4 Equal Columns */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
               
+              {/* Supporter Card 1 */}
               <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg h-full">
                 <CardContent className="p-8 text-center h-full flex flex-col justify-between">
                   <div>
-                    <Users className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Users className="h-8 w-8 text-blue-600" />
+                    </div>
                     <h3 className="text-xl font-bold mb-3">Browse Players</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm">
-                      Discover talented tennis players at all competitive levels
-                      and find the right fit
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                      Discover talented tennis players at all competitive levels.
                     </p>
+                    {/* Added List to match Player Card Height/Density */}
+                    <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
+                       <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <span>Filter by rank & region</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <span>View verified videos</span>
+                      </li>
+                    </ul>
                   </div>
                 </CardContent>
               </Card>
 
+              {/* Supporter Card 2 */}
               <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg h-full">
                 <CardContent className="p-8 text-center h-full flex flex-col justify-between">
                   <div>
-                    <Target className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Target className="h-8 w-8 text-blue-600" />
+                    </div>
                     <h3 className="text-xl font-bold mb-3">Choose a Player</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm">
-                      Review profiles, equipment needs, and support goals to find
-                      your match
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                      Review profiles and support goals to find your match.
                     </p>
+                    {/* Added List to match Player Card Height/Density */}
+                     <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
+                       <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <span>See equipment needs</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <span>Support specific goals</span>
+                      </li>
+                    </ul>
                   </div>
                 </CardContent>
               </Card>
 
+              {/* Supporter Card 3 */}
               <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg h-full">
                 <CardContent className="p-8 text-center h-full flex flex-col justify-between">
                   <div>
-                    <Trophy className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Trophy className="h-8 w-8 text-blue-600" />
+                    </div>
                     <h3 className="text-xl font-bold mb-3">Make an Impact</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm">
-                      Contribute toward travel, coaching, gear, or stipends and
-                      help athletes achieve their goals
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                      Contribute toward travel, coaching, or gear.
                     </p>
+                    {/* Added List to match Player Card Height/Density */}
+                     <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
+                       <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <span>100% Secure payments</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <span>Help athletes win</span>
+                      </li>
+                    </ul>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* 4th Card: Help (MATCHING STYLE) */}
+              {/* Supporter Card 4 (Help) */}
               <Card className="border-2 hover:border-gray-400 transition-all hover:shadow-lg h-full bg-gray-50/50">
                 <CardContent className="p-8 text-center h-full flex flex-col justify-between">
                   <div>
-                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <HelpCircle className="h-6 w-6 text-gray-500" />
+                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <HelpCircle className="h-8 w-8 text-gray-500" />
                     </div>
                     <h3 className="text-xl font-bold mb-3 text-gray-800">Need Help?</h3>
                     <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
