@@ -127,6 +127,17 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
 
 // --- KNOWN PLAYERS REGISTRY ---
 
+// ADMIN: Clear the known_players table
+  app.delete("/api/admin/clear-known-players", async (_req: Request, res: Response) => {
+    try {
+      await pool.query("TRUNCATE TABLE known_players RESTART IDENTITY");
+      res.json({ success: true, message: "Known players database cleared." });
+    } catch (e: any) {
+      console.error("Clear error:", e);
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   // ADMIN: Seed the database with CSV text from your PDF
   app.post("/api/admin/seed-csv", async (req: Request, res: Response) => {
     try {
