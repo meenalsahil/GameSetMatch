@@ -285,11 +285,10 @@ export default function HomePage() {
                     <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
                       <Users className="h-8 w-8 text-blue-600" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3">Browse Players</h3>
+                    <h3 className="text-2xl font-bold mb-4">Browse Players</h3>
                     <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
                       Discover talented tennis players at all competitive levels.
                     </p>
-                    {/* Added List to match Player Card Height/Density */}
                     <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
                        <li className="flex items-start gap-2">
                         <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -311,12 +310,11 @@ export default function HomePage() {
                     <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
                       <Target className="h-8 w-8 text-blue-600" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3">Choose a Player</h3>
+                    <h3 className="text-2xl font-bold mb-4">Choose a Player</h3>
                     <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
                       Review profiles and support goals to find your match.
                     </p>
-                    {/* Added List to match Player Card Height/Density */}
-                     <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
+                    <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
                        <li className="flex items-start gap-2">
                         <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
                         <span>See equipment needs</span>
@@ -337,11 +335,10 @@ export default function HomePage() {
                     <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
                       <Trophy className="h-8 w-8 text-blue-600" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3">Make an Impact</h3>
+                    <h3 className="text-2xl font-bold mb-4">Make an Impact</h3>
                     <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
                       Contribute toward travel, coaching, or gear.
                     </p>
-                    {/* Added List to match Player Card Height/Density */}
                      <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
                        <li className="flex items-start gap-2">
                         <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -356,24 +353,24 @@ export default function HomePage() {
                 </CardContent>
               </Card>
 
-              {/* Supporter Card 4 (Help) */}
+              {/* Supporter Card 4 (Help) - IDENTICAL TO PLAYER SECTION */}
               <Card className="border-2 hover:border-gray-400 transition-all hover:shadow-lg h-full bg-gray-50/50">
                 <CardContent className="p-8 text-center h-full flex flex-col justify-between">
                   <div>
                     <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
                       <HelpCircle className="h-8 w-8 text-gray-500" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3 text-gray-800">Need Help?</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                      Questions about how sponsorships work?
+                    <h3 className="text-2xl font-bold mb-4 text-gray-800">Have Questions?</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
+                      Not sure where to start? Check our FAQ or contact us directly.
                     </p>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <Button asChild variant="outline" size="sm" className="w-full bg-white">
-                      <Link href="/faq">FAQ</Link>
+                  <div className="flex flex-col gap-3">
+                    <Button asChild variant="outline" className="w-full bg-white">
+                      <Link href="/faq">Read FAQ</Link>
                     </Button>
-                    <Button asChild variant="ghost" size="sm" className="w-full">
-                      <Link href="/contact">Contact</Link>
+                    <Button asChild variant="ghost" className="w-full">
+                      <Link href="/contact">Contact Us</Link>
                     </Button>
                   </div>
                 </CardContent>
