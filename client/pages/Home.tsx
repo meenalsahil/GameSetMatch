@@ -272,7 +272,7 @@ export default function HomePage() {
               <h3 className="text-3xl font-bold mb-3">For Supporters</h3>
               <div className="inline-flex items-center gap-2 bg-purple-100 border border-purple-200 text-purple-700 px-4 py-1.5 rounded-full text-sm font-medium">
                 <Sparkles className="w-4 h-4" />
-                AI-powered player matching • FREE
+                AI-powered player search • FREE
               </div>
             </div>
 
