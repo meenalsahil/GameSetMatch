@@ -114,17 +114,52 @@ function PlayerLookup({ onSelect }: { onSelect: (player: any) => void }) {
   );
 }
 
-// --- Country Select Component ---
-const COUNTRIES = [
-  "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Canada", 
-  "Chile", "China", "Colombia", "Croatia", "Czech Republic", "Denmark",
-  "Egypt", "Finland", "France", "Germany", "Greece", "Hungary", "India",
-  "Ireland", "Israel", "Italy", "Japan", "Mexico", "Netherlands", 
-  "New Zealand", "Norway", "Poland", "Portugal", "Romania", "Russia",
-  "Serbia", "Slovakia", "South Africa", "South Korea", "Spain", 
-  "Sweden", "Switzerland", "Thailand", "Turkey", "Ukraine", 
-  "United Kingdom", "United States", "Uruguay", "Venezuela"
-];
+const CODE_TO_COUNTRY: Record<string, string> = {
+  "AFG": "Afghanistan", "ALB": "Albania", "ALG": "Algeria", "AND": "Andorra", "ANG": "Angola",
+  "ANT": "Antigua and Barbuda", "ARG": "Argentina", "ARM": "Armenia", "ARU": "Aruba", "AUS": "Australia",
+  "AUT": "Austria", "AZE": "Azerbaijan", "BAH": "Bahamas", "BAN": "Bangladesh", "BAR": "Barbados",
+  "BDI": "Burundi", "BEL": "Belgium", "BEN": "Benin", "BER": "Bermuda", "BHU": "Bhutan",
+  "BIH": "Bosnia and Herzegovina", "BIZ": "Belize", "BLR": "Belarus", "BOL": "Bolivia", "BOT": "Botswana",
+  "BRA": "Brazil", "BRN": "Bahrain", "BRU": "Brunei", "BUL": "Bulgaria", "BUR": "Burkina Faso",
+  "CAF": "Central African Republic", "CAM": "Cambodia", "CAN": "Canada", "CAY": "Cayman Islands", "CGO": "Congo",
+  "CHA": "Chad", "CHI": "Chile", "CHN": "China", "CIV": "Ivory Coast", "CMR": "Cameroon",
+  "COD": "DR Congo", "COK": "Cook Islands", "COL": "Colombia", "COM": "Comoros", "CPV": "Cape Verde",
+  "CRC": "Costa Rica", "CRO": "Croatia", "CUB": "Cuba", "CUR": "Curacao", "CYP": "Cyprus",
+  "CZE": "Czech Republic", "DEN": "Denmark", "DJI": "Djibouti", "DMA": "Dominica", "DOM": "Dominican Republic",
+  "ECU": "Ecuador", "EGY": "Egypt", "ERI": "Eritrea", "ESA": "El Salvador", "ESP": "Spain",
+  "EST": "Estonia", "ETH": "Ethiopia", "FIJ": "Fiji", "FIN": "Finland", "FRA": "France",
+  "FRO": "Faroe Islands", "GAB": "Gabon", "GAM": "Gambia", "GBR": "United Kingdom", "GBS": "Guinea-Bissau",
+  "GEO": "Georgia", "GEQ": "Equatorial Guinea", "GER": "Germany", "GHA": "Ghana", "GRE": "Greece",
+  "GRN": "Grenada", "GUA": "Guatemala", "GUI": "Guinea", "GUM": "Guam", "GUY": "Guyana",
+  "HAI": "Haiti", "HKG": "Hong Kong", "HON": "Honduras", "HUN": "Hungary", "INA": "Indonesia",
+  "IND": "India", "IRI": "Iran", "IRL": "Ireland", "IRQ": "Iraq", "ISL": "Iceland",
+  "ISR": "Israel", "ISV": "Virgin Islands (US)", "ITA": "Italy", "IVB": "Virgin Islands (UK)", "JAM": "Jamaica",
+  "JOR": "Jordan", "JPN": "Japan", "KAZ": "Kazakhstan", "KEN": "Kenya", "KGZ": "Kyrgyzstan",
+  "KIR": "Kiribati", "KOR": "South Korea", "KSA": "Saudi Arabia", "KUW": "Kuwait", "LAO": "Laos",
+  "LAT": "Latvia", "LBA": "Libya", "LBN": "Lebanon", "LBR": "Liberia", "LCA": "Saint Lucia",
+  "LES": "Lesotho", "LIE": "Liechtenstein", "LTU": "Lithuania", "LUX": "Luxembourg", "MAD": "Madagascar",
+  "MAR": "Morocco", "MAS": "Malaysia", "MAW": "Malawi", "MDA": "Moldova", "MDV": "Maldives",
+  "MEX": "Mexico", "MGL": "Mongolia", "MHL": "Marshall Islands", "MKD": "North Macedonia", "MLI": "Mali",
+  "MLT": "Malta", "MNE": "Montenegro", "MON": "Monaco", "MOZ": "Mozambique", "MRI": "Mauritius",
+  "MTN": "Mauritania", "MYA": "Myanmar", "NAM": "Namibia", "NCA": "Nicaragua", "NED": "Netherlands",
+  "NEP": "Nepal", "NGR": "Nigeria", "NIG": "Niger", "NOR": "Norway", "NRU": "Nauru",
+  "NZL": "New Zealand", "OMA": "Oman", "PAK": "Pakistan", "PAN": "Panama", "PAR": "Paraguay",
+  "PER": "Peru", "PHI": "Philippines", "PLE": "Palestine", "PLW": "Palau", "PNG": "Papua New Guinea",
+  "POL": "Poland", "POR": "Portugal", "PRK": "North Korea", "PUR": "Puerto Rico", "QAT": "Qatar",
+  "ROU": "Romania", "RSA": "South Africa", "RUS": "Russia", "RWA": "Rwanda", "SAM": "Samoa",
+  "SEN": "Senegal", "SEY": "Seychelles", "SGP": "Singapore", "SKN": "Saint Kitts and Nevis", "SLE": "Sierra Leone",
+  "SLO": "Slovenia", "SMR": "San Marino", "SOL": "Solomon Islands", "SOM": "Somalia", "SRB": "Serbia",
+  "SRI": "Sri Lanka", "STP": "Sao Tome and Principe", "SUD": "Sudan", "SUI": "Switzerland", "SUR": "Suriname",
+  "SVK": "Slovakia", "SWE": "Sweden", "SWZ": "Eswatini", "SYR": "Syria", "TAN": "Tanzania",
+  "TGA": "Tonga", "THA": "Thailand", "TJK": "Tajikistan", "TKM": "Turkmenistan", "TLS": "Timor-Leste",
+  "TOG": "Togo", "TPE": "Chinese Taipei", "TTO": "Trinidad and Tobago", "TUN": "Tunisia", "TUR": "Turkey",
+  "TUV": "Tuvalu", "UAE": "United Arab Emirates", "UGA": "Uganda", "UKR": "Ukraine", "URU": "Uruguay",
+  "USA": "United States", "UZB": "Uzbekistan", "VAN": "Vanuatu", "VEN": "Venezuela", "VIE": "Vietnam",
+  "VIN": "Saint Vincent and the Grenadines", "YEM": "Yemen", "ZAM": "Zambia", "ZIM": "Zimbabwe"
+};
+
+// Generate the list of country names from the map values, sorted alphabetically
+const COUNTRIES = Array.from(new Set(Object.values(CODE_TO_COUNTRY))).sort();
 
 function CountrySelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   return (
@@ -214,11 +249,23 @@ export default function PlayerSignup() {
     },
   });
 
-  const handleClaimProfile = (playerData: any) => {
+ const handleClaimProfile = (playerData: any) => {
     form.setValue("fullName", playerData.fullName);
-    if (COUNTRIES.includes(playerData.country)) {
-       form.setValue("country", playerData.country);
+    
+    // --- NEW LOGIC START ---
+    let mappedCountry = playerData.country;
+    
+    // Check if we have a mapping for this code (e.g. "IND" -> "India")
+    if (CODE_TO_COUNTRY[playerData.country]) {
+      mappedCountry = CODE_TO_COUNTRY[playerData.country];
     }
+    
+    // Only set it if the result is in our valid COUNTRIES list
+    if (COUNTRIES.includes(mappedCountry)) {
+       form.setValue("country", mappedCountry);
+    }
+    // --- NEW LOGIC END ---
+
     if (playerData.age) form.setValue("age", playerData.age);
     if (playerData.gender) form.setValue("gender", playerData.gender);
     
