@@ -87,8 +87,9 @@ export default function Header() {
               >
                 <Link href="/signin">Sign In</Link>
               </Button>
+              {/* UPDATED BUTTON TEXT */}
               <Button asChild size="sm" data-testid="button-get-started">
-                <Link href="/signup/player">Get Started</Link>
+                <Link href="/signup/player">Player Registration</Link>
               </Button>
             </>
           )}

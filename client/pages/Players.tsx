@@ -120,9 +120,11 @@ export default function Players() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <div className="flex-1">
         <div className="max-w-6xl mx-auto px-6 py-10">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Find Your Player</h1>
-            <p className="text-gray-600">Support talented tennis athletes on their journey to success</p>
+         <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Find a Player to Support</h1>
+            <p className="text-gray-600">
+              Browse verified athletes and help fund their journey to success
+            </p>
           </div>
 
           {/* AI Search Bar */}
