@@ -64,7 +64,23 @@ export default function AdminSeed() {
             placeholder={'"1","Player Name","USA","1998-05-05"\n"2","Another Player","ESP","2001-02-01"'}
           />
         </div>
-
+<div className="flex gap-4">
+          <Button onClick={handleSeed} disabled={loading || !data} className="flex-1">
+            {loading ? "Processing..." : "Seed Database"}
+          </Button>
+          
+          <Button 
+            variant="destructive"
+            onClick={async () => {
+              if (confirm("Are you sure? This will delete all searchable players.")) {
+                await fetch("/api/admin/clear-known-players", { method: "DELETE" });
+                alert("Database cleared!");
+              }
+            }}
+          >
+            Clear All
+          </Button>
+        </div>
         <Button onClick={handleSeed} disabled={loading || !data} className="w-full">
           {loading ? "Processing..." : "Seed Database"}
         </Button>
