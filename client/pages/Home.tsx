@@ -1,4 +1,3 @@
-import { Sparkles } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,8 +9,35 @@ import {
   ArrowRight,
   CheckCircle2,
   PlayCircle,
+  Sparkles,
+  HelpCircle, // Added Icon
 } from "lucide-react";
 import Footer from "@/components/Footer";
+
+// Reusable Help Card for Home Page
+function HelpCard() {
+  return (
+    <Card className="border-2 border-dashed border-slate-200 bg-slate-50 hover:border-purple-300 transition-all hover:shadow-md h-full">
+      <CardContent className="p-8 text-center h-full flex flex-col justify-center">
+        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+          <HelpCircle className="h-8 w-8 text-slate-400" />
+        </div>
+        <h3 className="text-xl font-bold mb-3 text-slate-700">Have Questions?</h3>
+        <p className="text-sm text-slate-500 mb-6">
+          Not sure where to start? Check our FAQ or contact us directly.
+        </p>
+        <div className="flex flex-col gap-2">
+          <Button asChild variant="outline" size="sm" className="w-full bg-white">
+            <Link href="/faq">Read FAQ</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm" className="w-full text-purple-600 hover:text-purple-700 hover:bg-purple-50">
+            <Link href="/contact">Contact Us</Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function HomePage() {
   useEffect(() => {
@@ -29,9 +55,8 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* HERO SECTION WITH BACKGROUND VIDEO */}
+      {/* HERO SECTION */}
       <section className="relative overflow-hidden">
-        {/* Background video */}
         <video
           className="absolute inset-0 w-full h-full object-cover"
           autoPlay
@@ -39,17 +64,14 @@ export default function HomePage() {
           loop
           playsInline
         >
-          {/* You can replace this with your own hosted tennis video later */}
           <source
             src="https://videos.pexels.com/video-files/4761793/4761793-uhd_2560_1440_25fps.mp4"
             type="video/mp4"
           />
         </video>
 
-        {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/65 to-emerald-900/50" />
 
-        {/* Hero content */}
         <div className="relative z-10 container mx-auto px-6 py-24 flex items-center min-h-[70vh]">
           <div className="max-w-4xl">
             {/* Trust pills */}
@@ -94,7 +116,7 @@ export default function HomePage() {
                 </Link>
               </Button>
 
-              {/* UPDATED BUTTON: "I am a Supporter" */}
+              {/* UPDATED: Renamed to "I am a Supporter" */}
               <Button
                 size="lg"
                 variant="outline"
@@ -109,19 +131,18 @@ export default function HomePage() {
               </Button>
             </div>
 
-            {/* Trust strip bullets */}
             <div className="flex flex-wrap gap-4 text-xs md:text-sm text-emerald-100/85">
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                ATP / ITF / WTA profile link required for players
+                ATP / ITF / WTA profile link required
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Video verification for player identity
+                Video verification
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Manual review before profiles go live
+                Manual review
               </div>
             </div>
           </div>
@@ -142,36 +163,35 @@ export default function HomePage() {
             </p>
           </div>
 
+          {/* PLAYERS SECTION */}
           <div className="mb-20">
             <h3 className="text-3xl font-bold text-center mb-12">
               For Players
             </h3>
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg">
+            
+            {/* UPDATED: 4 Columns */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+              {/* Card 1 */}
+              <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg h-full">
                 <CardContent className="p-8 text-center">
                   <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
                     <span className="text-3xl font-bold text-green-600">1</span>
                   </div>
                   <h3 className="text-2xl font-bold mb-4">Sign Up</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Create your player profile in minutes. It&apos;s free to
-                    join!
+                  <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
+                    Create your player profile in minutes. It&apos;s free to join!
                   </p>
-                  <ul className="text-left text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                  <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
                     <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>Share your tennis journey</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>Upload match videos</span>
+                      <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      <span>Share your journey</span>
                     </li>
                   </ul>
                 </CardContent>
               </Card>
 
-              <Card className="border-2 border-purple-200 hover:border-purple-500 transition-all hover:shadow-lg relative">
-                {/* AI Badge */}
+              {/* Card 2 */}
+              <Card className="border-2 border-purple-200 hover:border-purple-500 transition-all hover:shadow-lg relative h-full">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
                   <span className="inline-flex items-center gap-1.5 bg-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
                     <Sparkles className="w-3 h-3" />
@@ -182,53 +202,48 @@ export default function HomePage() {
                   <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
                     <span className="text-3xl font-bold text-purple-600">2</span>
                   </div>
-                  <h3 className="text-2xl font-bold mb-4">
-                    Build Your Profile
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Showcase your achievements, ranking, and funding goals
+                  <h3 className="text-2xl font-bold mb-4">Build Profile</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
+                    Showcase your achievements and funding goals
                   </p>
-                  <ul className="text-left text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                  <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
                     <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                       <span>Tournament results</span>
                     </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>Training needs</span>
-                    </li>
                     <li className="flex items-start gap-2 text-purple-600 font-medium">
-                      <Sparkles className="h-5 w-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                      <span>AI writes your bio - Free!</span>
+                      <Sparkles className="h-4 w-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                      <span>AI writes bio - Free!</span>
                     </li>
                   </ul>
                 </CardContent>
               </Card>
 
-              <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg">
+              {/* Card 3 */}
+              <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg h-full">
                 <CardContent className="p-8 text-center">
                   <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="text-3xl font-bold text-blue-600">
-                      3
-                    </span>
+                    <span className="text-3xl font-bold text-blue-600">3</span>
                   </div>
                   <h3 className="text-2xl font-bold mb-4">Get Support</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Connect with supporters who want to back your tennis
-                    journey
+                  <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
+                    Connect with supporters who want to back your journey
                   </p>
-                  <ul className="text-left text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                  <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
                     <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                       <span>Travel & gear funding</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                       <span>Monthly stipends</span>
                     </li>
                   </ul>
                 </CardContent>
               </Card>
+
+              {/* Card 4: Help (NEW) */}
+              <HelpCard />
             </div>
 
             <div className="text-center mt-12">
@@ -238,7 +253,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* For Supporters */}
+          {/* SUPPORTERS SECTION */}
           <div>
             <div className="text-center mb-12">
               <h3 className="text-3xl font-bold mb-3">For Supporters</h3>
@@ -247,39 +262,44 @@ export default function HomePage() {
                 AI-powered player matching • FREE
               </div>
             </div>
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg">
+
+            {/* UPDATED: 4 Columns */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg h-full">
                 <CardContent className="p-8 text-center">
                   <Users className="h-12 w-12 text-blue-600 mx-auto mb-4" />
                   <h3 className="text-xl font-bold mb-3">Browse Players</h3>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
                     Discover talented tennis players at all competitive levels
                     and find the right fit
                   </p>
                 </CardContent>
               </Card>
 
-              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg">
+              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg h-full">
                 <CardContent className="p-8 text-center">
                   <Target className="h-12 w-12 text-blue-600 mx-auto mb-4" />
                   <h3 className="text-xl font-bold mb-3">Choose a Player</h3>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
                     Review profiles, equipment needs, and support goals to find
                     your match
                   </p>
                 </CardContent>
               </Card>
 
-              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg">
+              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg h-full">
                 <CardContent className="p-8 text-center">
                   <Trophy className="h-12 w-12 text-blue-600 mx-auto mb-4" />
                   <h3 className="text-xl font-bold mb-3">Make an Impact</h3>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
                     Contribute toward travel, coaching, gear, or stipends and
                     help athletes achieve their goals
                   </p>
                 </CardContent>
               </Card>
+
+              {/* Card 4: Help (NEW) */}
+              <HelpCard />
             </div>
           </div>
         </div>
