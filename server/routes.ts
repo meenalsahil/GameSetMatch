@@ -125,6 +125,117 @@ app.get("/api/admin/fix-email-verified", async (_req: Request, res: Response) =>
   }
 });
 
+// --- KNOWN PLAYERS REGISTRY ---
+
+  // ADMIN: Seed the database with CSV text from your PDF
+  app.post("/api/admin/seed-csv", async (req: Request, res: Response) => {
+    try {
+      const { gender, csvData } = req.body;
+      
+      if (!csvData || !gender) {
+        return res.status(400).json({ message: "Missing data" });
+      }
+
+      // Ensure table exists
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS known_players (
+          id SERIAL PRIMARY KEY,
+          full_name TEXT NOT NULL,
+          country TEXT,
+          gender TEXT,
+          birth_date DATE,
+          source_id TEXT
+        );
+      `);
+
+      // Parse the CSV content you pasted
+      // Format: "Rank","Player","Country","Birthdate"
+      // Example: "1","Aryna Sabalenka","BLR","1998-05-05"
+      const rows = csvData.split("\n");
+      let count = 0;
+
+      for (const row of rows) {
+        // Remove quotes and split
+        const cleanRow = row.replace(/"/g, "").trim();
+        if (!cleanRow) continue;
+        
+        const cols = cleanRow.split(",");
+        // We expect at least 4 columns. 
+        // cols[1] is Name, cols[2] is Country Code, cols[3] is DOB
+        
+        if (cols.length >= 4) {
+          const name = cols[1].trim();
+          const countryCode = cols[2].trim();
+          const dob = cols[3].trim(); // 1998-05-05
+
+          // Basic validation
+          if (name && name !== "Player" && dob.includes("-")) {
+             await pool.query(
+              `INSERT INTO known_players (full_name, country, gender, birth_date) 
+               VALUES ($1, $2, $3, $4)
+               ON CONFLICT DO NOTHING`, // Prevent duplicates if run twice
+              [name, countryCode, gender, dob]
+            );
+            count++;
+          }
+        }
+      }
+
+      res.json({ success: true, message: `Successfully seeded ${count} ${gender} players.` });
+    } catch (e: any) {
+      console.error("Seeding error:", e);
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // SEARCH: Smart Lookup for Signup
+  app.get("/api/players/lookup", async (req: Request, res: Response) => {
+    try {
+      const query = req.query.q as string;
+      if (!query || query.length < 2) return res.json([]);
+
+      // Case-insensitive search
+      const result = await pool.query(
+        `SELECT full_name, country, gender, birth_date 
+         FROM known_players 
+         WHERE full_name ILIKE $1 
+         LIMIT 10`,
+        [`%${query}%`]
+      );
+
+      // Helper map for Country Codes -> Full Names
+      const countryMap: Record<string, string> = {
+        "USA": "United States", "GBR": "United Kingdom", "ESP": "Spain",
+        "FRA": "France", "ITA": "Italy", "GER": "Germany", "AUS": "Australia",
+        "ARG": "Argentina", "CAN": "Canada", "CHN": "China", "JPN": "Japan",
+        "RUS": "Russia", "SUI": "Switzerland", "CZE": "Czech Republic",
+        "BRA": "Brazil", "POL": "Poland", "SRB": "Serbia", "CRO": "Croatia"
+        // Add more if needed, otherwise it sends the code
+      };
+
+      const players = result.rows.map(p => {
+        let age = null;
+        if (p.birth_date) {
+          const birth = new Date(p.birth_date);
+          const today = new Date();
+          age = today.getFullYear() - birth.getFullYear();
+        }
+        
+        return {
+          fullName: p.full_name,
+          country: countryMap[p.country] || p.country, // Convert code if possible
+          gender: p.gender === 'Male' ? 'male' : 'female',
+          age: age
+        };
+      });
+
+      res.json(players);
+    } catch (e) {
+      console.error("Lookup error:", e);
+      res.json([]);
+    }
+  });
+
 app.get("/api/admin/add-player-fields", async (_req: Request, res: Response) => {
   try {
     await pool.query(`

@@ -7,6 +7,7 @@ import {
   text,
   timestamp,
   jsonb,
+  date
 } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
@@ -16,11 +17,8 @@ export const players = pgTable("players", {
   passwordHash: text("password_hash").notNull(),
   fullName: text("full_name").notNull(),
   age: integer("age"),
-  
-  // FIXED: Added these two missing columns
-  gender: text("gender"),
+  gender: text("gender"),      
   playStyle: text("play_style"),
-
   country: text("country"),
   location: text("location"),
   ranking: integer("ranking"),
@@ -68,6 +66,16 @@ export const players = pgTable("players", {
   verificationNotes: text("verification_notes"),
 });
 
+// NEW: Table to store your master list (from the PDFs)
+export const knownPlayers = pgTable("known_players", {
+  id: serial("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  country: text("country"),
+  gender: text("gender"), // 'Male' or 'Female'
+  birthDate: date("birth_date"),
+  sourceId: text("source_id"), // Optional ID from source
+});
+
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),
   playerId: integer("player_id").notNull(),
@@ -78,17 +86,15 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = typeof players.$inferInsert;
+export type KnownPlayer = typeof knownPlayers.$inferSelect;
 
 // ---- Zod schemas used by client + server ----
 
-// helper: is it ATP / ITF / WTA host?
 const isOfficialTourHost = (value: string) => {
   try {
     const url = new URL(value);
     const host = url.hostname.toLowerCase();
-
     const allowedRoots = ["atptour.com", "itftennis.com", "wtatennis.com"];
-
     return allowedRoots.some(
       (root) => host === root || host.endsWith("." + root),
     );
@@ -107,42 +113,17 @@ export const signupPlayerSchema = z.object({
   country: z.string().min(2, "Please enter your country"),
   location: z.string().min(2, "Please enter your location"),
   ranking: z.string().optional(),
-  specialization: z
-    .string()
-    .min(2, "Please specify your court specialization"),
-  bio: z
-    .string()
-    .min(
-      10,
-      "Please tell us about your tennis journey (at least 10 characters)",
-    ),
-  fundingGoals: z
-    .string()
-    .min(
-      10,
-      "Please describe what you're raising funds for (at least 10 characters)",
-    ),
-
-  // Verification video: any shareable link (YouTube, Drive, Dropbox, etc.), just required
+  specialization: z.string().min(2, "Please specify your court specialization"),
+  bio: z.string().min(10,"Please tell us about your tennis journey (at least 10 characters)"),
+  fundingGoals: z.string().min(10,"Please describe what you're raising funds for (at least 10 characters)"),
   videoUrl: z.string().min(1, "Verification video link is required"),
-
-  // ATP / ITF / WTA profile: required + must be on official domains
-  atpProfileUrl: z
-    .string()
-    .trim()
-    .min(1, "ATP/ITF/WTA Profile URL is required")
-    .refine(
-      (value) => {
-        // if somehow empty, let the .min() error handle it – avoid double errors
+  atpProfileUrl: z.string().trim().min(1, "ATP/ITF/WTA Profile URL is required")
+    .refine((value) => {
         if (!value) return true;
         return isOfficialTourHost(value);
       },
-      {
-        message:
-          "Please enter a link to an official ATP, ITF, or WTA player profile",
-      },
+      { message: "Please enter a link to an official ATP, ITF, or WTA player profile" },
     ),
-
   photo: z.any().optional(),
 });
 

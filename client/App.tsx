@@ -7,6 +7,7 @@ import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
+import AdminSeed from "@/pages/AdminSeed";
 
 // Pages
 import Home from "@/pages/Home";
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/faq" component={FAQ} />
       <Route path="/contact" component={Contact} />
       <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/admin/seed" component={AdminSeed} />
       <Route path="/terms" component={TermsOfService} />
       
       {/* Browse & Player Profiles */}
