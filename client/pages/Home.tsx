@@ -116,11 +116,11 @@ export default function HomePage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Video verification
+                Video upload by Players for authenticity
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Manual review
+                Manual account review of each Player by Admin
               </div>
             </div>
           </div>
@@ -136,7 +136,7 @@ export default function HomePage() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">How It Works</h2>
             <p className="text-xl text-gray-600 dark:text-gray-400">
-              Get the support you need to compete at ATP, Challenger, and ITF
+              Get the support you need to compete at ATP, WTA, Challenger, and ITF
               tournaments
             </p>
           </div>
