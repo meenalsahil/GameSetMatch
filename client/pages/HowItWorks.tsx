@@ -101,23 +101,25 @@ const faqs = [
 // Reusable Help Card Component
 function HelpCard() {
   return (
-    <Card className="p-8 text-center bg-slate-50 border-2 border-dashed border-slate-200 hover:border-primary/50 transition-all">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white shadow-sm mb-6">
-        <HelpCircle className="h-8 w-8 text-slate-500" />
-      </div>
-      <h3 className="text-2xl font-bold text-card-foreground mb-3">
-        Have Questions?
-      </h3>
-      <p className="text-muted-foreground mb-6 text-sm">
-        Not sure where to start? Check our FAQ or get in touch with our team.
-      </p>
-      <div className="flex flex-col gap-3">
-        <Button asChild variant="outline" className="w-full bg-white">
-          <Link href="/faq">Read FAQ</Link>
-        </Button>
-        <Button asChild variant="ghost" className="w-full text-primary hover:text-primary/80">
-          <Link href="/contact">Contact Us</Link>
-        </Button>
+    <Card className="p-8 text-center bg-slate-50 border-2 border-dashed border-slate-200 hover:border-primary/50 transition-all h-full flex flex-col justify-center">
+      <div>
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white shadow-sm mb-6">
+          <HelpCircle className="h-8 w-8 text-slate-500" />
+        </div>
+        <h3 className="text-2xl font-bold text-card-foreground mb-3">
+          Have Questions?
+        </h3>
+        <p className="text-muted-foreground mb-6 text-sm">
+          Not sure where to start? Check our FAQ or get in touch with our team.
+        </p>
+        <div className="flex flex-col gap-3">
+          <Button asChild variant="outline" className="w-full bg-white">
+            <Link href="/faq">Read FAQ</Link>
+          </Button>
+          <Button asChild variant="ghost" className="w-full text-primary hover:text-primary/80">
+            <Link href="/contact">Contact Us</Link>
+          </Button>
+        </div>
       </div>
     </Card>
   );
@@ -147,7 +149,7 @@ export default function HowItWorks() {
               For Players
             </h2>
             <p className="text-lg text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-              Get the support you need to compete at ATP, Challenger, and ITF
+              Get the support you need to compete at ATP, WTA, Challenger, and ITF
               tournaments.
             </p>
             
