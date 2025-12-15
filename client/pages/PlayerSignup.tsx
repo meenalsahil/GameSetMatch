@@ -212,6 +212,11 @@ const playerSignupSchema = z.object({
     .refine((value) => isOfficialTourHost(value), {
       message: "Please enter a link to an official ATP, ITF, or WTA player profile",
     }),
+  // ADD THIS BLOCK START
+  termsAgreement: z.boolean().default(false).refine((val) => val === true, {
+    message: "You must agree to the terms and privacy policy to continue",
+  }),
+  // ADD THIS BLOCK END
 });
 
 type PlayerSignupForm = z.infer<typeof playerSignupSchema>;
@@ -244,8 +249,9 @@ export default function PlayerSignup() {
       playStyle: undefined,
       bio: "",
       fundingGoals: "",
-      videoUrl: "",
+   videoUrl: "",
       atpProfileUrl: "",
+      termsAgreement: false, // <--- ADD THIS LINE
     },
   });
 
@@ -818,6 +824,36 @@ export default function PlayerSignup() {
                   </li>
                 </ol>
               </div>
+
+              {/* Terms and Conditions Checkbox */}
+              <FormField
+                control={form.control}
+                name="termsAgreement"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-xl border border-gray-200 p-4 mb-6 bg-gray-50">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-sm font-normal text-gray-600">
+                        I agree to the{" "}
+                        <Link href="/terms" className="text-emerald-600 hover:underline font-medium" target="_blank">
+                          Terms of Service
+                        </Link>{" "}
+                        and{" "}
+                        <Link href="/privacy" className="text-emerald-600 hover:underline font-medium" target="_blank">
+                          Privacy Policy
+                        </Link>
+                        .
+                      </FormLabel>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
 
               {/* Submit Button */}
               <Button
