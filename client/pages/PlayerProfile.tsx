@@ -14,11 +14,6 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
-export default function PlayerProfile() {
-  const { id } = useParams();
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
-
   // Add this block to force scroll to top
 export default function PlayerProfile() {
   const { id } = useParams();
