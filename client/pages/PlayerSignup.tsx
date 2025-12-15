@@ -840,15 +840,26 @@ export default function PlayerSignup() {
   />
 </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel className="text-sm font-normal text-gray-600">
+                      <FormLabel className="text-sm font-normal text-gray-600 cursor-pointer">
                         I agree to the{" "}
-                        <Link href="/terms" className="text-emerald-600 hover:underline font-medium" target="_blank">
+                        {/* Changed Link to standard <a> tag to force new tab correctly */}
+                        <a 
+                          href="/terms" 
+                          className="text-emerald-600 hover:underline font-medium" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
                           Terms of Service
-                        </Link>{" "}
+                        </a>{" "}
                         and{" "}
-                        <Link href="/privacy" className="text-emerald-600 hover:underline font-medium" target="_blank">
+                        <a 
+                          href="/privacy" 
+                          className="text-emerald-600 hover:underline font-medium" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
                           Privacy Policy
-                        </Link>
+                        </a>
                         .
                       </FormLabel>
                       <FormMessage />
