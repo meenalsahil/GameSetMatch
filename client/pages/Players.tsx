@@ -422,7 +422,7 @@ export default function Players() {
                     }`}
                   >
                     {/* Avatar */}
-                    <div
+                   <div
                       className={`w-14 h-14 rounded-full bg-gradient-to-br ${getGradientColors(
                         player.fullName
                       )} flex items-center justify-center text-xl font-bold text-white flex-shrink-0 self-start sm:self-center'}
@@ -503,7 +503,7 @@ export default function Players() {
                     </div>
 
                     {/* Sponsor Count */}
-                    <div className="flex items-center justify-between w-full sm:w-auto sm:flex-col sm:items-end sm:gap-2"">
+                    <div className="flex items-center justify-between w-full sm:w-auto sm:flex-col sm:items-end sm:gap-2">
                       <p className="text-xl font-bold text-emerald-600">
                         {player.sponsorCount || 0}
                       </p>
