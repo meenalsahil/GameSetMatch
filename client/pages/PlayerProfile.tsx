@@ -20,17 +20,15 @@ export default function PlayerProfile() {
   const { toast } = useToast();
 
   // Add this block to force scroll to top
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [id]);
-
-  const {
-    data: player,
-
 export default function PlayerProfile() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  // Force scroll to top when the page loads or ID changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
 
   const {
     data: player,
