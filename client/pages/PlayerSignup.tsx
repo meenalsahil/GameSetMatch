@@ -832,11 +832,13 @@ export default function PlayerSignup() {
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-xl border border-gray-200 p-4 mb-6 bg-gray-50">
                     <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
+  <input
+    type="checkbox"
+    checked={field.value}
+    onChange={field.onChange}
+    className="h-4 w-4 mt-1 rounded border-gray-300 text-emerald-600 focus:ring-emerald-600 cursor-pointer"
+  />
+</FormControl>
                     <div className="space-y-1 leading-none">
                       <FormLabel className="text-sm font-normal text-gray-600">
                         I agree to the{" "}
