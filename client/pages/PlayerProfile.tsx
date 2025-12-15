@@ -1,5 +1,5 @@
 // client/src/pages/PlayerProfile.tsx
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -38,70 +38,67 @@ export default function PlayerProfile() {
     },
   });
 
-  const handleSponsor = async () => {
-    // Safety: no player loaded yet
+  // --- NEW STATE ---
+  const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
+  // --- NEW FUNCTION 1: Opens the modal ---
+  const handleSupportClick = () => {
     if (!player) {
       toast({
         title: "Support Interest",
-        description:
-          "Thanks for your interest in supporting this player! We'll contact you shortly with next steps.",
+        description: "Thanks for your interest in supporting this player! We'll contact you shortly.",
       });
       return;
     }
+    // Open the modal instead of going directly to Stripe
+    setIsSponsorModalOpen(true);
+  };
+
+  // --- NEW FUNCTION 2: Handles the actual Stripe redirect ---
+  const proceedToStripe = async () => {
+    if (!termsAccepted) return;
+    setIsSponsorModalOpen(false); // Close modal
 
     try {
-      // Use per-player checkout route
       const res = await fetch(`/api/players/${player.id}/sponsor-checkout`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // If you later add a custom amount input, pass it here:
-        // body: JSON.stringify({ amount: 50 }),
+        headers: { "Content-Type": "application/json" },
       });
 
-      // Player not Stripe-ready: fall back to interest flow
       if (res.status === 409) {
         toast({
           title: "Support Interest",
-          description:
-            "Thanks for your interest in supporting this player! We'll contact you shortly with next steps.",
+          description: "Thanks for your interest! We'll contact you shortly.",
         });
         return;
       }
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        console.error("Sponsor error:", data);
         toast({
           title: "Something went wrong",
-          description:
-            data?.message ||
-            "We couldn't start the sponsorship right now. Please try again.",
+          description: data?.message || "We couldn't start the sponsorship right now.",
+          variant: "destructive",
         });
         return;
       }
 
       const data = await res.json();
-
       if (data?.url) {
-        // Redirect to Stripe Checkout
         window.location.href = data.url;
-        return;
+      } else {
+        toast({
+          title: "Support Interest",
+          description: "Thanks for your interest!",
+        });
       }
-
-      // Fallback if backend didn't return a URL
-      toast({
-        title: "Support Interest",
-        description:
-          "Thanks for your interest in supporting this player! We'll contact you shortly with next steps.",
-      });
     } catch (err) {
       console.error("Sponsor error", err);
       toast({
-        title: "Support Interest",
-        description:
-          "Thanks for your interest in supporting this player! We'll contact you shortly with next steps.",
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -165,8 +162,8 @@ export default function PlayerProfile() {
                   </span>
                 </div>
               </div>
-              <Button onClick={handleSponsor} className="ml-4">
-                <Heart className="h-4 w-4 mr-2" />
+<Button onClick={handleSupportClick} className="ml-4">
+                  <Heart className="h-4 w-4 mr-2" />
                 Support this Player
               </Button>
             </div>
@@ -285,13 +282,69 @@ export default function PlayerProfile() {
             <p className="mb-4 text-green-50">
               Help talented players reach their full potential.
             </p>
-            <Button onClick={handleSponsor} variant="secondary" size="lg">
+            <Button onClick={handleSupportClick} variant="secondary" size="lg">
               <Heart className="h-5 w-5 mr-2" />
               Become a Supporter Today
             </Button>
           </CardContent>
         </Card>
       </div>
+      {/* --- NEW: Sponsor Consent Modal --- */}
+      {isSponsorModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200 border border-gray-100">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Support {player?.fullName}
+            </h3>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              You are about to be redirected to Stripe to complete your sponsorship. 
+              Please confirm you agree to our platform rules.
+            </p>
+
+            <div className="flex items-start gap-3 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <input
+                type="checkbox"
+                id="sponsorTerms"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-600 cursor-pointer"
+              />
+              <label htmlFor="sponsorTerms" className="text-sm text-gray-700 cursor-pointer select-none">
+                I agree to the{" "}
+                <a href="/terms" target="_blank" rel="noreferrer" className="text-emerald-600 hover:text-emerald-700 hover:underline font-semibold">
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a href="/privacy" target="_blank" rel="noreferrer" className="text-emerald-600 hover:text-emerald-700 hover:underline font-semibold">
+                  Privacy Policy
+                </a>
+                . I understand that sponsorships are non-refundable.
+              </label>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsSponsorModalOpen(false)}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={proceedToStripe}
+                disabled={!termsAccepted}
+                className={`text-white transition-all ${
+                  termsAccepted 
+                    ? "bg-emerald-600 hover:bg-emerald-700 shadow-md" 
+                    : "bg-gray-300 cursor-not-allowed"
+                }`}
+              >
+                Continue to Payment
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
