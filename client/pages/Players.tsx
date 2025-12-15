@@ -281,7 +281,7 @@ export default function Players() {
 
           {/* AI Search Bar */}
           <div className="max-w-3xl mx-auto mb-10">
-            <div className="bg-white rounded-2xl shadow-lg p-2 flex items-center gap-2">
+            <div className="bg-white rounded-2xl shadow-lg p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <div className="flex-1 flex items-center gap-3 px-4">
                 <Sparkles className="w-5 h-5 text-purple-500 flex-shrink-0" />
                 <Input
@@ -345,10 +345,10 @@ export default function Players() {
               placeholder="Quick search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-48 rounded-full bg-white border-gray-200"
+              className="w-full sm:w-48 rounded-full bg-white border-gray-200"
             />
             <Select value={countryFilter} onValueChange={setCountryFilter}>
-              <SelectTrigger className="w-40 rounded-full bg-white border-gray-200">
+              <SelectTrigger className="w-full sm:w-40 rounded-full bg-white border-gray-200">
                 <SelectValue placeholder="All Countries" />
               </SelectTrigger>
               <SelectContent>
@@ -413,7 +413,7 @@ export default function Players() {
                 return (
                   <div
                     key={player.id}
-                    className={`flex items-center gap-4 p-5 transition-all cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                    className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 p-5 transition-all cursor-pointer border-b border-gray-100 last:border-b-0 ${
                       isTopSponsored
                         ? "bg-amber-50 hover:bg-amber-100"
                         : isAiMatch
@@ -425,7 +425,7 @@ export default function Players() {
                     <div
                       className={`w-14 h-14 rounded-full bg-gradient-to-br ${getGradientColors(
                         player.fullName
-                      )} flex items-center justify-center text-xl font-bold text-white flex-shrink-0`}
+                      )} flex items-center justify-center text-xl font-bold text-white flex-shrink-0 self-start sm:self-center'}
                     >
                       {player.photoUrl ? (
                         <img
@@ -503,7 +503,7 @@ export default function Players() {
                     </div>
 
                     {/* Sponsor Count */}
-                    <div className="text-center px-4">
+                    <div className="flex items-center justify-between w-full sm:w-auto sm:flex-col sm:items-end sm:gap-2"">
                       <p className="text-xl font-bold text-emerald-600">
                         {player.sponsorCount || 0}
                       </p>
