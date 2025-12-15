@@ -70,6 +70,7 @@ type EarningsData = {
     created: string;
     description: string | null;
     sponsorEmail?: string;
+    sponsorName?: string;
   }>;
 };
 
@@ -922,8 +923,15 @@ export default function Dashboard() {
                                   </div>
                                   <div>
                                     <div className="font-medium">
-                                      {transfer.sponsorEmail || "Anonymous Sponsor"}
-                                    </div>
+  {/* Priority: Sponsor Name -> Masked Email -> Anonymous */}
+  {transfer.sponsorName || (transfer.sponsorEmail ? (() => {
+    const [name, domain] = transfer.sponsorEmail.split("@");
+    // Returns "aj***@gmail.com"
+    return name && domain 
+      ? `${name.substring(0, 2)}***@${domain}` 
+      : "Anonymous Sponsor";
+  })() : "Anonymous Sponsor")}
+</div>
                                     <div className="text-sm text-gray-500">
                                       {formatDate(transfer.created)}
                                     </div>
