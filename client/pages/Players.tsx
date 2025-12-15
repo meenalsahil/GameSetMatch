@@ -425,7 +425,7 @@ export default function Players() {
                    <div
                       className={`w-14 h-14 rounded-full bg-gradient-to-br ${getGradientColors(
                         player.fullName
-                      )} flex items-center justify-center text-xl font-bold text-white flex-shrink-0 self-start sm:self-center'}
+                      )} flex items-center justify-center text-xl font-bold text-white flex-shrink-0 self-start sm:self-center`}
                     >
                       {player.photoUrl ? (
                         <img
