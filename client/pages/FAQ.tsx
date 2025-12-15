@@ -23,6 +23,11 @@ export default function FAQ() {
         "It's completely FREE for players to create a profile and connect with supporters. We don't charge any membership fees or take a percentage of support contributions.",
     },
     {
+      question: "How does GameSetMatch sustain itself?",
+      answer:
+        "Our primary mission is to support the tennis community and help players succeed by removing financial barriers. To keep the platform running, cover operational costs (such as server maintenance, payment processing security, and development), and continue improving the service for everyone, we deduct a small 7% platform fee from funds received from sponsors. This allows us to maintain a high-quality, secure environment without charging upfront membership fees to players.",
+    },
+    {
       question: "What types of support are available?",
       answer:
         "Supporters can provide travel expenses, equipment (rackets, strings, shoes), monthly training stipends, tournament entry fees, or one-time contributions for specific needs.",
