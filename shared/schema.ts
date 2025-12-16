@@ -139,7 +139,7 @@ export type SignupPlayer = z.infer<typeof signupPlayerSchema>;
 // Cache table for external Tennis API data
 export const playerStatsCache = pgTable("player_stats_cache", {
   id: serial("id").primaryKey(),
-  playerId: integer("player_id").notNull(),
+  playerId: text("player_id").notNull(),
   tennisApiPlayerId: text("tennis_api_player_id"),
   statsJson: jsonb("stats_json"),
   lastUpdated: timestamp("last_updated").defaultNow(),
