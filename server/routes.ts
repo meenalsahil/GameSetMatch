@@ -1744,7 +1744,7 @@ if (player.atpProfileUrl || player.atp_profile_url) {
         } else {
            try {
               // A. Search for Player (Cost: 1 Request)
-              const searchRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/search/${encodeURIComponent(searchName)}`, {
+const searchRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search?search=${encodeURIComponent(searchName)}`, {
                   method: 'GET',
                   headers: {
                       'x-rapidapi-key': rapidApiKey,
