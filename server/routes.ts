@@ -1683,7 +1683,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
-  // -------- AI: Ask Analyst (With Link-Based Lookup) --------
+ // -------- AI: Ask Analyst (With Link-Based Lookup) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
     const playerId = parseInt(req.params.id);
     const { question } = req.body;
@@ -1700,7 +1700,6 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
       let searchName = player.fullName;
       
       // If they have an ATP link, try to extract the "real" name from the slug
-      // Example: https://www.atptour.com/en/players/carlos-alcaraz/a0e2/overview
       if (player.atpProfileUrl) {
         try {
           const urlObj = new URL(player.atpProfileUrl);
@@ -1710,7 +1709,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
           if (playersIndex !== -1 && pathSegments[playersIndex + 1]) {
             const slug = pathSegments[playersIndex + 1];
             // Convert "carlos-alcaraz" to "Carlos Alcaraz"
-            searchName = slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            searchName = slug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
             console.log(`🔍 Detected ATP Link. Overriding "${player.fullName}" with "${searchName}"`);
           }
         } catch (e) {
@@ -1718,7 +1717,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
         }
       }
 
-      // 2. Check Database Cache (Search by the player's ID, not name, to keep it linked to this profile)
+      // 2. Check Database Cache
       let statsData = null;
       let usedCache = false;
 
@@ -1819,24 +1818,6 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
       console.error("AI Stats Error:", error);
       res.status(500).json({ message: "Failed to analyze stats" });
     }
-  });
-
-      res.json({ 
-        answer: completion.choices[0].message.content,
-        usedCache,
-        lastUpdated: cached?.lastUpdated || new Date()
-      });
-
-    } catch (error) {
-      console.error("AI Stats Error:", error);
-      res.status(500).json({ message: "Failed to analyze stats" });
-    }
-  });
-
-  // -------- ADMIN: Usage Monitor --------
-  app.get("/api/admin/usage", isAdmin, async (_req: Request, res: Response) => {
-      const count = await getApiUsage();
-      res.json({ count, limit: 500 });
   });
 
   return httpServer;
