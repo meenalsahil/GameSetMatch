@@ -1801,7 +1801,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
         : `You are an expert tennis analyst. You don't have access to specific match stats right now, but answer generally about tennis strategy or the player's background based on their profile: ${player.bio}`;
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: question }
