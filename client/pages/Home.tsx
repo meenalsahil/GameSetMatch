@@ -16,6 +16,11 @@ import {
   Users,
   TrendingUp,
   ArrowRight,
+  ShieldCheck,
+  Target,
+  Wallet,
+  Globe,
+  Video
 } from "lucide-react";
 
 // Helper to calculate funding progress
@@ -45,10 +50,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* --- HERO SECTION --- */}
+      {/* --- 1. HERO SECTION --- */}
       <section className="relative overflow-hidden bg-gradient-to-b from-green-50 to-white dark:from-green-950/20 dark:to-background pt-20 pb-16 px-6">
         <div className="container mx-auto max-w-5xl text-center">
-          
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-6">
             Invest in the Future of <br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-600">
@@ -57,8 +61,8 @@ export default function Home() {
           </h1>
           
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-            Directly support talented players rising through the ATP & WTA ranks. 
-            Track their journey, analyze their stats, and be part of their team.
+            The first platform connecting aspiring ATP & WTA players directly with supporters. 
+            Fund their travel, coaching, and tournaments.
           </p>
 
           {/* Search Bar */}
@@ -74,49 +78,137 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- FEATURES --- */}
+      {/* --- 2. HOW IT WORKS --- */}
       <section className="py-16 bg-white dark:bg-background border-y border-gray-100">
         <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-8">
-            
-            {/* Feature 1 */}
-            <div className="p-6 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
-              <div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center mb-4 text-green-600">
-                <Trophy className="h-5 w-5" />
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">How It Works</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              We bridge the financial gap between talented athletes and the tennis community.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 text-center">
+            <div className="p-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="h-8 w-8 text-green-600" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">Find Rising Stars</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Discover players before they break into the top 100. Browse by country, playing style, or age.
+              <h3 className="text-xl font-semibold mb-2">1. Discover Talent</h3>
+              <p className="text-muted-foreground">
+                Browse verified profiles of rising stars from around the world.
               </p>
             </div>
-
-            {/* Feature 2: Subtle text mention of AI */}
-            <div className="p-6 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
-              <div className="h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center mb-4 text-purple-600">
-                <Users className="h-5 w-5" />
+            <div className="p-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Wallet className="h-8 w-8 text-green-600" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">Vet with Data</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Use our AI Analyst on any profile to pull official match records and win rates instantly.
+              <h3 className="text-xl font-semibold mb-2">2. Direct Support</h3>
+              <p className="text-muted-foreground">
+                Contribute to specific career needs like flights, hotels, and coaching fees.
               </p>
             </div>
-
-            {/* Feature 3 */}
-            <div className="p-6 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
-              <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center mb-4 text-blue-600">
-                <TrendingUp className="h-5 w-5" />
+            <div className="p-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="h-8 w-8 text-green-600" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">Track Impact</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                See exactly how your support helps with travel, coaching, and tournament fees.
+              <h3 className="text-xl font-semibold mb-2">3. Track Progress</h3>
+              <p className="text-muted-foreground">
+                Watch them climb the rankings and receive exclusive updates from the tour.
               </p>
             </div>
-
           </div>
         </div>
       </section>
 
-      {/* --- PLAYER GRID --- */}
+      {/* --- 3. FOR PLAYERS SECTION --- */}
+      <section className="py-16 bg-gray-50 dark:bg-gray-900/50">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-10">
+            <div>
+              <h2 className="text-3xl font-bold mb-2">For Players</h2>
+              <p className="text-muted-foreground">Launch your professional career</p>
+            </div>
+            <Button variant="outline" className="mt-4 md:mt-0" onClick={() => setLocation("/auth")}>
+              Create Player Profile
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <Target className="h-8 w-8 text-blue-600 mb-2" />
+                <CardTitle>Create Profile</CardTitle>
+                <CardDescription>
+                  Share your story, ranking history, and funding goals with the world.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <Video className="h-8 w-8 text-blue-600 mb-2" />
+                <CardTitle>Verification</CardTitle>
+                <CardDescription>
+                  Upload a verification video to prove your identity and skill level.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <Wallet className="h-8 w-8 text-blue-600 mb-2" />
+                <CardTitle>Get Funded</CardTitle>
+                <CardDescription>
+                  Receive funds directly to your Stripe account for career expenses.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* --- 4. FOR SUPPORTERS SECTION --- */}
+      <section className="py-16 bg-white dark:bg-background">
+        <div className="container mx-auto px-6">
+          <div className="mb-10">
+            <h2 className="text-3xl font-bold mb-2">For Supporters</h2>
+            <p className="text-muted-foreground">Be part of the journey</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <Globe className="h-8 w-8 text-purple-600 mb-2" />
+                <CardTitle>Global Talent</CardTitle>
+                <CardDescription>
+                  Access a worldwide pool of tennis talent, from juniors to pros.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <ShieldCheck className="h-8 w-8 text-purple-600 mb-2" />
+                <CardTitle>Secure & Verified</CardTitle>
+                <CardDescription>
+                  All payments are processed securely via Stripe. Profiles are vetted.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <Trophy className="h-8 w-8 text-purple-600 mb-2" />
+                <CardTitle>Impact</CardTitle>
+                <CardDescription>
+                  Your support can be the difference between a player retiring or breaking top 100.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* --- 5. FEATURED PLAYERS --- */}
       <section className="py-20 bg-gray-50/50 dark:bg-black/5">
         <div className="container mx-auto px-6">
           <div className="flex justify-between items-end mb-10">
@@ -160,64 +252,4 @@ export default function Home() {
                         <span>{player.fullName}</span>
                         {player.country && (
                           <span className="text-lg" title={player.country}>
-                            <span className="text-xs font-normal text-muted-foreground border px-1.5 py-0.5 rounded bg-gray-50">
-                              {player.country}
-                            </span>
-                          </span>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="flex items-center gap-1">
-                        {player.age ? `${player.age} yrs • ` : ""}
-                        {player.playStyle || "Tennis Player"}
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardContent className="mt-auto pt-0">
-                      <div className="space-y-3">
-                        {/* Progress Bar */}
-                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                          <div
-                            className="bg-green-600 h-full rounded-full"
-                            style={{
-                              width: `${getProgress(
-                                player.sponsorCount * 50, 
-                                5000
-                              )}%`,
-                            }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>
-                            {player.sponsorCount || 0} Supporters
-                          </span>
-                          <span className="flex items-center gap-1 text-purple-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                            View Profile <ArrowRight className="h-3 w-3" />
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {!isLoading && filteredPlayers?.length === 0 && (
-            <div className="text-center py-20">
-              <p className="text-muted-foreground text-lg">
-                No players found matching "{search}"
-              </p>
-              <Button
-                variant="link"
-                onClick={() => setSearch("")}
-                className="mt-2 text-green-600"
-              >
-                Clear Search
-              </Button>
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
-  );
-}
+                            <span className="text-xs font-normal text-muted-foreground border px-1.5 py-0.5 rounded
