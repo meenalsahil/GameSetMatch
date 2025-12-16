@@ -1,387 +1,251 @@
-import { useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Link } from "wouter";
+import { Input } from "@/components/ui/input";
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Search,
   Trophy,
-  Target,
   Users,
+  TrendingUp,
   ArrowRight,
-  CheckCircle2,
-  PlayCircle,
   Sparkles,
-  HelpCircle,
+  ShieldCheck,
+  LineChart
 } from "lucide-react";
-import Footer from "@/components/Footer";
 
-export default function HomePage() {
-  useEffect(() => {
-    // Smooth scroll to section if hash exists
-    const hash = window.location.hash;
-    if (hash) {
-      const element = document.querySelector(hash);
-      if (element) {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-      }
-    }
-  }, []);
+// Helper to calculate funding progress (Mock logic for display)
+const getProgress = (current: number, goal: number) => {
+  if (!goal) return 0;
+  return Math.min(100, Math.round((current / goal) * 100));
+};
+
+export default function Home() {
+  const [, setLocation] = useLocation();
+  const [search, setSearch] = useState("");
+
+  const { data: players, isLoading } = useQuery({
+    queryKey: ["/api/players"],
+    queryFn: async () => {
+      const res = await fetch("/api/players");
+      if (!res.ok) throw new Error("Failed to load players");
+      return res.json();
+    },
+  });
+
+  // Filter logic
+  const filteredPlayers = players?.filter((p: any) =>
+    p.fullName.toLowerCase().includes(search.toLowerCase()) ||
+    p.location?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* HERO SECTION */}
-      <section className="relative overflow-hidden">
-        {/* Background video */}
-        <video
-          className="absolute inset-0 w-full h-full object-cover"
-          autoPlay
-          muted
-          loop
-          playsInline
-        >
-          <source
-            src="https://videos.pexels.com/video-files/4761793/4761793-uhd_2560_1440_25fps.mp4"
-            type="video/mp4"
-          />
-        </video>
+    <div className="min-h-screen bg-background">
+      {/* --- HERO SECTION --- */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-green-50 to-white dark:from-green-950/20 dark:to-background pt-20 pb-16 px-6">
+        <div className="container mx-auto max-w-5xl text-center">
+          
+          {/* 1. SUBTLE MARKETING: The "New Feature" Pill Badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 border border-purple-200 text-purple-700 text-xs font-medium mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <Sparkles className="h-3 w-3" />
+            <span>New: AI Match Intelligence is now live</span>
+          </div>
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/65 to-emerald-900/50" />
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-6">
+            Invest in the Future of <br className="hidden md:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-600">
+              Professional Tennis
+            </span>
+          </h1>
+          
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+            Directly support talented players rising through the ATP & WTA ranks. 
+            Analyze their official stats, track their journey, and be part of their team.
+          </p>
 
-        {/* Hero content */}
-        <div className="relative z-10 container mx-auto px-6 py-24 flex items-center min-h-[70vh]">
-          <div className="max-w-4xl">
-            {/* Trust pills */}
-            <div className="flex flex-wrap gap-3 mb-5">
-              <div className="inline-flex items-center gap-2 bg-emerald-900/40 border border-emerald-500/40 text-emerald-200 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Verified tennis players • ATP / ITF / WTA linked
-              </div>
-              
-              <div className="inline-flex items-center gap-2 bg-purple-900/60 border border-purple-400/50 text-purple-100 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide shadow-[0_0_15px_rgba(168,85,247,0.3)] backdrop-blur-sm">
-                <Sparkles className="w-3.5 h-3.5 text-purple-300" />
-                AI-Powered Platform • Smart Player Browse & Player Profile Builder
-              </div>
-            </div>
+          {/* Search Bar */}
+          <div className="max-w-md mx-auto relative mb-12">
+            <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+            <Input
+              className="pl-10 h-12 text-lg shadow-sm border-gray-200"
+              placeholder="Search by name or country..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
 
-            {/* Headline */}
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 leading-tight">
-              Connect{" "}
-              <span className="text-emerald-300">real tennis players</span>{" "}
-              with supporters who care.
-            </h1>
-
-            {/* Subheadline */}
-            <p className="text-base md:text-lg text-emerald-50/90 max-w-2xl mb-8">
-              GameSetMatch helps supporters connect with verified tennis
-              players using ATP/ITF/WTA profile links and verification
-              videos—so you know you're backing genuine athletes, not fake
-              profiles.
-            </p>
-
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
-              <Button
-                size="lg"
-                className="text-lg px-8 py-6 shadow-lg shadow-emerald-500/30"
-                asChild
-                data-testid="button-cta-player"
-              >
-                <Link href="/signup/player">
-                  I'm a Player
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-lg px-8 py-6 border-emerald-300/70 text-emerald-50 hover:bg-emerald-900/40"
-                asChild
-                data-testid="button-cta-sponsor"
-              >
-                <Link href="/players">
-                  I am a Supporter
-                  <PlayCircle className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-            </div>
-
-            {/* Trust strip bullets */}
-            <div className="flex flex-wrap gap-4 text-xs md:text-sm text-emerald-100/90 font-medium">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                ATP / ITF / WTA profile link required
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Video upload by Players for authenticity
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Manual account review of each Player by Admin
-              </div>
-            </div>
+          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck className="h-4 w-4 text-green-600" /> Verified Profiles
+            </span>
+            <span className="flex items-center gap-1.5">
+              <LineChart className="h-4 w-4 text-purple-600" /> Live ATP/WTA Data
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Users className="h-4 w-4 text-blue-600" /> Direct Support
+            </span>
           </div>
         </div>
       </section>
 
-      {/* HOW IT WORKS SECTION */}
-      <div
-        id="how-it-works"
-        className="py-24 bg-white dark:bg-gray-900 flex-1"
-      >
+      {/* --- VALUE PROPS (The "Balance") --- */}
+      <section className="py-16 bg-white dark:bg-background border-y border-gray-100">
         <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">How It Works</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400">
-              Get the support you need to compete at ATP, WTA, Challenger, and ITF
-              tournaments
-            </p>
-          </div>
-
-          {/* PLAYERS SECTION */}
-          <div className="mb-20">
-            <h3 className="text-3xl font-bold text-center mb-12">
-              For Players
-            </h3>
+          <div className="grid md:grid-cols-3 gap-8">
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-              
-              {/* Player Card 1 */}
-              <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg h-full">
-                <CardContent className="p-8 text-center h-full flex flex-col justify-between">
-                  <div>
-                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <span className="text-3xl font-bold text-green-600">1</span>
-                    </div>
-                    <h3 className="text-2xl font-bold mb-4">Sign Up</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
-                      Create your player profile in minutes. It&apos;s free to join!
-                    </p>
-                    <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
-                      <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span>Share your tennis journey</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span>Upload match videos</span>
-                      </li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Player Card 2 */}
-              <Card className="border-2 border-purple-200 hover:border-purple-500 transition-all hover:shadow-lg relative h-full">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                  <span className="inline-flex items-center gap-1.5 bg-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
-                    <Sparkles className="w-3 h-3" />
-                    AI-Powered
-                  </span>
-                </div>
-                <CardContent className="p-8 text-center h-full flex flex-col justify-between">
-                  <div>
-                    <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <span className="text-3xl font-bold text-purple-600">2</span>
-                    </div>
-                    <h3 className="text-2xl font-bold mb-4">Build Profile</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
-                      Showcase your achievements and funding goals.
-                    </p>
-                    <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
-                      <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span>Tournament results</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span>Training needs</span>
-                      </li>
-                      <li className="flex items-start gap-2 text-purple-600 font-medium">
-                        <Sparkles className="h-4 w-4 text-purple-500 flex-shrink-0 mt-0.5" />
-                        <span>AI writes bio - Free!</span>
-                      </li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Player Card 3 */}
-              <Card className="border-2 hover:border-green-500 transition-all hover:shadow-lg h-full">
-                <CardContent className="p-8 text-center h-full flex flex-col justify-between">
-                  <div>
-                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <span className="text-3xl font-bold text-blue-600">3</span>
-                    </div>
-                    <h3 className="text-2xl font-bold mb-4">Get Support</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
-                      Connect with supporters who want to back your journey.
-                    </p>
-                    <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
-                      <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span>Travel & gear funding</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span>Monthly stipends</span>
-                      </li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Player Card 4 (Help) */}
-              <Card className="border-2 hover:border-gray-400 transition-all hover:shadow-lg h-full bg-gray-50/50">
-                <CardContent className="p-8 text-center h-full flex flex-col justify-between">
-                  <div>
-                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <HelpCircle className="h-8 w-8 text-gray-500" />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-4 text-gray-800">Have Questions?</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
-                      Not sure where to start? Check our FAQ or contact us directly.
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    <Button asChild variant="outline" className="w-full bg-white">
-                      <Link href="/faq">Read FAQ</Link>
-                    </Button>
-                    <Button asChild variant="ghost" className="w-full">
-                      <Link href="/contact">Contact Us</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-            </div>
-
-            <div className="text-center mt-12">
-              <Button size="lg" className="text-lg" asChild>
-                <Link href="/signup/player">Get Started as Player</Link>
-              </Button>
-            </div>
-          </div>
-
-          {/* SUPPORTERS SECTION */}
-          <div>
-            <div className="text-center mb-12">
-              <h3 className="text-3xl font-bold mb-3">For Supporters</h3>
-              <div className="inline-flex items-center gap-2 bg-purple-100 border border-purple-200 text-purple-700 px-4 py-1.5 rounded-full text-sm font-medium">
-                <Sparkles className="w-4 h-4" />
-                AI-powered player search • FREE
+            {/* Feature 1 */}
+            <div className="p-6 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+              <div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center mb-4 text-green-600">
+                <Trophy className="h-5 w-5" />
               </div>
+              <h3 className="font-semibold text-lg mb-2">Find Rising Stars</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Discover players before they break into the top 100. Browse by country, playing style, or age.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-              
-              {/* Supporter Card 1 */}
-              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg h-full">
-                <CardContent className="p-8 text-center h-full flex flex-col justify-between">
-                  <div>
-                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Users className="h-8 w-8 text-blue-600" />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-4">Browse Players</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                      Discover talented tennis players at all competitive levels.
-                    </p>
-                    <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
-                       <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <span>Filter by rank & region</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <span>View verified videos</span>
-                      </li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Supporter Card 2 */}
-              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg h-full">
-                <CardContent className="p-8 text-center h-full flex flex-col justify-between">
-                  <div>
-                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Target className="h-8 w-8 text-blue-600" />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-4">Choose a Player</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                      Review profiles and support goals to find your match.
-                    </p>
-                    <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
-                       <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <span>See equipment needs</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <span>Support specific goals</span>
-                      </li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Supporter Card 3 */}
-              <Card className="border-2 hover:border-blue-500 transition-all hover:shadow-lg h-full">
-                <CardContent className="p-8 text-center h-full flex flex-col justify-between">
-                  <div>
-                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Trophy className="h-8 w-8 text-blue-600" />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-4">Make an Impact</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                      Contribute toward travel, coaching, or gear.
-                    </p>
-                     <ul className="text-left text-xs text-gray-600 dark:text-gray-400 space-y-2">
-                       <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <span>100% Secure payments</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <span>Help athletes win</span>
-                      </li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Supporter Card 4 (Help) - IDENTICAL TO PLAYER SECTION */}
-              <Card className="border-2 hover:border-gray-400 transition-all hover:shadow-lg h-full bg-gray-50/50">
-                <CardContent className="p-8 text-center h-full flex flex-col justify-between">
-                  <div>
-                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <HelpCircle className="h-8 w-8 text-gray-500" />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-4 text-gray-800">Have Questions?</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
-                      Not sure where to start? Check our FAQ or contact us directly.
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    <Button asChild variant="outline" className="w-full bg-white">
-                      <Link href="/faq">Read FAQ</Link>
-                    </Button>
-                    <Button asChild variant="ghost" className="w-full">
-                      <Link href="/contact">Contact Us</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
+            {/* Feature 2: AI MARKETING (Subtle but clear) */}
+            <div className="p-6 rounded-2xl bg-purple-50/50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/30 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Sparkles className="h-16 w-16 text-purple-600" />
+              </div>
+              <div className="h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center mb-4 text-purple-600 relative z-10">
+                <LineChart className="h-5 w-5" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2 text-purple-900 dark:text-purple-100 relative z-10">
+                Vet with AI Analysis
+              </h3>
+              <p className="text-purple-800/80 dark:text-purple-200/70 text-sm leading-relaxed relative z-10">
+                Don't guess. Use our new <strong>AI Analyst</strong> on any profile to pull official match records and win rates instantly.
+              </p>
             </div>
+
+            {/* Feature 3 */}
+            <div className="p-6 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+              <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center mb-4 text-blue-600">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Track Impact</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                See exactly how your support helps with travel, coaching, and tournament fees.
+              </p>
+            </div>
+
           </div>
         </div>
-      </div>
+      </section>
 
-      <Footer />
+      {/* --- PLAYER GRID --- */}
+      <section className="py-20 bg-gray-50/50 dark:bg-black/5">
+        <div className="container mx-auto px-6">
+          <div className="flex justify-between items-end mb-10">
+            <div>
+              <h2 className="text-3xl font-bold mb-2">Featured Players</h2>
+              <p className="text-muted-foreground">Talent waiting for an opportunity</p>
+            </div>
+            {/* Optional Filter Button could go here */}
+          </div>
+
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-64 bg-gray-200 animate-pulse rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredPlayers?.map((player: any) => (
+                <Link key={player.id} href={`/players/${player.id}`}>
+                  <Card className="cursor-pointer hover:shadow-lg transition-all duration-300 group border-gray-200 h-full flex flex-col overflow-hidden">
+                    {/* Image Area */}
+                    <div className="h-48 bg-gray-200 relative overflow-hidden">
+                      {player.photoUrl ? (
+                        <img
+                          src={player.photoUrl}
+                          alt={player.fullName}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                          <Users className="h-12 w-12 opacity-20" />
+                        </div>
+                      )}
+                      <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold shadow-sm">
+                        Rank #{player.ranking || "N/A"}
+                      </div>
+                    </div>
+
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex justify-between items-start">
+                        <span>{player.fullName}</span>
+                        {player.country && (
+                          <span className="text-lg" title={player.country}>
+                            {/* Simple check for flag if you have a helper, otherwise just text code */}
+                            <span className="text-xs font-normal text-muted-foreground border px-1.5 py-0.5 rounded bg-gray-50">
+                              {player.country}
+                            </span>
+                          </span>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-1">
+                        {player.age ? `${player.age} yrs • ` : ""}
+                        {player.playStyle || "Tennis Player"}
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="mt-auto pt-0">
+                      <div className="space-y-3">
+                        {/* Progress Bar */}
+                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-green-600 h-full rounded-full"
+                            style={{
+                              width: `${getProgress(
+                                player.sponsorCount * 50, // Mock calculation
+                                5000
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>
+                            {player.sponsorCount || 0} Supporters
+                          </span>
+                          <span className="flex items-center gap-1 text-purple-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                            Analyze <ArrowRight className="h-3 w-3" />
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {!isLoading && filteredPlayers?.length === 0 && (
+            <div className="text-center py-20">
+              <p className="text-muted-foreground text-lg">
+                No players found matching "{search}"
+              </p>
+              <Button
+                variant="link"
+                onClick={() => setSearch("")}
+                className="mt-2 text-green-600"
+              >
+                Clear Search
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

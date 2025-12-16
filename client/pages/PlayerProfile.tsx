@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input"; // Ensure you have this component
+import { Input } from "@/components/ui/input";
 import {
   ArrowLeft,
   MapPin,
@@ -10,10 +10,11 @@ import {
   Heart,
   ExternalLink,
   Globe,
-  Sparkles,  // New
-  X,         // New
-  Loader2,   // New
-  ArrowUp    // New
+  Sparkles,  
+  X,        
+  Loader2,   
+  ArrowUp,
+  Bot
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -45,7 +46,7 @@ export default function PlayerProfile() {
   const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // --- STATE: AI Analyst (NEW) ---
+  // --- STATE: AI Analyst ---
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiAnswer, setAiAnswer] = useState("");
@@ -61,14 +62,13 @@ export default function PlayerProfile() {
       });
       return;
     }
-    // Open the modal instead of going directly to Stripe
     setIsSponsorModalOpen(true);
   };
 
   // --- FUNCTION: Stripe Redirect ---
   const proceedToStripe = async () => {
     if (!termsAccepted) return;
-    setIsSponsorModalOpen(false); // Close modal
+    setIsSponsorModalOpen(false); 
 
     try {
       const res = await fetch(`/api/players/${player.id}/sponsor-checkout`, {
@@ -113,7 +113,7 @@ export default function PlayerProfile() {
     }
   };
 
-  // --- FUNCTION: Ask AI (NEW) ---
+  // --- FUNCTION: Ask AI ---
   const handleAskAi = async () => {
     if (!aiQuestion.trim() || !player) return;
     setIsAiLoading(true);
@@ -176,9 +176,9 @@ export default function PlayerProfile() {
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Browse Players
         </Button>
 
-        {/* Player Header with Support Button */}
-        <Card className="mb-8">
-          <CardHeader>
+        {/* Player Header */}
+        <Card className="mb-6 border-none shadow-md overflow-hidden">
+          <CardHeader className="bg-white pb-6">
             <div className="flex justify-between items-start gap-4">
               <div className="flex-1">
                 <CardTitle className="text-3xl font-bold mb-2">
@@ -200,42 +200,56 @@ export default function PlayerProfile() {
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
-                <Button onClick={handleSupportClick}>
+              <div className="flex flex-col items-end gap-2">
+                <Button onClick={handleSupportClick} className="shadow-sm">
                   <Heart className="h-4 w-4 mr-2" />
                   Support this Player
                 </Button>
-
-                {/* AI BUTTON (NEW) */}
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="border-purple-200 hover:bg-purple-50 text-purple-600 relative group"
-                  onClick={() => setIsAiChatOpen(true)}
-                  title="Ask AI Analyst"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-purple-500"></span>
-                  </span>
-                </Button>
+                
+                {player.atpProfileUrl && (
+                  <a
+                    href={player.atpProfileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline text-xs mt-1 inline-flex items-center gap-1"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Official Profile
+                  </a>
+                )}
               </div>
             </div>
-
-            {player.atpProfileUrl && (
-              <a
-                href={player.atpProfileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline text-sm mt-3 inline-flex items-center gap-1"
-              >
-                <ExternalLink className="h-4 w-4" />
-                View ATP / ITF / WTA Profile
-              </a>
-            )}
           </CardHeader>
         </Card>
+
+        {/* --- MARKETING: NEW AI FEATURE BANNER --- */}
+        <div 
+          onClick={() => setIsAiChatOpen(true)}
+          className="mb-8 cursor-pointer group relative overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-1 shadow-lg transition-all hover:shadow-xl hover:scale-[1.01]"
+        >
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+          <div className="relative flex items-center justify-between rounded-lg bg-white/10 backdrop-blur-sm p-4 px-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 shadow-inner">
+                <Sparkles className="h-6 w-6 text-yellow-300 animate-pulse" />
+              </div>
+              <div className="text-white">
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  Ask AI Analyst 
+                  <span className="rounded-full bg-yellow-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-yellow-200 border border-yellow-400/30">
+                    New
+                  </span>
+                </h3>
+                <p className="text-sm text-purple-100 opacity-90">
+                  Analyze {player.fullName.split(' ')[0]}'s recent match performance and stats.
+                </p>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-purple-700 shadow-sm transition-transform group-hover:translate-x-1">
+              Start Analysis <ArrowLeft className="h-4 w-4 rotate-180" />
+            </div>
+          </div>
+        </div>
 
         {/* Video Section */}
         {hasVideo && (
@@ -410,7 +424,7 @@ export default function PlayerProfile() {
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 text-white flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-purple-200" />
+                <Bot className="h-5 w-5 text-purple-200" />
                 <h3 className="font-bold">AI Performance Analyst</h3>
               </div>
               <button onClick={() => setIsAiChatOpen(false)} className="hover:bg-white/20 p-1 rounded-full">
@@ -450,19 +464,19 @@ export default function PlayerProfile() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-4 text-gray-400">
-                   <div className="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center">
-                     <Sparkles className="h-7 w-7 text-purple-500" />
+                   <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-2 animate-bounce">
+                     <Sparkles className="h-8 w-8 text-purple-600" />
                    </div>
-                   <p className="text-sm">
-                     I have access to {player?.fullName}'s official match records. <br/>
-                     Ask me about their recent performance!
+                   <h4 className="font-semibold text-gray-900">Ask about {player?.fullName}</h4>
+                   <p className="text-sm max-w-xs">
+                     I can analyze official match records, win rates, and playing style.
                    </p>
-                   <div className="flex flex-wrap gap-2 justify-center">
+                   <div className="flex flex-wrap gap-2 justify-center mt-4">
                       {["Win rate this year?", "Last 5 tournaments?", "Performance on Clay?"].map(q => (
                         <button 
                           key={q}
                           onClick={() => setAiQuestion(q)}
-                          className="text-xs bg-white border border-gray-200 px-3 py-1 rounded-full hover:border-purple-300 hover:bg-purple-50 transition-colors text-gray-600"
+                          className="text-xs bg-white border border-gray-200 px-3 py-1.5 rounded-full hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition-colors text-gray-600 font-medium"
                         >
                           {q}
                         </button>

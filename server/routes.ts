@@ -1683,7 +1683,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
-  // -------- AI: Ask Analyst (With Caching & Tracking) --------
+  // -------- AI: Ask Analyst (With Link-Based Lookup) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
     const playerId = parseInt(req.params.id);
     const { question } = req.body;
@@ -1691,12 +1691,34 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     if (!question) return res.status(400).json({ message: "Question required" });
 
     try {
-      // 1. Get Player Name
-      // Use your storage helper or direct DB call
-      const player = await storage.getPlayer(playerId); 
+      // 1. Get Player Data
+      const player: any = await storage.getPlayer(playerId); 
       if (!player) return res.status(404).json({ message: "Player not found" });
 
-      // 2. Check Database Cache
+      // --- LOGIC CHANGE: Determine Search Name ---
+      // Default to the database name
+      let searchName = player.fullName;
+      
+      // If they have an ATP link, try to extract the "real" name from the slug
+      // Example: https://www.atptour.com/en/players/carlos-alcaraz/a0e2/overview
+      if (player.atpProfileUrl) {
+        try {
+          const urlObj = new URL(player.atpProfileUrl);
+          const pathSegments = urlObj.pathname.split('/');
+          // usually the name is after 'players'
+          const playersIndex = pathSegments.indexOf('players');
+          if (playersIndex !== -1 && pathSegments[playersIndex + 1]) {
+            const slug = pathSegments[playersIndex + 1];
+            // Convert "carlos-alcaraz" to "Carlos Alcaraz"
+            searchName = slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            console.log(`🔍 Detected ATP Link. Overriding "${player.fullName}" with "${searchName}"`);
+          }
+        } catch (e) {
+          console.log("Could not parse ATP URL, falling back to full name");
+        }
+      }
+
+      // 2. Check Database Cache (Search by the player's ID, not name, to keep it linked to this profile)
       let statsData = null;
       let usedCache = false;
 
@@ -1706,7 +1728,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
         .where(eq(playerStatsCache.playerId, playerId))
         .limit(1);
 
-      // Define "Fresh": Data is less than 7 days old
+      // Cache is fresh if less than 7 days old
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -1715,17 +1737,16 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
         statsData = cached.statsJson;
         usedCache = true;
       } else {
-        // 3. No Cache? Fetch from RapidAPI
-        console.log(`🌍 Fetching FRESH data for ${player.fullName}`);
+        // 3. No Cache? Fetch from RapidAPI using the SMART SEARCH NAME
+        console.log(`🌍 Fetching FRESH data for: ${searchName}`);
         
         const rapidApiKey = process.env.RAPIDAPI_KEY;
         if (!rapidApiKey) {
-           // Fallback if no key: just use AI without stats
            console.warn("Missing RAPIDAPI_KEY");
         } else {
            try {
-              // A. Search for Player ID (Cost: 1 Request)
-              const searchRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/search/${encodeURIComponent(player.fullName)}`, {
+              // A. Search for Player (Cost: 1 Request)
+              const searchRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/search/${encodeURIComponent(searchName)}`, {
                   method: 'GET',
                   headers: {
                       'x-rapidapi-key': rapidApiKey,
@@ -1733,7 +1754,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
                   }
               });
               
-              await incrementApiUsage(1); // TRACK USAGE
+              await incrementApiUsage(1); 
               const searchData = await searchRes.json();
               const rapidPlayerId = searchData.results?.[0]?.id;
 
@@ -1746,14 +1767,14 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
                           'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com'
                       }
                   });
-                  await incrementApiUsage(1); // TRACK USAGE
+                  await incrementApiUsage(1);
                   
                   statsData = await statsRes.json();
 
                   // C. Save to Cache
                   if (cached) {
                       await db.update(playerStatsCache)
-                          .set({ statsJson: statsData, lastUpdated: new Date() })
+                          .set({ statsJson: statsData, lastUpdated: new Date(), tennisApiPlayerId: rapidPlayerId.toString() })
                           .where(eq(playerStatsCache.id, cached.id));
                   } else {
                       await db.insert(playerStatsCache).values({
@@ -1773,7 +1794,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       
       const systemPrompt = statsData 
-        ? `You are an expert tennis analyst. You have access to OFFICIAL 2025 match data for ${player.fullName}: ${JSON.stringify(statsData)}. 
+        ? `You are an expert tennis analyst. You have access to OFFICIAL 2025 match data for ${searchName} (linked to profile: ${player.fullName}). Data: ${JSON.stringify(statsData)}. 
            Answer the user's question based strictly on this data. 
            - If the data shows specific match results, quote them.
            - If the data is empty, say "I don't have recorded matches for 2025 yet."
@@ -1787,6 +1808,18 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
           { role: "user", content: question }
         ],
       });
+
+      res.json({ 
+        answer: completion.choices[0].message.content,
+        usedCache,
+        lastUpdated: cached?.lastUpdated || new Date()
+      });
+
+    } catch (error) {
+      console.error("AI Stats Error:", error);
+      res.status(500).json({ message: "Failed to analyze stats" });
+    }
+  });
 
       res.json({ 
         answer: completion.choices[0].message.content,
