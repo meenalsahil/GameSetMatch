@@ -1754,6 +1754,7 @@ const searchRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/ten
               
               await incrementApiUsage(1); 
               const searchData = await searchRes.json();
+              console.log("SEARCH RESULT:", JSON.stringify(searchData));
               const rapidPlayerId = searchData.results?.[0]?.id ?? searchData.data?.[0]?.id;
 
               if (rapidPlayerId) {
@@ -1768,6 +1769,7 @@ const searchRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/ten
                   await incrementApiUsage(1);
                   
                   statsData = await statsRes.json();
+                  console.log("STATS RESULT:", JSON.stringify(statsData));
 
                   // C. Save to Cache
                   if (cached) {
