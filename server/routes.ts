@@ -1754,7 +1754,7 @@ const searchRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/ten
               
               await incrementApiUsage(1); 
               const searchData = await searchRes.json();
-              const rapidPlayerId = searchData.results?.[0]?.id;
+              const rapidPlayerId = searchData.results?.[0]?.id ?? searchData.data?.[0]?.id;
 
               if (rapidPlayerId) {
                   // B. Get Events/Stats (Cost: 1 Request)
