@@ -86,7 +86,7 @@ export default function Header() {
                 size="sm"
                 data-testid="button-login"
               >
-                <Link href="/signin">Sign In</Link>
+<Link href="/signin">Player Sign In</Link>
               </Button>
               <Button asChild size="sm" data-testid="button-get-started">
                 <Link href="/signup/player">Player Registration</Link>
@@ -155,7 +155,7 @@ export default function Header() {
              ) : (
                <>
                  <Button asChild variant="outline" size="sm" className="w-full">
-                    <Link href="/signin" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
+                    <Link href="/signin" onClick={() => setMobileMenuOpen(false)}>Player Sign In</Link>
                  </Button>
                  <Button asChild size="sm" className="w-full">
                     <Link href="/signup/player" onClick={() => setMobileMenuOpen(false)}>Player Registration</Link>
