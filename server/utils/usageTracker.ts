@@ -1,5 +1,5 @@
-import { db } from "../db";
-import { apiUsage } from "@db/schema";
+import { db } from "../db.js";
+import { apiUsage } from "../../shared/schema.js";
 import { eq } from "drizzle-orm";
 
 export async function incrementApiUsage(count = 1) {
