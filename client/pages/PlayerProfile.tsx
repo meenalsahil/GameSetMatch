@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, FormEvent } from "react";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -24,7 +24,7 @@ export default function PlayerProfile() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Force scroll to top when the page loads or ID changes
+  // Force scroll to top when the page loads
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [id]);
@@ -42,18 +42,16 @@ export default function PlayerProfile() {
     },
   });
 
-  // --- STATE: Sponsor Modal ---
   const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // --- STATE: AI Analyst ---
+  // --- AI STATE ---
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiAnswer, setAiAnswer] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [cacheInfo, setCacheInfo] = useState<{used: boolean, date: string} | null>(null);
 
-  // --- FUNCTION: Open Sponsor Modal ---
   const handleSupportClick = () => {
     if (!player) {
       toast({
@@ -65,7 +63,6 @@ export default function PlayerProfile() {
     setIsSponsorModalOpen(true);
   };
 
-  // --- FUNCTION: Stripe Redirect ---
   const proceedToStripe = async () => {
     if (!termsAccepted) return;
     setIsSponsorModalOpen(false); 
@@ -113,8 +110,10 @@ export default function PlayerProfile() {
     }
   };
 
-  // --- FUNCTION: Ask AI ---
-  const handleAskAi = async () => {
+  // --- FIXED ASK FUNCTION ---
+  const handleAskAi = async (e?: FormEvent) => {
+    if (e) e.preventDefault(); // Prevent page reload if submitted via form
+
     if (!aiQuestion.trim() || !player) return;
     setIsAiLoading(true);
     
@@ -134,7 +133,8 @@ export default function PlayerProfile() {
          });
       }
     } catch (err) {
-      toast({ title: "Error", description: "Could not fetch answer", variant: "destructive" });
+      console.error(err);
+      toast({ title: "Error", description: "Could not fetch answer. Check server logs.", variant: "destructive" });
     } finally {
       setIsAiLoading(false);
     }
@@ -222,7 +222,7 @@ export default function PlayerProfile() {
           </CardHeader>
         </Card>
 
-        {/* --- MARKETING: NEW AI FEATURE BANNER --- */}
+        {/* --- AI FEATURE CARD (Simplified) --- */}
         <div 
           onClick={() => setIsAiChatOpen(true)}
           className="mb-8 cursor-pointer group relative overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-1 shadow-lg transition-all hover:shadow-xl hover:scale-[1.01]"
@@ -236,9 +236,6 @@ export default function PlayerProfile() {
               <div className="text-white">
                 <h3 className="font-bold text-lg flex items-center gap-2">
                   Ask AI Analyst 
-                  <span className="rounded-full bg-yellow-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-yellow-200 border border-yellow-400/30">
-                    New
-                  </span>
                 </h3>
                 <p className="text-sm text-purple-100 opacity-90">
                   Analyze {player.fullName.split(' ')[0]}'s recent match performance and stats.
@@ -486,25 +483,27 @@ export default function PlayerProfile() {
               )}
             </div>
 
-            {/* Input Area */}
+            {/* Input Area (Wrapped in form to fix submit issue) */}
             {!aiAnswer && (
-              <div className="p-4 bg-white border-t flex gap-2">
+              <form 
+                onSubmit={handleAskAi}
+                className="p-4 bg-white border-t flex gap-2"
+              >
                 <Input 
                   placeholder="Ask a question..." 
                   value={aiQuestion}
                   onChange={(e) => setAiQuestion(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !isAiLoading && handleAskAi()}
                   disabled={isAiLoading}
                   className="focus-visible:ring-purple-500"
                 />
                 <Button 
-                  onClick={handleAskAi} 
+                  type="submit"
                   disabled={!aiQuestion.trim() || isAiLoading}
                   className="bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
                 </Button>
-              </div>
+              </form>
             )}
           </div>
         </div>

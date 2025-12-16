@@ -16,12 +16,9 @@ import {
   Users,
   TrendingUp,
   ArrowRight,
-  Sparkles,
-  ShieldCheck,
-  LineChart
 } from "lucide-react";
 
-// Helper to calculate funding progress (Mock logic for display)
+// Helper to calculate funding progress
 const getProgress = (current: number, goal: number) => {
   if (!goal) return 0;
   return Math.min(100, Math.round((current / goal) * 100));
@@ -52,12 +49,6 @@ export default function Home() {
       <section className="relative overflow-hidden bg-gradient-to-b from-green-50 to-white dark:from-green-950/20 dark:to-background pt-20 pb-16 px-6">
         <div className="container mx-auto max-w-5xl text-center">
           
-          {/* 1. SUBTLE MARKETING: The "New Feature" Pill Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 border border-purple-200 text-purple-700 text-xs font-medium mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <Sparkles className="h-3 w-3" />
-            <span>New: AI Match Intelligence is now live</span>
-          </div>
-
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-6">
             Invest in the Future of <br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-600">
@@ -67,7 +58,7 @@ export default function Home() {
           
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
             Directly support talented players rising through the ATP & WTA ranks. 
-            Analyze their official stats, track their journey, and be part of their team.
+            Track their journey, analyze their stats, and be part of their team.
           </p>
 
           {/* Search Bar */}
@@ -80,22 +71,10 @@ export default function Home() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-green-600" /> Verified Profiles
-            </span>
-            <span className="flex items-center gap-1.5">
-              <LineChart className="h-4 w-4 text-purple-600" /> Live ATP/WTA Data
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Users className="h-4 w-4 text-blue-600" /> Direct Support
-            </span>
-          </div>
         </div>
       </section>
 
-      {/* --- VALUE PROPS (The "Balance") --- */}
+      {/* --- FEATURES --- */}
       <section className="py-16 bg-white dark:bg-background border-y border-gray-100">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-8">
@@ -111,19 +90,14 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Feature 2: AI MARKETING (Subtle but clear) */}
-            <div className="p-6 rounded-2xl bg-purple-50/50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/30 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Sparkles className="h-16 w-16 text-purple-600" />
+            {/* Feature 2: Subtle text mention of AI */}
+            <div className="p-6 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+              <div className="h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center mb-4 text-purple-600">
+                <Users className="h-5 w-5" />
               </div>
-              <div className="h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center mb-4 text-purple-600 relative z-10">
-                <LineChart className="h-5 w-5" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2 text-purple-900 dark:text-purple-100 relative z-10">
-                Vet with AI Analysis
-              </h3>
-              <p className="text-purple-800/80 dark:text-purple-200/70 text-sm leading-relaxed relative z-10">
-                Don't guess. Use our new <strong>AI Analyst</strong> on any profile to pull official match records and win rates instantly.
+              <h3 className="font-semibold text-lg mb-2">Vet with Data</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Use our AI Analyst on any profile to pull official match records and win rates instantly.
               </p>
             </div>
 
@@ -150,7 +124,6 @@ export default function Home() {
               <h2 className="text-3xl font-bold mb-2">Featured Players</h2>
               <p className="text-muted-foreground">Talent waiting for an opportunity</p>
             </div>
-            {/* Optional Filter Button could go here */}
           </div>
 
           {isLoading ? (
@@ -187,7 +160,6 @@ export default function Home() {
                         <span>{player.fullName}</span>
                         {player.country && (
                           <span className="text-lg" title={player.country}>
-                            {/* Simple check for flag if you have a helper, otherwise just text code */}
                             <span className="text-xs font-normal text-muted-foreground border px-1.5 py-0.5 rounded bg-gray-50">
                               {player.country}
                             </span>
@@ -208,7 +180,7 @@ export default function Home() {
                             className="bg-green-600 h-full rounded-full"
                             style={{
                               width: `${getProgress(
-                                player.sponsorCount * 50, // Mock calculation
+                                player.sponsorCount * 50, 
                                 5000
                               )}%`,
                             }}
@@ -219,7 +191,7 @@ export default function Home() {
                             {player.sponsorCount || 0} Supporters
                           </span>
                           <span className="flex items-center gap-1 text-purple-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                            Analyze <ArrowRight className="h-3 w-3" />
+                            View Profile <ArrowRight className="h-3 w-3" />
                           </span>
                         </div>
                       </div>
