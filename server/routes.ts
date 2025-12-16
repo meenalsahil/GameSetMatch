@@ -1697,12 +1697,11 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
 
       // --- LOGIC CHANGE: Determine Search Name ---
       // Default to the database name
-      let searchName = player.fullName;
-      
+let searchName = player.fullName || player.full_name;      
       // If they have an ATP link, try to extract the "real" name from the slug
-      if (player.atpProfileUrl) {
+if (player.atpProfileUrl || player.atp_profile_url) {
         try {
-          const urlObj = new URL(player.atpProfileUrl);
+          const urlObj = new URL(player.atpProfileUrl || player.atp_profile_url);
           const pathSegments = urlObj.pathname.split('/');
           // usually the name is after 'players'
           const playersIndex = pathSegments.indexOf('players');
