@@ -1685,7 +1685,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
 
  // -------- AI: Ask Analyst (With Link-Based Lookup) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
-    const playerId = req.params.id;
+    const playerId = parseInt(req.params.id);
     const { question } = req.body;
 
     if (!question) return res.status(400).json({ message: "Question required" });
