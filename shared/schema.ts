@@ -40,6 +40,8 @@ export const players = pgTable("players", {
   createdAt: timestamp("created_at").defaultNow(),
   stripeAccountId: varchar("stripe_account_id", { length: 255 }),
   stripeReady: boolean("stripe_ready").notNull().default(false),
+  sponsorCount: integer("sponsor_count").default(0),
+  verificationVideoUrl: text("verification_video_url"),
 
   // Email verification fields
   emailVerified: boolean("email_verified").default(false),
@@ -66,16 +68,17 @@ export const players = pgTable("players", {
   verificationNotes: text("verification_notes"),
 });
 
-// NEW: Table to store your master list (from the PDFs)
+// EXISTING TABLE - Keep serial because it already exists in DB
 export const knownPlayers = pgTable("known_players", {
   id: serial("id").primaryKey(),
   fullName: text("full_name").notNull(),
   country: text("country"),
-  gender: text("gender"), // 'Male' or 'Female'
+  gender: text("gender"), 
   birthDate: date("birth_date"),
-  sourceId: text("source_id"), // Optional ID from source
+  sourceId: text("source_id"), 
 });
 
+// EXISTING TABLE - Keep serial because it already exists in DB
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),
   playerId: integer("player_id").notNull(),
@@ -128,3 +131,24 @@ export const signupPlayerSchema = z.object({
 });
 
 export type SignupPlayer = z.infer<typeof signupPlayerSchema>;
+
+// ============================================
+// NEW TABLES - These don't exist yet in DB
+// ============================================
+
+// Cache table for external Tennis API data
+export const playerStatsCache = pgTable("player_stats_cache", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  tennisApiPlayerId: text("tennis_api_player_id"),
+  statsJson: jsonb("stats_json"),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+// Track API usage to stay under 500 limit
+export const apiUsage = pgTable("api_usage", {
+  id: serial("id").primaryKey(),
+  month: text("month").notNull().unique(),
+  requestCount: integer("request_count").default(0).notNull(),
+  lastRequestAt: timestamp("last_request_at").defaultNow(),
+});

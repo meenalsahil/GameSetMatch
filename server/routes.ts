@@ -1,4 +1,6 @@
 // server/routes.ts
+import { playerStatsCache } from "../shared/schema.js"; // Ensure path matches your setup
+import { incrementApiUsage, getApiUsage } from "./utils/usageTracker.js";
 import OpenAI from "openai";
 import { stripeHelpers, isStripeEnabled } from "./stripe.js";
 import { and, eq } from "drizzle-orm";
@@ -1680,5 +1682,129 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
       res.status(500).json({ message: "Failed to search players" });
     }
   });
+
+  // -------- AI: Ask Analyst (With Caching & Tracking) --------
+  app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
+    const playerId = parseInt(req.params.id);
+    const { question } = req.body;
+
+    if (!question) return res.status(400).json({ message: "Question required" });
+
+    try {
+      // 1. Get Player Name
+      // Use your storage helper or direct DB call
+      const player = await storage.getPlayer(playerId); 
+      if (!player) return res.status(404).json({ message: "Player not found" });
+
+      // 2. Check Database Cache
+      let statsData = null;
+      let usedCache = false;
+
+      const [cached] = await db
+        .select()
+        .from(playerStatsCache)
+        .where(eq(playerStatsCache.playerId, playerId))
+        .limit(1);
+
+      // Define "Fresh": Data is less than 7 days old
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      if (cached && cached.lastUpdated && cached.lastUpdated > sevenDaysAgo && cached.statsJson) {
+        console.log(`✅ Using Cached Stats for ${player.fullName}`);
+        statsData = cached.statsJson;
+        usedCache = true;
+      } else {
+        // 3. No Cache? Fetch from RapidAPI
+        console.log(`🌍 Fetching FRESH data for ${player.fullName}`);
+        
+        const rapidApiKey = process.env.RAPIDAPI_KEY;
+        if (!rapidApiKey) {
+           // Fallback if no key: just use AI without stats
+           console.warn("Missing RAPIDAPI_KEY");
+        } else {
+           try {
+              // A. Search for Player ID (Cost: 1 Request)
+              const searchRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/search/${encodeURIComponent(player.fullName)}`, {
+                  method: 'GET',
+                  headers: {
+                      'x-rapidapi-key': rapidApiKey,
+                      'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com'
+                  }
+              });
+              
+              await incrementApiUsage(1); // TRACK USAGE
+              const searchData = await searchRes.json();
+              const rapidPlayerId = searchData.results?.[0]?.id;
+
+              if (rapidPlayerId) {
+                  // B. Get Events/Stats (Cost: 1 Request)
+                  const statsRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/player/${rapidPlayerId}/events/2025`, {
+                      method: 'GET',
+                      headers: {
+                          'x-rapidapi-key': rapidApiKey,
+                          'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com'
+                      }
+                  });
+                  await incrementApiUsage(1); // TRACK USAGE
+                  
+                  statsData = await statsRes.json();
+
+                  // C. Save to Cache
+                  if (cached) {
+                      await db.update(playerStatsCache)
+                          .set({ statsJson: statsData, lastUpdated: new Date() })
+                          .where(eq(playerStatsCache.id, cached.id));
+                  } else {
+                      await db.insert(playerStatsCache).values({
+                          playerId,
+                          tennisApiPlayerId: rapidPlayerId.toString(),
+                          statsJson: statsData
+                      });
+                  }
+              }
+           } catch (apiErr) {
+             console.error("RapidAPI Error:", apiErr);
+           }
+        }
+      }
+
+      // 4. Ask OpenAI
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      const systemPrompt = statsData 
+        ? `You are an expert tennis analyst. You have access to OFFICIAL 2025 match data for ${player.fullName}: ${JSON.stringify(statsData)}. 
+           Answer the user's question based strictly on this data. 
+           - If the data shows specific match results, quote them.
+           - If the data is empty, say "I don't have recorded matches for 2025 yet."
+           - Keep it encouraging and professional.`
+        : `You are an expert tennis analyst. You don't have access to specific match stats right now, but answer generally about tennis strategy or the player's background based on their profile: ${player.bio}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: question }
+        ],
+      });
+
+      res.json({ 
+        answer: completion.choices[0].message.content,
+        usedCache,
+        lastUpdated: cached?.lastUpdated || new Date()
+      });
+
+    } catch (error) {
+      console.error("AI Stats Error:", error);
+      res.status(500).json({ message: "Failed to analyze stats" });
+    }
+  });
+
+  // -------- ADMIN: Usage Monitor --------
+  app.get("/api/admin/usage", isAdmin, async (_req: Request, res: Response) => {
+      const count = await getApiUsage();
+      res.json({ count, limit: 500 });
+  });
+
   return httpServer;
 }
