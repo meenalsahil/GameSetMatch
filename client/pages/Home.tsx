@@ -252,4 +252,64 @@ export default function Home() {
                         <span>{player.fullName}</span>
                         {player.country && (
                           <span className="text-lg" title={player.country}>
-                            <span className="text-xs font-normal text-muted-foreground border px-1.5 py-0.5 rounded
+                            <span className="text-xs font-normal text-muted-foreground border px-1.5 py-0.5 rounded bg-gray-50">
+                              {player.country}
+                            </span>
+                          </span>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-1">
+                        {player.age ? `${player.age} yrs • ` : ""}
+                        {player.playStyle || "Tennis Player"}
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="mt-auto pt-0">
+                      <div className="space-y-3">
+                        {/* Progress Bar */}
+                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-green-600 h-full rounded-full"
+                            style={{
+                              width: `${getProgress(
+                                player.sponsorCount * 50, 
+                                5000
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>
+                            {player.sponsorCount || 0} Supporters
+                          </span>
+                          <span className="flex items-center gap-1 text-purple-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                            View Profile <ArrowRight className="h-3 w-3" />
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {!isLoading && filteredPlayers?.length === 0 && (
+            <div className="text-center py-20">
+              <p className="text-muted-foreground text-lg">
+                No players found matching "{search}"
+              </p>
+              <Button
+                variant="link"
+                onClick={() => setSearch("")}
+                className="mt-2 text-green-600"
+              >
+                Clear Search
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
