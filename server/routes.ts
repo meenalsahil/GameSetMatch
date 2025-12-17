@@ -1683,7 +1683,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
- // -------- AI: Ask Analyst (Fixed URLs & Fixed Syntax) --------
+// -------- AI: Ask Analyst (Fixed: Slugs, Paths & Syntax) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
     const playerId = req.params.id;
     const { question } = req.body;
@@ -1706,6 +1706,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
           const playersIndex = pathSegments.indexOf('players');
           if (playersIndex !== -1 && pathSegments[playersIndex + 1]) {
             const slug = pathSegments[playersIndex + 1];
+            // Convert slug back to Name for display, but keep slug for search
             searchName = slug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
             console.log(`🔍 Detected ATP Link. Overriding "${player.fullName}" with "${searchName}"`);
           }
@@ -1746,8 +1747,12 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
            console.warn("Missing RAPIDAPI_KEY");
         } else {
            try {
-              // FIX: Removed '/tennis' prefix
-              const v1Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/search/${encodeURIComponent(searchName)}`;
+              // PREPARE: Generate a "slug" (e.g., "Lorenzo Musetti" -> "lorenzo-musetti")
+              const slug = searchName.toLowerCase().trim().replace(/\s+/g, '-');
+              
+              // ATTEMPT 1: Try /tennis/search/{slug} (Standard for Matchstat)
+              let v1Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/search/${slug}`;
+              console.log(`Attempting URL: ${v1Url}`);
               
               let searchRes = await fetch(v1Url, {
                   method: 'GET',
@@ -1759,35 +1764,31 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
               
               await incrementApiUsage(1); 
               let searchData = await searchRes.json();
+
+              // ATTEMPT 2: If slug failed, try raw encoded name: /tennis/search/{name}
+              if (searchData.message && searchData.message.includes("does not exist")) {
+                 console.log("⚠️ Slug search failed. Retrying with Encoded Name...");
+                 v1Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/search/${encodeURIComponent(searchName)}`;
+                 searchRes = await fetch(v1Url, {
+                    method: 'GET',
+                    headers: {
+                        'x-rapidapi-key': rapidApiKey,
+                        'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com'
+                    }
+                 });
+                 await incrementApiUsage(1);
+                 searchData = await searchRes.json();
+              }
+
               console.log("SEARCH RESULT:", JSON.stringify(searchData)); 
 
               let rapidPlayerId = searchData.results?.[0]?.id;
 
-              // FALLBACK: If Full Name failed, try Last Name
-              if (!rapidPlayerId) {
-                 const lastName = searchName.split(' ').pop();
-                 if (lastName && lastName !== searchName) {
-                    console.log(`⚠️ Full name search failed. Retrying with Last Name: ${lastName}`);
-                    // FIX: Removed '/tennis' prefix
-                    const v1FallbackUrl = `https://tennis-api-atp-wta-itf.p.rapidapi.com/search/${encodeURIComponent(lastName)}`;
-                    
-                    searchRes = await fetch(v1FallbackUrl, {
-                        method: 'GET',
-                        headers: {
-                           'x-rapidapi-key': rapidApiKey,
-                           'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com'
-                        }
-                    });
-                    await incrementApiUsage(1);
-                    searchData = await searchRes.json();
-                    rapidPlayerId = searchData.results?.[0]?.id;
-                 }
-              }
-
               if (rapidPlayerId) {
                   console.log(`✅ Found Player ID: ${rapidPlayerId}. Fetching stats...`);
-                  // FIX: Removed '/tennis' prefix
-                  const statsRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/player/${rapidPlayerId}/events/2025`, {
+                  
+                  // Fetch stats using the ID
+                  const statsRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/player/${rapidPlayerId}/events/2025`, {
                       method: 'GET',
                       headers: {
                           'x-rapidapi-key': rapidApiKey,
@@ -1822,14 +1823,16 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
 
       // 4. Ask OpenAI
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      const systemPrompt = statsData 
-        ? `You are an expert tennis analyst. You have access to OFFICIAL 2025 match data for ${searchName}. Data: ${JSON.stringify(statsData)}. Answer strictly based on this.`
-        : `You are an expert tennis analyst. Answer generally about tennis strategy or the player's background based on their profile: ${player.bio}`;
+      
+      // Context building: Don't ask for the name if we already have the profile!
+      const contextPrefix = statsData 
+        ? `You are an expert tennis analyst. You have access to OFFICIAL 2025 match data for ${searchName}. Data: ${JSON.stringify(statsData)}.`
+        : `You are an expert tennis analyst. The user is asking about the tennis player ${searchName}. Even if you don't have their 2025 real-time stats, answer based on their general career and play style. Do NOT say "I don't know who this is".`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: contextPrefix },
           { role: "user", content: question }
         ],
       });
