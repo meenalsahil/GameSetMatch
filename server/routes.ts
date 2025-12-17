@@ -1683,7 +1683,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
-// -------- AI: Ask Analyst (FIXED: V2 API + Slugs) --------
+// -------- AI: Ask Analyst (FIXED with ChatGPT's V2 Logic) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
     const playerId = req.params.id;
     const { question } = req.body;
@@ -1746,15 +1746,11 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
            console.warn("Missing RAPIDAPI_KEY");
         } else {
            try {
-              // PREPARE: Generate a "slug" (e.g., "Lorenzo Musetti" -> "lorenzo-musetti")
-              const slug = searchName.toLowerCase().trim().replace(/\s+/g, '-');
-              
-              // ATTEMPT 1: V2 Slug Search
-              // Correct URL: https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search/lorenzo-musetti
-              let v2Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search/${slug}`;
+              // ✅ FIX 1: Use V2 Search with Query Parameter
+              const v2Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search?search=${encodeURIComponent(searchName)}`;
               console.log(`Attempting V2 URL: ${v2Url}`);
               
-              let searchRes = await fetch(v2Url, {
+              const searchRes = await fetch(v2Url, {
                   method: 'GET',
                   headers: {
                       'x-rapidapi-key': rapidApiKey,
@@ -1764,30 +1760,16 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
               
               await incrementApiUsage(1); 
               let searchData = await searchRes.json();
-
-              // ATTEMPT 2: Fallback to Encoded Name (V2)
-              if (searchData.message && searchData.message.includes("does not exist")) {
-                 console.log("⚠️ V2 Slug search failed. Retrying with Encoded Name...");
-                 v2Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search/${encodeURIComponent(searchName)}`;
-                 searchRes = await fetch(v2Url, {
-                    method: 'GET',
-                    headers: {
-                        'x-rapidapi-key': rapidApiKey,
-                        'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com'
-                    }
-                 });
-                 await incrementApiUsage(1);
-                 searchData = await searchRes.json();
-              }
-
               console.log("SEARCH RESULT:", JSON.stringify(searchData)); 
 
-              let rapidPlayerId = searchData.results?.[0]?.id;
+              // ✅ FIX 2: Better Parsing for V2 Structure (Find 'player_atp' category)
+              const rapidPlayerId = searchData?.data?.find((c: any) => c.category === "player_atp")?.result?.[0]?.id 
+                                    ?? searchData?.data?.flatMap((c: any) => c.result || [])?.[0]?.id;
 
               if (rapidPlayerId) {
-                  console.log(`✅ Found Player ID: ${rapidPlayerId}. Fetching stats (V2)...`);
+                  console.log(`✅ Found Player ID: ${rapidPlayerId}. Fetching stats...`);
                   
-                  // Fetch stats using the ID (V2)
+                  // ✅ FIX 3: Use V2 Player Events Endpoint
                   const statsRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/player/${rapidPlayerId}/events/2025`, {
                       method: 'GET',
                       headers: {
