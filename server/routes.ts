@@ -1683,7 +1683,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
- // -------- AI: Ask Analyst (Fixed URLs) --------
+ // -------- AI: Ask Analyst (Fixed URLs & Fixed Syntax) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
     const playerId = req.params.id;
     const { question } = req.body;
@@ -1746,7 +1746,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
            console.warn("Missing RAPIDAPI_KEY");
         } else {
            try {
-              // FIX 1: Removed '/tennis' prefix from URL
+              // FIX: Removed '/tennis' prefix
               const v1Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/search/${encodeURIComponent(searchName)}`;
               
               let searchRes = await fetch(v1Url, {
@@ -1768,7 +1768,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
                  const lastName = searchName.split(' ').pop();
                  if (lastName && lastName !== searchName) {
                     console.log(`⚠️ Full name search failed. Retrying with Last Name: ${lastName}`);
-                    // FIX 2: Removed '/tennis' prefix here too
+                    // FIX: Removed '/tennis' prefix
                     const v1FallbackUrl = `https://tennis-api-atp-wta-itf.p.rapidapi.com/search/${encodeURIComponent(lastName)}`;
                     
                     searchRes = await fetch(v1FallbackUrl, {
@@ -1786,7 +1786,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
 
               if (rapidPlayerId) {
                   console.log(`✅ Found Player ID: ${rapidPlayerId}. Fetching stats...`);
-                  // FIX 3: Removed '/tennis' prefix from player events endpoint
+                  // FIX: Removed '/tennis' prefix
                   const statsRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/player/${rapidPlayerId}/events/2025`, {
                       method: 'GET',
                       headers: {
@@ -1845,3 +1845,6 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
       res.status(500).json({ message: "Failed to analyze stats" });
     }
   });
+
+  return httpServer;
+}
