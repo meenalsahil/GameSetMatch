@@ -1733,7 +1733,8 @@ if (player.atpProfileUrl || player.atp_profile_url) {
       if (cached && cached.lastUpdated && cached.lastUpdated > sevenDaysAgo && cached.statsJson) {
         console.log(`✅ Using Cached Stats for ${player.fullName}`);
         statsData = cached.statsJson;
-        usedCache = true;
+usedCache = true;
+      } else {
       // 3. No Cache? Fetch from RapidAPI using the SMART SEARCH NAME
       console.log(`🌍 Fetching FRESH data for: ${searchName}`);
       
@@ -1810,9 +1811,10 @@ if (player.atpProfileUrl || player.atp_profile_url) {
             } else {
                console.log("❌ Player ID not found in Search Results.");
             }
-         } catch (apiErr) {
-           console.error("RapidAPI Error:", apiErr);
-         }
+       } catch (apiErr) {
+             console.error("RapidAPI Error:", apiErr);
+           }
+        }
       }
       // 4. Ask OpenAI
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
