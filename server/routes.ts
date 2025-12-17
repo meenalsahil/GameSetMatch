@@ -1682,7 +1682,8 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
       res.status(500).json({ message: "Failed to search players" });
     }
   });
-// -------- AI: Ask Analyst (FIXED: Rankings Strategy) --------
+
+  // -------- AI: Ask Analyst (FIXED: Rankings Strategy + ATP Link Support) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
     const playerId = req.params.id;
     const { question } = req.body;
@@ -1694,8 +1695,29 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
       const player: any = await storage.getPlayer(playerId as any);
       if (!player) return res.status(404).json({ message: "Player not found" });
 
-      const searchName = player.fullName || player.full_name;
-      // Default to ATP, but check if gender implies WTA
+      // Start with the DB name (e.g., "Family Tennis")
+      let searchName = player.fullName || player.full_name;
+
+      // --- RESTORED LOGIC: Check for ATP/WTA Link Override ---
+      if (player.atpProfileUrl || player.atp_profile_url) {
+        try {
+          const urlObj = new URL(player.atpProfileUrl || player.atp_profile_url);
+          const pathSegments = urlObj.pathname.split('/');
+          // Look for 'players' in the URL to find the name slug
+          const playersIndex = pathSegments.indexOf('players');
+          if (playersIndex !== -1 && pathSegments[playersIndex + 1]) {
+            const slug = pathSegments[playersIndex + 1];
+            // Convert "novak-djokovic" -> "Novak Djokovic"
+            searchName = slug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            console.log(`🔍 Detected ATP Link. Overriding "${player.fullName}" with "${searchName}"`);
+          }
+        } catch (e) {
+          console.log("Could not parse ATP URL, falling back to full name");
+        }
+      }
+      // ---------------------------------------------------------
+
+      // Determine Endpoint (ATP vs WTA) based on Gender
       const isWTA = player.gender && (player.gender.toLowerCase() === 'female' || player.gender.toLowerCase() === 'wta');
       const rankingEndpoint = isWTA ? 'wta' : 'atp'; 
       
@@ -1734,7 +1756,6 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
               let rapidPlayerId = null;
 
               // STRATEGY A: Fetch Rankings (Reliable)
-              // We fetch the top rankings. Valid names WILL be here.
               console.log(`🌍 Strategy A: Fetching ${rankingEndpoint.toUpperCase()} Rankings List...`);
               
               const rankingsUrl = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/${rankingEndpoint}/rankings`;
@@ -1750,7 +1771,6 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
 
               if (rankingsData && rankingsData.data) {
                 // Fuzzy Match: Does the ranking name include our search name?
-                // e.g. "Novak Djokovic" (Rankings) includes "Novak Djokovic" (DB)
                 const found = rankingsData.data.find((p: any) => 
                    p.name && p.name.toLowerCase().includes(searchName.toLowerCase()) ||
                    searchName.toLowerCase().includes(p.name?.toLowerCase())
