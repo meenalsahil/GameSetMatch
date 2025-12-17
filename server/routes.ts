@@ -1683,7 +1683,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
-  // -------- AI: Ask Analyst (FIXED: Rankings Strategy + ATP Link Support) --------
+// -------- AI: Ask Analyst (FINAL: Smart Match + Structured Output) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
     const playerId = req.params.id;
     const { question } = req.body;
@@ -1695,19 +1695,17 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
       const player: any = await storage.getPlayer(playerId as any);
       if (!player) return res.status(404).json({ message: "Player not found" });
 
-      // Start with the DB name (e.g., "Family Tennis")
+      // Start with DB name
       let searchName = player.fullName || player.full_name;
 
-      // --- RESTORED LOGIC: Check for ATP/WTA Link Override ---
+      // --- ATP Link Override ---
       if (player.atpProfileUrl || player.atp_profile_url) {
         try {
           const urlObj = new URL(player.atpProfileUrl || player.atp_profile_url);
           const pathSegments = urlObj.pathname.split('/');
-          // Look for 'players' in the URL to find the name slug
           const playersIndex = pathSegments.indexOf('players');
           if (playersIndex !== -1 && pathSegments[playersIndex + 1]) {
             const slug = pathSegments[playersIndex + 1];
-            // Convert "novak-djokovic" -> "Novak Djokovic"
             searchName = slug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
             console.log(`🔍 Detected ATP Link. Overriding "${player.fullName}" with "${searchName}"`);
           }
@@ -1715,29 +1713,22 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
           console.log("Could not parse ATP URL, falling back to full name");
         }
       }
-      // ---------------------------------------------------------
 
-      // Determine Endpoint (ATP vs WTA) based on Gender
+      // Determine Endpoint
       const isWTA = player.gender && (player.gender.toLowerCase() === 'female' || player.gender.toLowerCase() === 'wta');
       const rankingEndpoint = isWTA ? 'wta' : 'atp'; 
       
       console.log(`🔍 Analyst looking for: ${searchName} (${rankingEndpoint.toUpperCase()})`);
 
-      // 2. Check Database Cache
+      // 2. Check Cache
       let statsData = null;
       let usedCache = false;
       let cached = null;
 
       try {
-         const [result] = await db
-          .select()
-          .from(playerStatsCache)
-          .where(eq(playerStatsCache.playerId, playerId as any)) 
-          .limit(1);
+         const [result] = await db.select().from(playerStatsCache).where(eq(playerStatsCache.playerId, playerId as any)).limit(1);
          cached = result;
-      } catch (err) {
-         console.log("Cache lookup error", err);
-      }
+      } catch (err) { console.log("Cache lookup error", err); }
 
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -1747,7 +1738,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
         statsData = cached.statsJson;
         usedCache = true;
       } else {
-        // 3. FETCH FRESH DATA (Rankings Strategy)
+        // 3. FETCH FRESH DATA
         const rapidApiKey = process.env.RAPIDAPI_KEY;
         if (!rapidApiKey) {
            console.warn("Missing RAPIDAPI_KEY");
@@ -1755,26 +1746,35 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
            try {
               let rapidPlayerId = null;
 
-              // STRATEGY A: Fetch Rankings (Reliable)
+              // STRATEGY A: Rankings List
               console.log(`🌍 Strategy A: Fetching ${rankingEndpoint.toUpperCase()} Rankings List...`);
-              
               const rankingsUrl = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/${rankingEndpoint}/rankings`;
               const rankingsRes = await fetch(rankingsUrl, {
                   method: 'GET',
-                  headers: {
-                      'x-rapidapi-key': rapidApiKey,
-                      'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com'
-                  }
+                  headers: { 'x-rapidapi-key': rapidApiKey, 'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com' }
               });
               await incrementApiUsage(1);
               const rankingsData = await rankingsRes.json();
 
               if (rankingsData && rankingsData.data) {
-                // Fuzzy Match: Does the ranking name include our search name?
-                const found = rankingsData.data.find((p: any) => 
-                   p.name && p.name.toLowerCase().includes(searchName.toLowerCase()) ||
-                   searchName.toLowerCase().includes(p.name?.toLowerCase())
+                // DEBUG: Print the first player name to see format
+                if (rankingsData.data.length > 0) {
+                    console.log(`ℹ️ API Name Format Example: "${rankingsData.data[0].name}"`);
+                }
+
+                // 1. Try Fuzzy Full Match
+                let found = rankingsData.data.find((p: any) => 
+                   p.name && (p.name.toLowerCase().includes(searchName.toLowerCase()) || searchName.toLowerCase().includes(p.name?.toLowerCase()))
                 );
+
+                // 2. Fallback: Try Last Name Match (e.g. "Djokovic")
+                if (!found) {
+                    const lastName = searchName.split(' ').pop();
+                    if (lastName && lastName.length > 3) {
+                        console.log(`⚠️ Full match failed. Trying last name: "${lastName}"`);
+                        found = rankingsData.data.find((p: any) => p.name && p.name.toLowerCase().includes(lastName.toLowerCase()));
+                    }
+                }
 
                 if (found) {
                    console.log(`✅ Found in Rankings! Name: ${found.name}, ID: ${found.id}`);
@@ -1784,16 +1784,15 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
                 }
               }
 
-              // STRATEGY B: Fallback to Search (Legacy) if Rankings failed
+              // STRATEGY B: Fallback to Search
               if (!rapidPlayerId) {
                 console.log("⚠️ Rankings failed. Trying V2 Search fallback...");
-                const v2Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search?search=${encodeURIComponent(searchName)}`;
+                // Try searching JUST the last name to be safer
+                const lastName = searchName.split(' ').pop();
+                const v2Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search?search=${encodeURIComponent(lastName || searchName)}`;
                 const searchRes = await fetch(v2Url, {
                     method: 'GET',
-                    headers: {
-                        'x-rapidapi-key': rapidApiKey,
-                        'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com'
-                    }
+                    headers: { 'x-rapidapi-key': rapidApiKey, 'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com' }
                 });
                 await incrementApiUsage(1);
                 const searchData = await searchRes.json();
@@ -1802,17 +1801,13 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
                                 ?? searchData?.data?.flatMap((c: any) => c.result || [])?.[0]?.id;
               }
 
-              // 4. FETCH STATS (If we found an ID)
+              // 4. FETCH STATS
               if (rapidPlayerId) {
                   console.log(`✅ ID Verified: ${rapidPlayerId}. Fetching Events...`);
-                  
                   const statsUrl = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/player/${rapidPlayerId}/events/2025`;
                   const statsRes = await fetch(statsUrl, {
                       method: 'GET',
-                      headers: {
-                          'x-rapidapi-key': rapidApiKey,
-                          'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com'
-                      }
+                      headers: { 'x-rapidapi-key': rapidApiKey, 'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com' }
                   });
                   await incrementApiUsage(1);
                   statsData = await statsRes.json();
@@ -1820,37 +1815,39 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
                   // Save to Cache
                   try {
                       if (cached) {
-                          await db.update(playerStatsCache)
-                              .set({ statsJson: statsData, lastUpdated: new Date(), tennisApiPlayerId: rapidPlayerId.toString() })
-                              .where(eq(playerStatsCache.id, cached.id));
+                          await db.update(playerStatsCache).set({ statsJson: statsData, lastUpdated: new Date(), tennisApiPlayerId: rapidPlayerId.toString() }).where(eq(playerStatsCache.id, cached.id));
                       } else {
-                          await db.insert(playerStatsCache).values({
-                              playerId: playerId as any, 
-                              tennisApiPlayerId: rapidPlayerId.toString(),
-                              statsJson: statsData
-                          });
+                          await db.insert(playerStatsCache).values({ playerId: playerId as any, tennisApiPlayerId: rapidPlayerId.toString(), statsJson: statsData });
                       }
                   } catch (cacheErr) { console.log("Cache save skipped:", cacheErr); }
               } else {
                  console.log("❌ Player ID not found via Rankings OR Search.");
               }
-           } catch (apiErr) {
-             console.error("RapidAPI Error:", apiErr);
-           }
+           } catch (apiErr) { console.error("RapidAPI Error:", apiErr); }
         }
       }
 
-      // 5. Ask OpenAI
+      // 5. Ask OpenAI (With STRUCTURED Prompt)
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       
-      const contextPrefix = statsData 
-        ? `You are an expert tennis analyst. You have access to OFFICIAL 2025 match data for ${searchName}. Data: ${JSON.stringify(statsData)}.`
-        : `You are an expert tennis analyst. The user is asking about the tennis player ${searchName}. Even if you don't have their 2025 real-time stats, answer based on their general career and play style.`;
+      const systemPrompt = `You are an expert tennis analyst.
+      
+CONTEXT:
+The user is asking about: ${searchName}
+Data Source: ${statsData ? "OFFICIAL REAL-TIME 2025 MATCH DATA" : "Your general knowledge (Data Unavailable)"}
+${statsData ? `Data: ${JSON.stringify(statsData)}` : ""}
+
+INSTRUCTIONS:
+1. Answer the user's specific question.
+2. Use BULLET POINTS for readability.
+3. Keep paragraphs short (2-3 sentences max).
+4. If showing stats (win rate, titles), use a Markdown table.
+5. If data is missing, admit it briefly, then answer based on general career knowledge.`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: contextPrefix },
+          { role: "system", content: systemPrompt },
           { role: "user", content: question }
         ],
       });
