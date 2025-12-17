@@ -1683,9 +1683,9 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
- // -------- AI: Ask Analyst (Fixed V1 Search & Syntax) --------
+ // -------- AI: Ask Analyst (Fixed URLs) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
-    const playerId = req.params.id; // Keep as string (UUID)
+    const playerId = req.params.id;
     const { question } = req.body;
 
     if (!question) return res.status(400).json({ message: "Question required" });
@@ -1738,7 +1738,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
         statsData = cached.statsJson;
         usedCache = true;
       } else {
-        // 3. No Cache? Fetch from RapidAPI (Using V1 Endpoint)
+        // 3. No Cache? Fetch from RapidAPI
         console.log(`🌍 Fetching FRESH data for: ${searchName}`);
         
         const rapidApiKey = process.env.RAPIDAPI_KEY;
@@ -1746,8 +1746,8 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
            console.warn("Missing RAPIDAPI_KEY");
         } else {
            try {
-              // V1 SEARCH (Reliable Endpoint)
-              const v1Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/search/${encodeURIComponent(searchName)}`;
+              // FIX 1: Removed '/tennis' prefix from URL
+              const v1Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/search/${encodeURIComponent(searchName)}`;
               
               let searchRes = await fetch(v1Url, {
                   method: 'GET',
@@ -1761,15 +1761,15 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
               let searchData = await searchRes.json();
               console.log("SEARCH RESULT:", JSON.stringify(searchData)); 
 
-              // PARSING V1: It returns a simple 'results' array
               let rapidPlayerId = searchData.results?.[0]?.id;
 
-              // FALLBACK: If Full Name failed, try Last Name with V1
+              // FALLBACK: If Full Name failed, try Last Name
               if (!rapidPlayerId) {
                  const lastName = searchName.split(' ').pop();
                  if (lastName && lastName !== searchName) {
-                    console.log(`⚠️ Full name search failed. Retrying V1 with Last Name: ${lastName}`);
-                    const v1FallbackUrl = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/search/${encodeURIComponent(lastName)}`;
+                    console.log(`⚠️ Full name search failed. Retrying with Last Name: ${lastName}`);
+                    // FIX 2: Removed '/tennis' prefix here too
+                    const v1FallbackUrl = `https://tennis-api-atp-wta-itf.p.rapidapi.com/search/${encodeURIComponent(lastName)}`;
                     
                     searchRes = await fetch(v1FallbackUrl, {
                         method: 'GET',
@@ -1786,7 +1786,8 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
 
               if (rapidPlayerId) {
                   console.log(`✅ Found Player ID: ${rapidPlayerId}. Fetching stats...`);
-                  const statsRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/player/${rapidPlayerId}/events/2025`, {
+                  // FIX 3: Removed '/tennis' prefix from player events endpoint
+                  const statsRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/player/${rapidPlayerId}/events/2025`, {
                       method: 'GET',
                       headers: {
                           'x-rapidapi-key': rapidApiKey,
@@ -1844,6 +1845,3 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
       res.status(500).json({ message: "Failed to analyze stats" });
     }
   });
-
-  return httpServer;
-}
