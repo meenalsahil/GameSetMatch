@@ -1683,62 +1683,9 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
- // -------- AI: Ask Analyst (With Link-Based Lookup) --------
+ // -------- AI: Ask Analyst (Fixed V1 Search & Syntax) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
-    const playerId = req.params.id; 
-    const { question } = req.body;
-
-    if (!question) return res.status(400).json({ message: "Question required" });
-
-    try {
-      // 1. Get Player Data
-      const player: any = await storage.getPlayer(playerId);
-      if (!player) return res.status(404).json({ message: "Player not found" });
-
-      // --- LOGIC CHANGE: Determine Search Name ---
-      // Default to the database name
-let searchName = player.fullName || player.full_name;      
-      // If they have an ATP link, try to extract the "real" name from the slug
-if (player.atpProfileUrl || player.atp_profile_url) {
-        try {
-          const urlObj = new URL(player.atpProfileUrl || player.atp_profile_url);
-          const pathSegments = urlObj.pathname.split('/');
-          // usually the name is after 'players'
-          const playersIndex = pathSegments.indexOf('players');
-          if (playersIndex !== -1 && pathSegments[playersIndex + 1]) {
-            const slug = pathSegments[playersIndex + 1];
-            // Convert "carlos-alcaraz" to "Carlos Alcaraz"
-            searchName = slug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-            console.log(`🔍 Detected ATP Link. Overriding "${player.fullName}" with "${searchName}"`);
-          }
-        } catch (e) {
-          console.log("Could not parse ATP URL, falling back to full name");
-        }
-      }
-
-      // 2. Check Database Cache
-      let statsData = null;
-      let usedCache = false;
-
-      const [cached] = await db
-        .select()
-        .from(playerStatsCache)
-        .where(eq(playerStatsCache.playerId, playerId))
-        .limit(1);
-
-      // Cache is fresh if less than 7 days old
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      if (cached && cached.lastUpdated && cached.lastUpdated > sevenDaysAgo && cached.statsJson) {
-        console.log(`✅ Using Cached Stats for ${player.fullName}`);
-        statsData = cached.statsJson;
-usedCache = true;
-      } else {
-  
-  // -------- AI: Ask Analyst (With Link-Based Lookup) --------
-  app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
-    const playerId = req.params.id;
+    const playerId = req.params.id; // Keep as string (UUID)
     const { question } = req.body;
 
     if (!question) return res.status(400).json({ message: "Question required" });
