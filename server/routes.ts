@@ -1683,7 +1683,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
-// -------- AI: Ask Analyst (FINAL FIX: Slug + Correct Path) --------
+// -------- AI: Ask Analyst (FIXED: V2 API + Slugs) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
     const playerId = req.params.id;
     const { question } = req.body;
@@ -1738,8 +1738,8 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
         statsData = cached.statsJson;
         usedCache = true;
       } else {
-        // 3. No Cache? Fetch from RapidAPI
-        console.log(`🌍 Fetching FRESH data for: ${searchName}`);
+        // 3. No Cache? Fetch from RapidAPI (V2)
+        console.log(`🌍 Fetching FRESH data for: ${searchName} (V2)`);
         
         const rapidApiKey = process.env.RAPIDAPI_KEY;
         if (!rapidApiKey) {
@@ -1749,12 +1749,12 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
               // PREPARE: Generate a "slug" (e.g., "Lorenzo Musetti" -> "lorenzo-musetti")
               const slug = searchName.toLowerCase().trim().replace(/\s+/g, '-');
               
-              // ATTEMPT 1: Slug Search (NO /tennis prefix)
-              // Correct URL: https://tennis-api-atp-wta-itf.p.rapidapi.com/search/lorenzo-musetti
-              let v1Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/search/${slug}`;
-              console.log(`Attempting URL: ${v1Url}`);
+              // ATTEMPT 1: V2 Slug Search
+              // Correct URL: https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search/lorenzo-musetti
+              let v2Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search/${slug}`;
+              console.log(`Attempting V2 URL: ${v2Url}`);
               
-              let searchRes = await fetch(v1Url, {
+              let searchRes = await fetch(v2Url, {
                   method: 'GET',
                   headers: {
                       'x-rapidapi-key': rapidApiKey,
@@ -1765,11 +1765,11 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
               await incrementApiUsage(1); 
               let searchData = await searchRes.json();
 
-              // ATTEMPT 2: Fallback to Encoded Name (NO /tennis prefix)
+              // ATTEMPT 2: Fallback to Encoded Name (V2)
               if (searchData.message && searchData.message.includes("does not exist")) {
-                 console.log("⚠️ Slug search failed. Retrying with Encoded Name...");
-                 v1Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/search/${encodeURIComponent(searchName)}`;
-                 searchRes = await fetch(v1Url, {
+                 console.log("⚠️ V2 Slug search failed. Retrying with Encoded Name...");
+                 v2Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search/${encodeURIComponent(searchName)}`;
+                 searchRes = await fetch(v2Url, {
                     method: 'GET',
                     headers: {
                         'x-rapidapi-key': rapidApiKey,
@@ -1785,10 +1785,10 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
               let rapidPlayerId = searchData.results?.[0]?.id;
 
               if (rapidPlayerId) {
-                  console.log(`✅ Found Player ID: ${rapidPlayerId}. Fetching stats...`);
+                  console.log(`✅ Found Player ID: ${rapidPlayerId}. Fetching stats (V2)...`);
                   
-                  // Fetch stats using the ID (NO /tennis prefix)
-                  const statsRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/player/${rapidPlayerId}/events/2025`, {
+                  // Fetch stats using the ID (V2)
+                  const statsRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/player/${rapidPlayerId}/events/2025`, {
                       method: 'GET',
                       headers: {
                           'x-rapidapi-key': rapidApiKey,
@@ -1813,7 +1813,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
                       }
                   } catch (cacheErr) { console.log("Cache save skipped:", cacheErr); }
               } else {
-                 console.log("❌ Player ID not found in Search Results.");
+                 console.log("❌ Player ID not found in V2 Search Results.");
               }
            } catch (apiErr) {
              console.error("RapidAPI Error:", apiErr);
@@ -1847,6 +1847,3 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
       res.status(500).json({ message: "Failed to analyze stats" });
     }
   });
-
-  return httpServer;
-}
