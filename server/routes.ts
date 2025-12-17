@@ -1735,7 +1735,7 @@ if (player.atpProfileUrl || player.atp_profile_url) {
         statsData = cached.statsJson;
 usedCache = true;
       } else {
-      // 3. No Cache? Fetch from RapidAPI using the SMART SEARCH NAME
+   // 3. No Cache? Fetch from RapidAPI
       console.log(`🌍 Fetching FRESH data for: ${searchName}`);
       
       const rapidApiKey = process.env.RAPIDAPI_KEY;
@@ -1743,9 +1743,11 @@ usedCache = true;
          console.warn("Missing RAPIDAPI_KEY");
       } else {
          try {
-            // A. Search for Player (Try Full Name first)
-            // NOTE: Using V2 Search Endpoint
-            let searchRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search?search=${encodeURIComponent(searchName)}`, {
+            // A. Search for Player (Using V1 Endpoint)
+            // V1 URL Format: /tennis/search/{name}
+            const v1Url = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/search/${encodeURIComponent(searchName)}`;
+            
+            let searchRes = await fetch(v1Url, {
                 method: 'GET',
                 headers: {
                     'x-rapidapi-key': rapidApiKey,
@@ -1757,16 +1759,17 @@ usedCache = true;
             let searchData = await searchRes.json();
             console.log("SEARCH RESULT:", JSON.stringify(searchData)); 
 
-            // PARSING V2: Find the 'player_atp' category inside the 'data' array
-            let atpData = searchData.data?.find((c: any) => c.category === 'player_atp');
-            let rapidPlayerId = atpData?.result?.[0]?.id;
+            // PARSING V1: It returns a simple 'results' array
+            let rapidPlayerId = searchData.results?.[0]?.id;
 
-            // FALLBACK: If Full Name failed (total=0), try searching ONLY Last Name
+            // FALLBACK: If Full Name failed, try Last Name with V1
             if (!rapidPlayerId) {
                const lastName = searchName.split(' ').pop();
                if (lastName && lastName !== searchName) {
-                  console.log(`⚠️ Full name search failed. Retrying with Last Name: ${lastName}`);
-                  searchRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search?search=${encodeURIComponent(lastName)}`, {
+                  console.log(`⚠️ Full name search failed. Retrying V1 with Last Name: ${lastName}`);
+                  const v1FallbackUrl = `https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/search/${encodeURIComponent(lastName)}`;
+                  
+                  searchRes = await fetch(v1FallbackUrl, {
                       method: 'GET',
                       headers: {
                           'x-rapidapi-key': rapidApiKey,
@@ -1775,14 +1778,12 @@ usedCache = true;
                   });
                   await incrementApiUsage(1);
                   searchData = await searchRes.json();
-                  // Check ATP again
-                  atpData = searchData.data?.find((c: any) => c.category === 'player_atp');
-                  rapidPlayerId = atpData?.result?.[0]?.id;
+                  rapidPlayerId = searchData.results?.[0]?.id;
                }
             }
 
             if (rapidPlayerId) {
-                // B. Get Events/Stats (Cost: 1 Request)
+                // B. Get Events/Stats
                 console.log(`✅ Found Player ID: ${rapidPlayerId}. Fetching stats...`);
                 const statsRes = await fetch(`https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/player/${rapidPlayerId}/events/2025`, {
                     method: 'GET',
@@ -1797,24 +1798,28 @@ usedCache = true;
                 console.log("STATS DATA RECEIVED:", !!statsData);
 
                 // C. Save to Cache
-                if (cached) {
-                    await db.update(playerStatsCache)
-                        .set({ statsJson: statsData, lastUpdated: new Date(), tennisApiPlayerId: rapidPlayerId.toString() })
-                        .where(eq(playerStatsCache.id, cached.id));
-                } else {
-                    await db.insert(playerStatsCache).values({
-                        playerId: playerId as any,
-                        tennisApiPlayerId: rapidPlayerId.toString(),
-                        statsJson: statsData
-                    });
+                try {
+                    if (cached) {
+                        await db.update(playerStatsCache)
+                            .set({ statsJson: statsData, lastUpdated: new Date(), tennisApiPlayerId: rapidPlayerId.toString() })
+                            .where(eq(playerStatsCache.id, cached.id));
+                    } else {
+                        // FORCE CAST to 'any' for insert
+                        await db.insert(playerStatsCache).values({
+                            playerId: playerId as any, 
+                            tennisApiPlayerId: rapidPlayerId.toString(),
+                            statsJson: statsData
+                        });
+                    }
+                } catch (cacheErr) {
+                    console.log("Cache save skipped:", cacheErr);
                 }
             } else {
                console.log("❌ Player ID not found in Search Results.");
             }
-       } catch (apiErr) {
-             console.error("RapidAPI Error:", apiErr);
-           }
-        }
+         } catch (apiErr) {
+           console.error("RapidAPI Error:", apiErr);
+         }
       }
       // 4. Ask OpenAI
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
