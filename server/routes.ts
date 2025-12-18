@@ -1719,7 +1719,7 @@ app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
     // 3. Search the web using Tavily
     let searchContext = "";
     let sourcesUsed: string[] = [];
-    const tavilyKey = process.env["TAVILY_API_KEY"];
+   const tavilyKey = process.env.TAVILY_API_KEY;
 
     if (tavilyKey) {
       try {
