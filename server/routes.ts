@@ -1864,23 +1864,24 @@ INSTRUCTIONS:
     }
   });
 
-// -------- DEBUG: API Scanner (Find the working endpoint) --------
+// -------- DEBUG: Super Scanner (Locate the Rankings) --------
   app.get("/api/debug-tennis", async (req: Request, res: Response) => {
     const results: any = {};
     const rapidApiKey = process.env.RAPIDAPI_KEY;
     
     if (!rapidApiKey) return res.json({ error: "No API Key configured" });
     
-    // The list of likely endpoints to test
+    // The "Matchstat" API standard paths (NO /tennis prefix)
     const endpoints = [
-      { name: "Search (Last Name)", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search?search=Djokovic" },
-      { name: "Rankings V2 (Root)", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/rankings" },
-      { name: "Rankings V2 (ATP Path)", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/rankings/atp" },
-      { name: "Rankings V1 (Fallback)", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v1/rankings" }
+      { name: "Attempt 1: /rankings/atp", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/rankings/atp" },
+      { name: "Attempt 2: /ranking/atp", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/ranking/atp" },
+      { name: "Attempt 3: /tennis/rankings/atp", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/rankings/atp" },
+      { name: "Attempt 4: /atp/rankings", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/atp/rankings" },
+      // Try fetching a player directly by ID (Djokovic's ID is often known)
+      { name: "Attempt 5: /player/d643 (Direct ID)", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/player/d643" } 
     ];
 
     try {
-      // Run all checks in parallel
       await Promise.all(endpoints.map(async (ep) => {
         try {
           const response = await fetch(ep.url, {
@@ -1891,23 +1892,25 @@ INSTRUCTIONS:
              }
           });
           
-          const data = await response.json();
+          const text = await response.text();
+          let data = {};
+          try { data = JSON.parse(text); } catch { data = { error: "Not JSON", preview: text.substring(0, 50) }; }
+
           results[ep.name] = {
             status: response.status,
             success: response.status === 200,
-            dataPreview: JSON.stringify(data).substring(0, 100) + "..." // Just the first 100 chars
+            dataPreview: JSON.stringify(data).substring(0, 150) + "..."
           };
         } catch (e: any) {
           results[ep.name] = { error: e.message };
         }
       }));
 
-      // Return the full report
       res.json(results);
-      
     } catch (e: any) {
       res.json({ fatalError: e.message });
     }
   });
+  
   return httpServer;
 }
