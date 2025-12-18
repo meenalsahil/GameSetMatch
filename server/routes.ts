@@ -1683,7 +1683,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
-// -------- AI: Ask Analyst (TAVILY + CACHING VERSION) --------
+// -------- AI: Ask Analyst (ANTI-HALLUCINATION) --------
 app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
   const playerId = req.params.id;
   const { question } = req.body;
@@ -1696,6 +1696,8 @@ app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
     if (!player) return res.status(404).json({ message: "Player not found" });
 
     let playerName = player.fullName || player.full_name;
+    let playerFirstName = playerName.split(' ')[0];
+    let playerLastName = playerName.split(' ').slice(1).join(' ');
 
     // ATP Link Override (extract clean name from ATP URL)
     if (player.atpProfileUrl || player.atp_profile_url) {
@@ -1706,22 +1708,18 @@ app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
         if (playersIndex !== -1 && pathSegments[playersIndex + 1]) {
           const slug = pathSegments[playersIndex + 1];
           playerName = slug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          playerFirstName = playerName.split(' ')[0];
+          playerLastName = playerName.split(' ').slice(1).join(' ');
           console.log(`🔍 ATP Link detected. Using name: "${playerName}"`);
         }
       } catch (e) { /* Ignore */ }
     }
 
-    // 2. Build search query and cache key
+    // 2. Check cache first
     const currentYear = new Date().getFullYear();
-    const searchQuery = `${playerName} tennis ${question} ${currentYear}`;
-    
-    // Create a simple cache key from player + question
     const cacheKey = `${playerId}:${question.toLowerCase().trim().substring(0, 100)}`;
     
-    // 3. CHECK CACHE FIRST
     let cachedResult = null;
-    let usedCache = false;
-    
     try {
       const cacheCheck = await pool.query(`
         SELECT answer, sources, created_at 
@@ -1733,89 +1731,107 @@ app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
       
       if (cacheCheck.rows.length > 0) {
         cachedResult = cacheCheck.rows[0];
-        usedCache = true;
         console.log(`✅ Cache HIT for: "${question.substring(0, 50)}..."`);
+        return res.json({
+          answer: cachedResult.answer,
+          sources: cachedResult.sources || [],
+          sourcesCount: (cachedResult.sources || []).length,
+          usedCache: true,
+          cachedAt: cachedResult.created_at
+        });
       }
     } catch (cacheErr) {
-      // Table might not exist yet, that's okay
-      console.log("Cache lookup skipped (table may not exist)");
+      console.log("Cache lookup skipped");
     }
 
-    // If we have a valid cache, return it immediately
-    if (cachedResult) {
-      return res.json({
-        answer: cachedResult.answer,
-        sources: cachedResult.sources || [],
-        sourcesCount: (cachedResult.sources || []).length,
-        usedCache: true,
-        cachedAt: cachedResult.created_at,
-        searchQuery: searchQuery
-      });
-    }
-
-    // 4. No cache - Search the web using Tavily
-    console.log(`🌍 Tavily searching: "${searchQuery}"`);
+    // 3. Build SMART search queries - ALWAYS use FULL NAME to avoid confusion
+    const playerRanking = player.ranking ? parseInt(player.ranking) : 999;
+    const isLowerRanked = playerRanking > 100 || !player.ranking;
     
+    // CRITICAL: Always use FULL NAME in quotes to avoid confusion with relatives
+    const primaryQuery = `"${playerName}" tennis ${question} ${currentYear}`;
+    
+    // Secondary query for ITF/Challenger (important for lower-ranked players!)
+    const secondaryQuery = isLowerRanked 
+      ? `"${playerName}" ITF Challenger results ${currentYear}`
+      : null;
+
+    console.log(`🌍 Player: ${playerName} | Ranking: ${playerRanking} | Lower ranked: ${isLowerRanked}`);
+    console.log(`🔍 Primary search: ${primaryQuery}`);
+    if (secondaryQuery) console.log(`🔍 Secondary search: ${secondaryQuery}`);
+
+    // 4. Search the web using Tavily (NO DOMAIN RESTRICTIONS!)
     let searchContext = "";
     let sourcesUsed: { url: string; title: string }[] = [];
     const tavilyKey = process.env.TVLY_KEY;
 
     if (tavilyKey) {
       try {
-        const tavilyRes = await fetch('https://api.tavily.com/search', {
+        // ========== SEARCH 1: Primary Query ==========
+        const tavilyRes1 = await fetch('https://api.tavily.com/search', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             api_key: tavilyKey,
-            query: searchQuery,
+            query: primaryQuery,
             search_depth: "advanced",
             include_answer: true,
             include_raw_content: false,
-            max_results: 8,
-            include_domains: [
-              "atptour.com",
-              "wtatennis.com", 
-              "espn.com",
-              "tennis.com",
-              "rolandgarros.com",
-              "wimbledon.com",
-              "ausopen.com",
-              "usopen.org",
-              "reuters.com",
-              "bbc.com",
-              "wikipedia.org"
-            ]
+            max_results: 6
           })
         });
 
-        const tavilyData = await tavilyRes.json();
-        console.log(`✅ Tavily returned ${tavilyData.results?.length || 0} results`);
+        const tavilyData1 = await tavilyRes1.json();
+        console.log(`✅ Primary search returned ${tavilyData1.results?.length || 0} results`);
 
-        // Extract the AI-generated answer if available
-        if (tavilyData.answer) {
-          searchContext += `SUMMARY: ${tavilyData.answer}\n\n`;
+        if (tavilyData1.answer) {
+          searchContext += `PRIMARY SEARCH SUMMARY:\n${tavilyData1.answer}\n\n`;
         }
 
-        // Extract detailed results with titles for UI
-        if (tavilyData.results && tavilyData.results.length > 0) {
-          searchContext += "DETAILED SOURCES:\n\n";
-          
-          for (const result of tavilyData.results) {
-            searchContext += `SOURCE: ${result.title}\n`;
-            searchContext += `URL: ${result.url}\n`;
-            searchContext += `CONTENT: ${result.content}\n\n`;
-            
-            // Store both URL and title for better UI display
-            sourcesUsed.push({
-              url: result.url,
-              title: result.title || new URL(result.url).hostname
-            });
+        if (tavilyData1.results && tavilyData1.results.length > 0) {
+          searchContext += "PRIMARY SOURCES:\n\n";
+          for (const result of tavilyData1.results) {
+            searchContext += `SOURCE: ${result.title}\nURL: ${result.url}\nCONTENT: ${result.content}\n\n`;
+            sourcesUsed.push({ url: result.url, title: result.title || new URL(result.url).hostname });
           }
         }
 
-        console.log(`📊 Total context length: ${searchContext.length} chars`);
+        // ========== SEARCH 2: ITF/Challenger Query (for lower-ranked players) ==========
+        if (secondaryQuery) {
+          console.log(`🔍 Running secondary ITF/Challenger search...`);
+          
+          const tavilyRes2 = await fetch('https://api.tavily.com/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              api_key: tavilyKey,
+              query: secondaryQuery,
+              search_depth: "advanced",
+              include_answer: true,
+              include_raw_content: false,
+              max_results: 6
+            })
+          });
+
+          const tavilyData2 = await tavilyRes2.json();
+          console.log(`✅ Secondary search returned ${tavilyData2.results?.length || 0} results`);
+
+          if (tavilyData2.answer) {
+            searchContext += `\nITF/CHALLENGER SEARCH SUMMARY:\n${tavilyData2.answer}\n\n`;
+          }
+
+          if (tavilyData2.results && tavilyData2.results.length > 0) {
+            searchContext += "ITF/CHALLENGER SOURCES:\n\n";
+            for (const result of tavilyData2.results) {
+              if (!sourcesUsed.find(s => s.url === result.url)) {
+                searchContext += `SOURCE: ${result.title}\nURL: ${result.url}\nCONTENT: ${result.content}\n\n`;
+                sourcesUsed.push({ url: result.url, title: result.title || new URL(result.url).hostname });
+              }
+            }
+          }
+        }
+
+        console.log(`📊 Total context: ${searchContext.length} chars, ${sourcesUsed.length} unique sources`);
 
       } catch (searchErr) {
         console.error("❌ Tavily search error:", searchErr);
@@ -1824,28 +1840,65 @@ app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
       console.warn("⚠️ TVLY_KEY not set in environment variables");
     }
 
-    // 5. Ask OpenAI with the search results as context
+    // 5. Ask OpenAI with STRICT ANTI-HALLUCINATION PROMPT
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const systemPrompt = searchContext
-      ? `You are an expert tennis analyst with access to REAL-TIME web data.
+      ? `You are a tennis data analyst. You MUST follow these rules EXACTLY:
 
-PLAYER: ${playerName}
-USER QUESTION: "${question}"
+═══════════════════════════════════════════════════════════════
+PLAYER IDENTITY - CRITICAL - DO NOT CONFUSE WITH OTHERS
+═══════════════════════════════════════════════════════════════
+PLAYER NAME: ${playerName}
+FIRST NAME: ${playerFirstName}
+LAST NAME: ${playerLastName}
 
-REAL-TIME WEB SEARCH RESULTS:
+⚠️ WARNING: This player may have relatives or namesakes in tennis!
+- If searching for "Jacopo Berrettini", do NOT confuse with "Matteo Berrettini" (his brother, former top 10)
+- If searching for any player, ONLY report data that EXPLICITLY mentions "${playerFirstName}" or the full name "${playerName}"
+- Rankings, results, or stats for OTHER players with the same last name are WRONG
+
+═══════════════════════════════════════════════════════════════
+STRICT DATA RULES - ANTI-HALLUCINATION
+═══════════════════════════════════════════════════════════════
+1. ONLY use information EXPLICITLY stated in the search results below
+2. If the search results don't contain specific data, say "This information was not found in the search results"
+3. NEVER guess or estimate rankings, scores, or results
+4. NEVER fill in gaps with assumed data
+5. If you see data for a different player (like a sibling), IGNORE IT
+6. When uncertain, say "I could not verify this information"
+
+═══════════════════════════════════════════════════════════════
+PLAYER CONTEXT
+═══════════════════════════════════════════════════════════════
+- This is likely a lower-ranked player competing in ITF Futures and Challenger events
+- Their career-high ranking is probably #200-1000, NOT top 100
+- Look for M15, M25, W15, W25 (ITF) and Challenger results
+- Do NOT assume ATP/WTA main tour participation unless explicitly stated
+
+═══════════════════════════════════════════════════════════════
+USER QUESTION
+═══════════════════════════════════════════════════════════════
+"${question}"
+
+═══════════════════════════════════════════════════════════════
+SEARCH RESULTS (USE ONLY THIS DATA)
+═══════════════════════════════════════════════════════════════
 ${searchContext}
 
-INSTRUCTIONS:
-1. Answer the question using ONLY the search results provided above.
-2. Be specific - include dates, scores, tournament names, and round information.
-3. If asked about recent matches, list them with: Date, Tournament, Opponent, Score, Result (W/L).
-4. If asked about performance on a surface, summarize their win-loss record and key results.
-5. Format nicely with bullet points and bold for emphasis.
-6. If the search results don't contain enough info, say so honestly.
-7. NEVER make up results - only report what's in the search data.`
-      : `You are an expert tennis analyst. Answer questions about ${playerName} based on your training knowledge.
-Note: Real-time search is unavailable, so recent 2025 results may not be accurate.`;
+═══════════════════════════════════════════════════════════════
+RESPONSE FORMAT
+═══════════════════════════════════════════════════════════════
+- Be specific with dates, tournament names, opponents, scores
+- Use bullet points for clarity
+- If data is incomplete, acknowledge gaps honestly
+- End with a note if search results were limited`
+
+      : `You are a tennis analyst. The user asked about ${playerName}, but real-time search is unavailable.
+
+IMPORTANT: Do NOT guess or provide unverified information. Simply state that you cannot retrieve current data for this player and suggest they check official sources like the ATP/WTA/ITF websites.
+
+Do NOT confuse this player with others who may have similar names (like family members).`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -1853,16 +1906,15 @@ Note: Real-time search is unavailable, so recent 2025 results may not be accurat
         { role: "system", content: systemPrompt },
         { role: "user", content: question }
       ],
-      max_tokens: 1500,
-      temperature: 0.3
+      max_tokens: 2000,
+      temperature: 0.1  // Lower temperature = less creative = fewer hallucinations
     });
 
     const answer = completion.choices[0].message.content;
-    const topSources = sourcesUsed.slice(0, 5);
+    const topSources = sourcesUsed.slice(0, 8);
 
-    // 6. SAVE TO CACHE
+    // 6. Save to cache
     try {
-      // Create table if not exists
       await pool.query(`
         CREATE TABLE IF NOT EXISTS ai_analyst_cache (
           id SERIAL PRIMARY KEY,
@@ -1874,10 +1926,8 @@ Note: Real-time search is unavailable, so recent 2025 results may not be accurat
           created_at TIMESTAMP DEFAULT NOW()
         );
         CREATE INDEX IF NOT EXISTS idx_cache_key ON ai_analyst_cache(cache_key);
-        CREATE INDEX IF NOT EXISTS idx_cache_created ON ai_analyst_cache(created_at);
       `);
 
-      // Insert or update cache
       await pool.query(`
         INSERT INTO ai_analyst_cache (cache_key, player_id, question, answer, sources)
         VALUES ($1, $2, $3, $4, $5)
@@ -1890,7 +1940,6 @@ Note: Real-time search is unavailable, so recent 2025 results may not be accurat
       console.log(`💾 Cached result for: "${question.substring(0, 50)}..."`);
     } catch (cacheErr) {
       console.error("Cache save error:", cacheErr);
-      // Don't fail the request if caching fails
     }
 
     // 7. Return response
@@ -1899,32 +1948,13 @@ Note: Real-time search is unavailable, so recent 2025 results may not be accurat
       sources: topSources,
       sourcesCount: topSources.length,
       usedCache: false,
-      searchQuery: searchQuery,
+      searchQueries: secondaryQuery ? [primaryQuery, secondaryQuery] : [primaryQuery],
       timestamp: new Date()
     });
 
   } catch (error) {
     console.error("AI Stats Error:", error);
     res.status(500).json({ message: "Failed to analyze stats" });
-  }
-});
-
-
-// ============================================================
-// OPTIONAL: Admin endpoint to clear old cache entries
-// ============================================================
-app.delete("/api/admin/clear-analyst-cache", async (_req: Request, res: Response) => {
-  try {
-    const result = await pool.query(`
-      DELETE FROM ai_analyst_cache 
-      WHERE created_at < NOW() - INTERVAL '24 hours'
-    `);
-    res.json({ 
-      success: true, 
-      message: `Cleared ${result.rowCount} old cache entries` 
-    });
-  } catch (e: any) {
-    res.status(500).json({ message: e.message });
   }
 });
 
