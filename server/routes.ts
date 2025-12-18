@@ -1683,111 +1683,151 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
-// -------- AI: Ask Analyst (The "Smart Wikipedia" Version) --------
-  app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
-    const playerId = req.params.id;
-    const { question } = req.body;
+// -------- AI: Ask Analyst (TAVILY WEB SEARCH VERSION) --------
+app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
+  const playerId = req.params.id;
+  const { question } = req.body;
 
-    if (!question) return res.status(400).json({ message: "Question required" });
+  if (!question) return res.status(400).json({ message: "Question required" });
 
-    try {
-      // 1. Get Player Name
-      const player: any = await storage.getPlayer(playerId as any);
-      if (!player) return res.status(404).json({ message: "Player not found" });
+  try {
+    // 1. Get Player Data
+    const player: any = await storage.getPlayer(playerId as any);
+    if (!player) return res.status(404).json({ message: "Player not found" });
 
-      let searchName = player.fullName || player.full_name;
+    let playerName = player.fullName || player.full_name;
 
-      // ATP Link Override
-      if (player.atpProfileUrl || player.atp_profile_url) {
-        try {
-          const urlObj = new URL(player.atpProfileUrl || player.atp_profile_url);
-          const pathSegments = urlObj.pathname.split('/');
-          const playersIndex = pathSegments.indexOf('players');
-          if (playersIndex !== -1 && pathSegments[playersIndex + 1]) {
-            const slug = pathSegments[playersIndex + 1];
-            searchName = slug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    // ATP Link Override (extract clean name from ATP URL)
+    if (player.atpProfileUrl || player.atp_profile_url) {
+      try {
+        const urlObj = new URL(player.atpProfileUrl || player.atp_profile_url);
+        const pathSegments = urlObj.pathname.split('/');
+        const playersIndex = pathSegments.indexOf('players');
+        if (playersIndex !== -1 && pathSegments[playersIndex + 1]) {
+          const slug = pathSegments[playersIndex + 1];
+          playerName = slug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          console.log(`🔍 ATP Link detected. Using name: "${playerName}"`);
+        }
+      } catch (e) { /* Ignore */ }
+    }
+
+    // 2. Build smart search query
+    const currentYear = new Date().getFullYear();
+    const searchQuery = `${playerName} tennis ${question} ${currentYear}`;
+    console.log(`🌍 Tavily searching: "${searchQuery}"`);
+
+    // 3. Search the web using Tavily
+    let searchContext = "";
+    let sourcesUsed: string[] = [];
+    const tavilyKey = process.env.TAVILY_API_KEY;
+
+    if (tavilyKey) {
+      try {
+        const tavilyRes = await fetch('https://api.tavily.com/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            api_key: tavilyKey,
+            query: searchQuery,
+            search_depth: "advanced",  // Better results
+            include_answer: true,      // Get AI-summarized answer
+            include_raw_content: false,
+            max_results: 8,            // Get more sources
+            include_domains: [         // Prioritize trusted tennis sources
+              "atptour.com",
+              "wtatennis.com", 
+              "espn.com",
+              "tennis.com",
+              "rolandgarros.com",
+              "wimbledon.com",
+              "ausopen.com",
+              "usopen.org",
+              "reuters.com",
+              "bbc.com",
+              "wikipedia.org"
+            ]
+          })
+        });
+
+        const tavilyData = await tavilyRes.json();
+        
+        // Log for debugging
+        console.log(`✅ Tavily returned ${tavilyData.results?.length || 0} results`);
+
+        // Extract the AI-generated answer if available
+        if (tavilyData.answer) {
+          searchContext += `SUMMARY: ${tavilyData.answer}\n\n`;
+        }
+
+        // Extract detailed results
+        if (tavilyData.results && tavilyData.results.length > 0) {
+          searchContext += "DETAILED SOURCES:\n\n";
+          
+          for (const result of tavilyData.results) {
+            searchContext += `SOURCE: ${result.title}\n`;
+            searchContext += `URL: ${result.url}\n`;
+            searchContext += `CONTENT: ${result.content}\n\n`;
+            sourcesUsed.push(result.url);
           }
-        } catch (e) { /* Ignore */ }
+        }
+
+        console.log(`📊 Total context length: ${searchContext.length} chars`);
+
+      } catch (searchErr) {
+        console.error("❌ Tavily search error:", searchErr);
       }
+    } else {
+      console.warn("⚠️ TAVILY_API_KEY not set in environment variables");
+    }
 
-      console.log(`🌍 Analyst looking for info on: ${searchName}`);
-      let wikiContext = "";
-      let pageTitleUsed = "";
+    // 4. Ask OpenAI with the search results as context
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-      // 2. FETCH WIKIPEDIA (Smart Strategy)
-      // Strategy: Try to find the "2025 Season" page first. It has the stats.
-      // If that fails, fall back to the main "Biography" page.
-      
-      const currentYear = new Date().getFullYear(); // 2025
-      const seasonPageTitle = `${searchName} ${currentYear} tennis season`;
-      
-      const targets = [
-          seasonPageTitle, // Priority 1: "Novak Djokovic 2025 tennis season"
-          searchName       // Priority 2: "Novak Djokovic" (Main Bio)
-      ];
+    const systemPrompt = searchContext
+      ? `You are an expert tennis analyst with access to REAL-TIME web data.
 
-      for (const title of targets) {
-          try {
-             console.log(`📖 Trying Wikipedia page: "${title}"...`);
-             const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=true&titles=${encodeURIComponent(title)}&format=json&origin=*`;
-             
-             const response = await fetch(wikiUrl);
-             const data = await response.json();
-             const pages = data?.query?.pages;
-             const pageKey = pages ? Object.keys(pages)[0] : null;
+PLAYER: ${playerName}
+USER QUESTION: "${question}"
 
-             if (pageKey && pageKey !== "-1") {
-                 const fullText = pages[pageKey].extract;
-                 // Season pages are dense with stats, so we grab more text (30k chars)
-                 wikiContext = fullText.substring(0, 30000); 
-                 pageTitleUsed = title;
-                 console.log(`✅ FOUND! Read ${wikiContext.length} chars from "${title}"`);
-                 break; // Stop looking, we found the best page
-             }
-          } catch (err) {
-             console.log(`❌ Failed to read "${title}"`);
-          }
-      }
-
-      // 3. ASK OPENAI
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      
-      const systemPrompt = `You are an expert tennis analyst. 
-
-CONTEXT:
-User Question: "${question}"
-Player: ${searchName}
-Source Page: "${pageTitleUsed}"
-
-SOURCE MATERIAL (WIKIPEDIA):
-${wikiContext ? wikiContext : "No Wikipedia article found. Use your general training data."}
+REAL-TIME WEB SEARCH RESULTS:
+${searchContext}
 
 INSTRUCTIONS:
-1. Answer the question using the SOURCE MATERIAL provided.
-2. If the source is a "Season" page, look for the 'Matches' or 'Tournament' sections to list specific results.
-3. If the user asks for "Last 5 matches", infer it from the most recent tournament results listed in the text.
-4. Format with Markdown (Bullet points for lists, Bold for wins).
-5. Be confident. If the text says he won the Australian Open, say it clearly.`;
+1. Answer the question using ONLY the search results provided above.
+2. Be specific - include dates, scores, tournament names, and round information.
+3. If asked about recent matches, list them with: Date, Tournament, Opponent, Score, Result (W/L).
+4. If asked about performance on a surface, summarize their win-loss record and key results.
+5. Format nicely with bullet points and bold for emphasis.
+6. If the search results don't contain enough info, say so honestly.
+7. NEVER make up results - only report what's in the search data.`
+      : `You are an expert tennis analyst. Answer questions about ${playerName} based on your training knowledge.
+Note: Real-time search is unavailable, so recent 2025 results may not be accurate.`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: question }
-        ],
-      });
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: question }
+      ],
+      max_tokens: 1500,
+      temperature: 0.3  // Lower temperature for more factual responses
+    });
 
-      res.json({ 
-        answer: completion.choices[0].message.content,
-        usedCache: false,
-        lastUpdated: new Date()
-      });
+    res.json({
+      answer: completion.choices[0].message.content,
+      searchQuery: searchQuery,
+      sourcesCount: sourcesUsed.length,
+      sources: sourcesUsed.slice(0, 5), // Return top 5 sources for transparency
+      timestamp: new Date()
+    });
 
-    } catch (error) {
-      console.error("AI Stats Error:", error);
-      res.status(500).json({ message: "Failed to analyze stats" });
-    }
-  });
+  } catch (error) {
+    console.error("AI Stats Error:", error);
+    res.status(500).json({ message: "Failed to analyze stats" });
+  }
+});
   
   return httpServer;
 }
