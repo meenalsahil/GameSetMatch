@@ -1683,7 +1683,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
-// -------- AI: Ask Analyst (TAVILY WEB SEARCH VERSION) --------
+// -------- AI: Ask Analyst (TAVILY + CACHING VERSION) --------
 app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
   const playerId = req.params.id;
   const { question } = req.body;
@@ -1711,15 +1711,54 @@ app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
       } catch (e) { /* Ignore */ }
     }
 
-    // 2. Build smart search query
+    // 2. Build search query and cache key
     const currentYear = new Date().getFullYear();
     const searchQuery = `${playerName} tennis ${question} ${currentYear}`;
-    console.log(`🌍 Tavily searching: "${searchQuery}"`);
+    
+    // Create a simple cache key from player + question
+    const cacheKey = `${playerId}:${question.toLowerCase().trim().substring(0, 100)}`;
+    
+    // 3. CHECK CACHE FIRST
+    let cachedResult = null;
+    let usedCache = false;
+    
+    try {
+      const cacheCheck = await pool.query(`
+        SELECT answer, sources, created_at 
+        FROM ai_analyst_cache 
+        WHERE cache_key = $1 
+          AND created_at > NOW() - INTERVAL '6 hours'
+        LIMIT 1
+      `, [cacheKey]);
+      
+      if (cacheCheck.rows.length > 0) {
+        cachedResult = cacheCheck.rows[0];
+        usedCache = true;
+        console.log(`✅ Cache HIT for: "${question.substring(0, 50)}..."`);
+      }
+    } catch (cacheErr) {
+      // Table might not exist yet, that's okay
+      console.log("Cache lookup skipped (table may not exist)");
+    }
 
-    // 3. Search the web using Tavily
+    // If we have a valid cache, return it immediately
+    if (cachedResult) {
+      return res.json({
+        answer: cachedResult.answer,
+        sources: cachedResult.sources || [],
+        sourcesCount: (cachedResult.sources || []).length,
+        usedCache: true,
+        cachedAt: cachedResult.created_at,
+        searchQuery: searchQuery
+      });
+    }
+
+    // 4. No cache - Search the web using Tavily
+    console.log(`🌍 Tavily searching: "${searchQuery}"`);
+    
     let searchContext = "";
-    let sourcesUsed: string[] = [];
-   const tavilyKey = process.env.TVLY_KEY;
+    let sourcesUsed: { url: string; title: string }[] = [];
+    const tavilyKey = process.env.TVLY_KEY;
 
     if (tavilyKey) {
       try {
@@ -1731,11 +1770,11 @@ app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
           body: JSON.stringify({
             api_key: tavilyKey,
             query: searchQuery,
-            search_depth: "advanced",  // Better results
-            include_answer: true,      // Get AI-summarized answer
+            search_depth: "advanced",
+            include_answer: true,
             include_raw_content: false,
-            max_results: 8,            // Get more sources
-            include_domains: [         // Prioritize trusted tennis sources
+            max_results: 8,
+            include_domains: [
               "atptour.com",
               "wtatennis.com", 
               "espn.com",
@@ -1752,8 +1791,6 @@ app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
         });
 
         const tavilyData = await tavilyRes.json();
-        
-        // Log for debugging
         console.log(`✅ Tavily returned ${tavilyData.results?.length || 0} results`);
 
         // Extract the AI-generated answer if available
@@ -1761,7 +1798,7 @@ app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
           searchContext += `SUMMARY: ${tavilyData.answer}\n\n`;
         }
 
-        // Extract detailed results
+        // Extract detailed results with titles for UI
         if (tavilyData.results && tavilyData.results.length > 0) {
           searchContext += "DETAILED SOURCES:\n\n";
           
@@ -1769,7 +1806,12 @@ app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
             searchContext += `SOURCE: ${result.title}\n`;
             searchContext += `URL: ${result.url}\n`;
             searchContext += `CONTENT: ${result.content}\n\n`;
-            sourcesUsed.push(result.url);
+            
+            // Store both URL and title for better UI display
+            sourcesUsed.push({
+              url: result.url,
+              title: result.title || new URL(result.url).hostname
+            });
           }
         }
 
@@ -1779,10 +1821,10 @@ app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
         console.error("❌ Tavily search error:", searchErr);
       }
     } else {
-      console.warn("⚠️ TAVILY_API_KEY not set in environment variables");
+      console.warn("⚠️ TVLY_KEY not set in environment variables");
     }
 
-    // 4. Ask OpenAI with the search results as context
+    // 5. Ask OpenAI with the search results as context
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const systemPrompt = searchContext
@@ -1812,14 +1854,52 @@ Note: Real-time search is unavailable, so recent 2025 results may not be accurat
         { role: "user", content: question }
       ],
       max_tokens: 1500,
-      temperature: 0.3  // Lower temperature for more factual responses
+      temperature: 0.3
     });
 
+    const answer = completion.choices[0].message.content;
+    const topSources = sourcesUsed.slice(0, 5);
+
+    // 6. SAVE TO CACHE
+    try {
+      // Create table if not exists
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS ai_analyst_cache (
+          id SERIAL PRIMARY KEY,
+          cache_key TEXT UNIQUE NOT NULL,
+          player_id TEXT,
+          question TEXT,
+          answer TEXT,
+          sources JSONB,
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_cache_key ON ai_analyst_cache(cache_key);
+        CREATE INDEX IF NOT EXISTS idx_cache_created ON ai_analyst_cache(created_at);
+      `);
+
+      // Insert or update cache
+      await pool.query(`
+        INSERT INTO ai_analyst_cache (cache_key, player_id, question, answer, sources)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (cache_key) DO UPDATE SET
+          answer = EXCLUDED.answer,
+          sources = EXCLUDED.sources,
+          created_at = NOW()
+      `, [cacheKey, playerId, question, answer, JSON.stringify(topSources)]);
+      
+      console.log(`💾 Cached result for: "${question.substring(0, 50)}..."`);
+    } catch (cacheErr) {
+      console.error("Cache save error:", cacheErr);
+      // Don't fail the request if caching fails
+    }
+
+    // 7. Return response
     res.json({
-      answer: completion.choices[0].message.content,
+      answer: answer,
+      sources: topSources,
+      sourcesCount: topSources.length,
+      usedCache: false,
       searchQuery: searchQuery,
-      sourcesCount: sourcesUsed.length,
-      sources: sourcesUsed.slice(0, 5), // Return top 5 sources for transparency
       timestamp: new Date()
     });
 
@@ -1828,6 +1908,25 @@ Note: Real-time search is unavailable, so recent 2025 results may not be accurat
     res.status(500).json({ message: "Failed to analyze stats" });
   }
 });
-  
+
+
+// ============================================================
+// OPTIONAL: Admin endpoint to clear old cache entries
+// ============================================================
+app.delete("/api/admin/clear-analyst-cache", async (_req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      DELETE FROM ai_analyst_cache 
+      WHERE created_at < NOW() - INTERVAL '24 hours'
+    `);
+    res.json({ 
+      success: true, 
+      message: `Cleared ${result.rowCount} old cache entries` 
+    });
+  } catch (e: any) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
   return httpServer;
 }
