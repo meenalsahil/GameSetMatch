@@ -56,18 +56,13 @@ export default function HomePage() {
         <div className="relative z-10 container mx-auto px-6 py-16 lg:py-20 min-h-[75vh]">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
             
-            {/* ========== LEFT SIDE - EXISTING CONTENT ========== */}
+            {/* ========== LEFT SIDE ========== */}
             <div className="flex flex-col justify-center">
-              {/* Trust pills */}
+              {/* Trust pill - ONLY the verified badge (removed redundant AI badge) */}
               <div className="flex flex-wrap gap-3 mb-5">
                 <div className="inline-flex items-center gap-2 bg-emerald-900/40 border border-emerald-500/40 text-emerald-200 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   Verified tennis players • ATP / ITF / WTA linked
-                </div>
-                
-                <div className="inline-flex items-center gap-2 bg-purple-900/60 border border-purple-400/50 text-purple-100 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide shadow-[0_0_15px_rgba(168,85,247,0.3)] backdrop-blur-sm">
-                  <Sparkles className="w-3.5 h-3.5 text-purple-300" />
-                  AI-Powered Platform • Smart Player Browse, AI Stats Analyst & Player Profile Builder
                 </div>
               </div>
 
@@ -133,11 +128,12 @@ export default function HomePage() {
 
             {/* ========== RIGHT SIDE - AI FEATURES PANELS ========== */}
             <div className="hidden lg:block">
-              {/* AI Header Badge */}
+              {/* AI Header Badge - WITH FREE */}
               <div className="text-center mb-6">
                 <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-full shadow-lg shadow-purple-500/25">
                   <Sparkles className="w-5 h-5 text-yellow-300" />
                   <span className="font-bold text-lg">AI-Powered Features</span>
+                  <span className="bg-white/20 text-yellow-300 text-xs font-bold px-2 py-0.5 rounded-full ml-1">FREE</span>
                 </div>
               </div>
 
@@ -248,9 +244,16 @@ export default function HomePage() {
 
           {/* PLAYERS SECTION */}
           <div className="mb-20">
-            <h3 className="text-3xl font-bold text-center mb-12">
+            <h3 className="text-3xl font-bold text-center mb-3">
               For Players
             </h3>
+            {/* AI Badge for Players - Profile Builder */}
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 bg-green-100 border border-green-200 text-green-700 px-4 py-1.5 rounded-full text-sm font-medium">
+                <Sparkles className="w-4 h-4" />
+                AI-powered Profile Builder • FREE
+              </div>
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
               
@@ -365,9 +368,10 @@ export default function HomePage() {
           <div>
             <div className="text-center mb-12">
               <h3 className="text-3xl font-bold mb-3">For Supporters</h3>
+              {/* UPDATED: Now includes both Smart Search AND StAItistics */}
               <div className="inline-flex items-center gap-2 bg-purple-100 border border-purple-200 text-purple-700 px-4 py-1.5 rounded-full text-sm font-medium">
                 <Sparkles className="w-4 h-4" />
-                AI-powered player search • FREE
+                AI-powered Smart Search & St<span className="bg-purple-600 text-white px-1 rounded text-xs font-bold mx-0.5">AI</span>tistics • FREE
               </div>
             </div>
 
@@ -448,7 +452,7 @@ export default function HomePage() {
                 </CardContent>
               </Card>
 
-              {/* Supporter Card 4 (Help) - IDENTICAL TO PLAYER SECTION */}
+              {/* Supporter Card 4 (Help) */}
               <Card className="border-2 hover:border-gray-400 transition-all hover:shadow-lg h-full bg-gray-50/50">
                 <CardContent className="p-8 text-center h-full flex flex-col justify-between">
                   <div>
