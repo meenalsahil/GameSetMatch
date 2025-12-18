@@ -1683,7 +1683,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
-// -------- AI: Ask Analyst (The "Wikipedia Reader" Version) --------
+// -------- AI: Ask Analyst (The "Smart Wikipedia" Version) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
     const playerId = req.params.id;
     const { question } = req.body;
@@ -1691,13 +1691,13 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     if (!question) return res.status(400).json({ message: "Question required" });
 
     try {
-      // 1. Get Player Name from DB
+      // 1. Get Player Name
       const player: any = await storage.getPlayer(playerId as any);
       if (!player) return res.status(404).json({ message: "Player not found" });
 
       let searchName = player.fullName || player.full_name;
 
-      // 1a. ATP Link Override (CRITICAL: Fixes "Family Tennis" issue)
+      // ATP Link Override
       if (player.atpProfileUrl || player.atp_profile_url) {
         try {
           const urlObj = new URL(player.atpProfileUrl || player.atp_profile_url);
@@ -1705,43 +1705,51 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
           const playersIndex = pathSegments.indexOf('players');
           if (playersIndex !== -1 && pathSegments[playersIndex + 1]) {
             const slug = pathSegments[playersIndex + 1];
-            // Convert "novak-djokovic" -> "Novak Djokovic"
             searchName = slug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-            console.log(`🔍 Detected ATP Link. Overriding name to: "${searchName}"`);
           }
-        } catch (e) { /* Ignore parsing errors */ }
+        } catch (e) { /* Ignore */ }
       }
 
-      console.log(`🌍 Reading Wikipedia for: ${searchName}`);
+      console.log(`🌍 Analyst looking for info on: ${searchName}`);
       let wikiContext = "";
+      let pageTitleUsed = "";
 
-      // 2. FETCH WIKIPEDIA (The "Claude" Method)
-      try {
-        // We fetch the FULL article text (extracts)
-        const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=true&titles=${encodeURIComponent(searchName)}&format=json&origin=*`;
-        
-        const response = await fetch(wikiUrl);
-        const data = await response.json();
-        
-        // Wikipedia returns data keyed by Page ID (e.g. "12345"). We grab the first key.
-        const pages = data?.query?.pages;
-        const firstPageKey = pages ? Object.keys(pages)[0] : null;
-        
-        if (firstPageKey && firstPageKey !== "-1") {
-            const fullText = pages[firstPageKey].extract;
-            
-            // OPTIMIZATION: We truncate to ~20,000 chars to fit in AI context window.
-            // This is usually plenty to cover the Intro + Career Highlights + Recent Seasons.
-            wikiContext = fullText.substring(0, 20000); 
-            console.log(`✅ Successfully read ${wikiContext.length} chars from Wikipedia.`);
-        } else {
-            console.log("❌ Wikipedia page not found.");
-        }
-      } catch (err) {
-        console.error("Wikipedia Fetch Error:", err);
+      // 2. FETCH WIKIPEDIA (Smart Strategy)
+      // Strategy: Try to find the "2025 Season" page first. It has the stats.
+      // If that fails, fall back to the main "Biography" page.
+      
+      const currentYear = new Date().getFullYear(); // 2025
+      const seasonPageTitle = `${searchName} ${currentYear} tennis season`;
+      
+      const targets = [
+          seasonPageTitle, // Priority 1: "Novak Djokovic 2025 tennis season"
+          searchName       // Priority 2: "Novak Djokovic" (Main Bio)
+      ];
+
+      for (const title of targets) {
+          try {
+             console.log(`📖 Trying Wikipedia page: "${title}"...`);
+             const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=true&titles=${encodeURIComponent(title)}&format=json&origin=*`;
+             
+             const response = await fetch(wikiUrl);
+             const data = await response.json();
+             const pages = data?.query?.pages;
+             const pageKey = pages ? Object.keys(pages)[0] : null;
+
+             if (pageKey && pageKey !== "-1") {
+                 const fullText = pages[pageKey].extract;
+                 // Season pages are dense with stats, so we grab more text (30k chars)
+                 wikiContext = fullText.substring(0, 30000); 
+                 pageTitleUsed = title;
+                 console.log(`✅ FOUND! Read ${wikiContext.length} chars from "${title}"`);
+                 break; // Stop looking, we found the best page
+             }
+          } catch (err) {
+             console.log(`❌ Failed to read "${title}"`);
+          }
       }
 
-      // 3. ASK OPENAI (The Analyst)
+      // 3. ASK OPENAI
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       
       const systemPrompt = `You are an expert tennis analyst. 
@@ -1749,15 +1757,17 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
 CONTEXT:
 User Question: "${question}"
 Player: ${searchName}
+Source Page: "${pageTitleUsed}"
 
 SOURCE MATERIAL (WIKIPEDIA):
 ${wikiContext ? wikiContext : "No Wikipedia article found. Use your general training data."}
 
 INSTRUCTIONS:
-1. Answer the question using the SOURCE MATERIAL provided above.
-2. Look specifically for "2024" or "2025" sections in the text to answer recent questions.
-3. If the user asks about something not in the text (like "Live score right now"), admit you only have data up to the article's last update.
-4. Format your answer with Markdown (Bullet points, Bold text) to make it easy to read.`;
+1. Answer the question using the SOURCE MATERIAL provided.
+2. If the source is a "Season" page, look for the 'Matches' or 'Tournament' sections to list specific results.
+3. If the user asks for "Last 5 matches", infer it from the most recent tournament results listed in the text.
+4. Format with Markdown (Bullet points for lists, Bold for wins).
+5. Be confident. If the text says he won the Australian Open, say it clearly.`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
