@@ -14,10 +14,43 @@ import {
   X,        
   Loader2,   
   ArrowUp,
-  Bot
+  BarChart3,
+  TrendingUp
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+
+// ============================================
+// StAItistics Logo Component - Reusable
+// ============================================
+const StAItisticsLogo = ({ size = "default" }: { size?: "small" | "default" | "large" }) => {
+  const sizeClasses = {
+    small: "text-sm",
+    default: "text-lg",
+    large: "text-2xl"
+  };
+  
+  return (
+    <span className={`font-bold ${sizeClasses[size]}`}>
+      St<span className="bg-white/20 text-yellow-300 px-1 rounded mx-0.5 font-extrabold">AI</span>tistics
+    </span>
+  );
+};
+
+// Dark version for light backgrounds
+const StAItisticsLogoDark = ({ size = "default" }: { size?: "small" | "default" | "large" }) => {
+  const sizeClasses = {
+    small: "text-sm",
+    default: "text-lg", 
+    large: "text-2xl"
+  };
+  
+  return (
+    <span className={`font-bold text-gray-900 ${sizeClasses[size]}`}>
+      St<span className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-1.5 py-0.5 rounded mx-0.5 font-extrabold">AI</span>tistics
+    </span>
+  );
+};
 
 export default function PlayerProfile() {
   const { id } = useParams();
@@ -176,8 +209,8 @@ export default function PlayerProfile() {
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Browse Players
         </Button>
 
-        {/* Player Header */}
-        <Card className="mb-6 border-none shadow-md overflow-hidden">
+        {/* Player Header Card */}
+        <Card className="mb-6 border-none shadow-md">
           <CardHeader className="bg-white pb-6">
             <div className="flex justify-between items-start gap-4">
               <div className="flex-1">
@@ -211,10 +244,10 @@ export default function PlayerProfile() {
                     href={player.atpProfileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-xs mt-1 inline-flex items-center gap-1"
+                    className="text-sm text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1"
                   >
                     <ExternalLink className="h-3 w-3" />
-                    Official Profile
+                    ATP Profile
                   </a>
                 )}
               </div>
@@ -222,7 +255,9 @@ export default function PlayerProfile() {
           </CardHeader>
         </Card>
 
-        {/* --- AI FEATURE CARD (Simplified) --- */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* StAItistics FEATURE CARD */}
+        {/* ═══════════════════════════════════════════════════════════ */}
         <div 
           onClick={() => setIsAiChatOpen(true)}
           className="mb-8 cursor-pointer group relative overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-1 shadow-lg transition-all hover:shadow-xl hover:scale-[1.01]"
@@ -231,76 +266,37 @@ export default function PlayerProfile() {
           <div className="relative flex items-center justify-between rounded-lg bg-white/10 backdrop-blur-sm p-4 px-6">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 shadow-inner">
-                <Sparkles className="h-6 w-6 text-yellow-300 animate-pulse" />
+                <BarChart3 className="h-6 w-6 text-yellow-300" />
               </div>
               <div className="text-white">
                 <h3 className="font-bold text-lg flex items-center gap-2">
-                  Ask AI Analyst 
+                  <StAItisticsLogo />
+                  <Sparkles className="h-4 w-4 text-yellow-300 animate-pulse" />
                 </h3>
                 <p className="text-sm text-purple-100 opacity-90">
-                  Analyze {player.fullName.split(' ')[0]}'s recent match performance and stats.
+                  AI-powered performance analysis for {player.fullName.split(' ')[0]}
                 </p>
               </div>
             </div>
             <div className="hidden sm:flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-purple-700 shadow-sm transition-transform group-hover:translate-x-1">
-              Start Analysis <ArrowLeft className="h-4 w-4 rotate-180" />
+              Analyze <TrendingUp className="h-4 w-4" />
             </div>
           </div>
         </div>
 
-        {/* Video Section */}
-        {hasVideo && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Verification / Intro Video</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLocalVideo ? (
-                <video
-                  controls
-                  className="w-full max-w-xl rounded-lg border bg-black"
-                >
-                  <source src={player.videoUrl} />
-                  Your browser does not support the video tag.
-                </video>
-              ) : isYouTube ? (
-                <div className="aspect-video w-full max-w-xl rounded-lg overflow-hidden border">
-                  <iframe
-                    src={player.videoUrl.replace("watch?v=", "embed/")}
-                    title="Player Video"
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-              ) : (
-                <a
-                  href={player.videoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline flex items-center gap-1"
-                >
-                  Watch video <ExternalLink className="h-4 w-4" />
-                </a>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Player Statistics */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Player Statistics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">Ranking</p>
-                <p className="text-2xl font-bold">#{player.ranking || "N/A"}</p>
-              </div>
+        {/* Player Stats Grid */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-muted/50 p-4 rounded-lg">
                 <p className="text-sm text-muted-foreground mb-1">Age</p>
-                <p className="text-2xl font-bold">{player.age || "N/A"}</p>
+                <p className="text-lg font-semibold">{player.age || "N/A"}</p>
+              </div>
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">Gender</p>
+                <p className="text-lg font-semibold capitalize">
+                  {player.gender || "N/A"}
+                </p>
               </div>
               <div className="bg-muted/50 p-4 rounded-lg">
                 <p className="text-sm text-muted-foreground mb-1">
@@ -310,7 +306,53 @@ export default function PlayerProfile() {
                   {player.specialization || "N/A"}
                 </p>
               </div>
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">
+                  Country
+                </p>
+                <p className="text-lg font-semibold">
+                  {player.country || "N/A"}
+                </p>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Video Section */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <h3 className="font-semibold text-xl mb-4 flex items-center gap-2">
+              🎬 Verification / Introduction
+            </h3>
+            {hasVideo ? (
+              <div className="w-full aspect-video rounded-lg overflow-hidden bg-black shadow-md">
+                {isLocalVideo ? (
+                  <video
+                    src={player.videoUrl}
+                    controls
+                    className="w-full h-full object-cover"
+                  />
+                ) : isYouTube ? (
+                  <iframe
+                    src={player.videoUrl.replace("watch?v=", "embed/")}
+                    title="Player video"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full"
+                  />
+                ) : (
+                  <video
+                    src={player.videoUrl}
+                    controls
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                No video uploaded yet.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -413,18 +455,27 @@ export default function PlayerProfile() {
         </div>
       )}
 
-      {/* --- MODAL 2: AI Analyst Chat --- */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* MODAL 2: StAItistics Chat */}
+      {/* ═══════════════════════════════════════════════════════════ */}
       {isAiChatOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in duration-200">
             
-            {/* Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 text-white flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Bot className="h-5 w-5 text-purple-200" />
-                <h3 className="font-bold">AI Performance Analyst</h3>
+            {/* Header with StAItistics branding */}
+            <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-4 text-white flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+                  <BarChart3 className="h-4 w-4 text-yellow-300" />
+                </div>
+                <div>
+                  <h3 className="font-bold flex items-center gap-1">
+                    <StAItisticsLogo size="default" />
+                  </h3>
+                  <p className="text-xs text-purple-200">AI-Powered Analysis</p>
+                </div>
               </div>
-              <button onClick={() => setIsAiChatOpen(false)} className="hover:bg-white/20 p-1 rounded-full">
+              <button onClick={() => setIsAiChatOpen(false)} className="hover:bg-white/20 p-1.5 rounded-full transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -447,7 +498,7 @@ export default function PlayerProfile() {
                   {/* Cache Indicator Footer */}
                   {cacheInfo && (
                     <div className="text-xs text-gray-400 text-center mt-4 border-t pt-2">
-                       Data from: {cacheInfo.date} • {cacheInfo.used ? "⚡ Cached (0 API Calls)" : "🌍 Fresh from ATP API"}
+                       Data from: {cacheInfo.date} • {cacheInfo.used ? "⚡ Cached" : "🌍 Live Search"}
                     </div>
                   )}
 
@@ -461,19 +512,25 @@ export default function PlayerProfile() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-4 text-gray-400">
-                   <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-2 animate-bounce">
-                     <Sparkles className="h-8 w-8 text-purple-600" />
+                   <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center mb-2 shadow-inner">
+                     <BarChart3 className="h-8 w-8 text-purple-600" />
                    </div>
-                   <h4 className="font-semibold text-gray-900">Ask about {player?.fullName}</h4>
-                   <p className="text-sm max-w-xs">
-                     I can analyze official match records, win rates, and playing style.
+                   <div>
+                     <StAItisticsLogoDark size="large" />
+                   </div>
+                   <p className="text-sm max-w-xs text-gray-500">
+                     Get real-time stats, rankings, and match results for {player?.fullName}
                    </p>
                    <div className="flex flex-wrap gap-2 justify-center mt-4">
-                      {["Win rate this year?", "Last 5 tournaments?", "Performance on Clay?"].map(q => (
+                      {[
+                        "Results in 2025?",
+                        "Current ranking?",
+                        "Performance on clay?"
+                      ].map(q => (
                         <button 
                           key={q}
                           onClick={() => setAiQuestion(q)}
-                          className="text-xs bg-white border border-gray-200 px-3 py-1.5 rounded-full hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition-colors text-gray-600 font-medium"
+                          className="text-xs bg-white border border-gray-200 px-3 py-1.5 rounded-full hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition-colors text-gray-600 font-medium shadow-sm"
                         >
                           {q}
                         </button>
@@ -483,14 +540,14 @@ export default function PlayerProfile() {
               )}
             </div>
 
-            {/* Input Area (Wrapped in form to fix submit issue) */}
+            {/* Input Area */}
             {!aiAnswer && (
               <form 
                 onSubmit={handleAskAi}
                 className="p-4 bg-white border-t flex gap-2"
               >
                 <Input 
-                  placeholder="Ask a question..." 
+                  placeholder="Ask about stats, rankings, results..." 
                   value={aiQuestion}
                   onChange={(e) => setAiQuestion(e.target.value)}
                   disabled={isAiLoading}
