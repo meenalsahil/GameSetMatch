@@ -1864,48 +1864,45 @@ INSTRUCTIONS:
     }
   });
 
-// -------- DEBUG: Super Scanner (Locate the Rankings) --------
+// -------- DEBUG: Parameter Scanner (Find the magic word) --------
   app.get("/api/debug-tennis", async (req: Request, res: Response) => {
     const results: any = {};
     const rapidApiKey = process.env.RAPIDAPI_KEY;
-    
     if (!rapidApiKey) return res.json({ error: "No API Key configured" });
-    
-    // The "Matchstat" API standard paths (NO /tennis prefix)
-    const endpoints = [
-      { name: "Attempt 1: /rankings/atp", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/rankings/atp" },
-      { name: "Attempt 2: /ranking/atp", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/ranking/atp" },
-      { name: "Attempt 3: /tennis/rankings/atp", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/rankings/atp" },
-      { name: "Attempt 4: /atp/rankings", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/atp/rankings" },
-      // Try fetching a player directly by ID (Djokovic's ID is often known)
-      { name: "Attempt 5: /player/d643 (Direct ID)", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/player/d643" } 
+
+    // Test different parameters on the WORKING endpoint
+    const queries = [
+      { name: "Try 1: ?search=Djokovic", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search?search=Djokovic" },
+      { name: "Try 2: ?name=Djokovic",   url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search?name=Djokovic" },
+      { name: "Try 3: ?q=Djokovic",      url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search?q=Djokovic" },
+      { name: "Try 4: ?player=Djokovic", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search?player=Djokovic" },
+      // Test if we can list players directly (no search)
+      { name: "Try 5: List Players",     url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/players" }
     ];
 
     try {
-      await Promise.all(endpoints.map(async (ep) => {
+      await Promise.all(queries.map(async (q) => {
         try {
-          const response = await fetch(ep.url, {
+          const response = await fetch(q.url, {
              method: "GET",
              headers: { 
                'x-rapidapi-key': rapidApiKey, 
                'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com' 
              }
           });
+          const data = await response.json();
+          // Check if we actually got results
+          const count = data.data ? JSON.stringify(data.data).length : 0;
           
-          const text = await response.text();
-          let data = {};
-          try { data = JSON.parse(text); } catch { data = { error: "Not JSON", preview: text.substring(0, 50) }; }
-
-          results[ep.name] = {
+          results[q.name] = {
             status: response.status,
-            success: response.status === 200,
-            dataPreview: JSON.stringify(data).substring(0, 150) + "..."
+            foundData: count > 50, // Did we get more than empty brackets?
+            preview: JSON.stringify(data).substring(0, 100) + "..."
           };
         } catch (e: any) {
-          results[ep.name] = { error: e.message };
+          results[q.name] = { error: e.message };
         }
       }));
-
       res.json(results);
     } catch (e: any) {
       res.json({ fatalError: e.message });
