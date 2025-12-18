@@ -1683,7 +1683,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
-// -------- AI: Ask Analyst (Hybrid: Mock + Wikipedia + API) --------
+// -------- AI: Ask Analyst (The "Wikipedia Reader" Version) --------
   app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
     const playerId = req.params.id;
     const { question } = req.body;
@@ -1691,15 +1691,13 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     if (!question) return res.status(400).json({ message: "Question required" });
 
     try {
-      // 1. Get Player from DB
+      // 1. Get Player Name from DB
       const player: any = await storage.getPlayer(playerId as any);
       if (!player) return res.status(404).json({ message: "Player not found" });
 
       let searchName = player.fullName || player.full_name;
 
-      // ---------------------------------------------------------
-      // 1. ATP LINK PARSER (Restored)
-      // ---------------------------------------------------------
+      // 1a. ATP Link Override (CRITICAL: Fixes "Family Tennis" issue)
       if (player.atpProfileUrl || player.atp_profile_url) {
         try {
           const urlObj = new URL(player.atpProfileUrl || player.atp_profile_url);
@@ -1707,92 +1705,59 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
           const playersIndex = pathSegments.indexOf('players');
           if (playersIndex !== -1 && pathSegments[playersIndex + 1]) {
             const slug = pathSegments[playersIndex + 1];
+            // Convert "novak-djokovic" -> "Novak Djokovic"
             searchName = slug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
             console.log(`🔍 Detected ATP Link. Overriding name to: "${searchName}"`);
           }
-        } catch (e) {
-          console.log("Could not parse ATP URL");
-        }
+        } catch (e) { /* Ignore parsing errors */ }
       }
 
-      // ---------------------------------------------------------
-      // 2. THE BULLETPROOF MOCK (Checks Name AND Question)
-      // ---------------------------------------------------------
-      const MOCK_STATS: Record<string, any> = {
-        "Novak Djokovic": {
-           rank: 1, titles: 98, grand_slams: 24, matches_won: 1087, win_rate: "83.6%",
-           recent_form: ["W", "W", "L", "W", "W"],
-           play_style: "Aggressive Baseliner, Best Returner in History"
-        },
-        "Carlos Alcaraz": {
-           rank: 2, titles: 12, grand_slams: 2,
-           play_style: "Explosive, All-Court, Heavy Forehand"
-        },
-        "Jannik Sinner": {
-           rank: 3, titles: 10, grand_slams: 1,
-           play_style: "Powerful Baseliner, Clean Ball Striker"
+      console.log(`🌍 Reading Wikipedia for: ${searchName}`);
+      let wikiContext = "";
+
+      // 2. FETCH WIKIPEDIA (The "Claude" Method)
+      try {
+        // We fetch the FULL article text (extracts)
+        const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=true&titles=${encodeURIComponent(searchName)}&format=json&origin=*`;
+        
+        const response = await fetch(wikiUrl);
+        const data = await response.json();
+        
+        // Wikipedia returns data keyed by Page ID (e.g. "12345"). We grab the first key.
+        const pages = data?.query?.pages;
+        const firstPageKey = pages ? Object.keys(pages)[0] : null;
+        
+        if (firstPageKey && firstPageKey !== "-1") {
+            const fullText = pages[firstPageKey].extract;
+            
+            // OPTIMIZATION: We truncate to ~20,000 chars to fit in AI context window.
+            // This is usually plenty to cover the Intro + Career Highlights + Recent Seasons.
+            wikiContext = fullText.substring(0, 20000); 
+            console.log(`✅ Successfully read ${wikiContext.length} chars from Wikipedia.`);
+        } else {
+            console.log("❌ Wikipedia page not found.");
         }
-      };
-
-      let statsData = null;
-      let usedSource = "General Knowledge";
-
-      // CHECK: Does the Name OR the Question contain a famous player?
-      const mockKey = Object.keys(MOCK_STATS).find(key => 
-          searchName.toLowerCase().includes(key.toLowerCase()) || 
-          question.toLowerCase().includes(key.toLowerCase()) || // <--- SAFETY NET
-          key.toLowerCase().includes(searchName.toLowerCase())
-      );
-
-      if (mockKey) {
-          console.log(`🚀 MOCK HIT: Using hardcoded stats for ${mockKey}`);
-          statsData = MOCK_STATS[mockKey];
-          usedSource = "Official ATP Stats (Cached)";
-          searchName = mockKey; // Force name to match
-      } 
-
-      // ---------------------------------------------------------
-      // 3. WIKIPEDIA SCRAPER (Fallback)
-      // ---------------------------------------------------------
-      let wikiBio = "";
-      if (!statsData) {
-         try {
-            console.log(`🌍 Scraping Wikipedia for: ${searchName}`);
-            const wikiRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchName)}`);
-            if (wikiRes.ok) {
-               const wikiData = await wikiRes.json();
-               if (wikiData.extract) {
-                  wikiBio = wikiData.extract;
-                  usedSource = "Wikipedia Summary";
-                  console.log("✅ Wikipedia Bio Found");
-               }
-            }
-         } catch (e) {
-            console.log("Wikipedia scrape failed");
-         }
+      } catch (err) {
+        console.error("Wikipedia Fetch Error:", err);
       }
 
-      // ---------------------------------------------------------
-      // 4. ASK OPENAI
-      // ---------------------------------------------------------
+      // 3. ASK OPENAI (The Analyst)
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       
-      const systemPrompt = `You are an expert tennis analyst.
-      
-CONTEXT:
-Player: ${searchName}
-User Question: "${question}"
+      const systemPrompt = `You are an expert tennis analyst. 
 
-AVAILABLE DATA:
-${statsData ? `[OFFICIAL STATS]: ${JSON.stringify(statsData)}` : ""}
-${wikiBio ? `[WIKIPEDIA BIO]: ${wikiBio}` : ""}
+CONTEXT:
+User Question: "${question}"
+Player: ${searchName}
+
+SOURCE MATERIAL (WIKIPEDIA):
+${wikiContext ? wikiContext : "No Wikipedia article found. Use your general training data."}
 
 INSTRUCTIONS:
-1. Answer the question using the provided data.
-2. If using Mock Stats, be specific (e.g. "He has 24 Grand Slams").
-3. If using Wikipedia, summarize the career highlights.
-4. If NO data is available, use your general knowledge but admit it.
-5. Format with Bullet Points.`;
+1. Answer the question using the SOURCE MATERIAL provided above.
+2. Look specifically for "2024" or "2025" sections in the text to answer recent questions.
+3. If the user asks about something not in the text (like "Live score right now"), admit you only have data up to the article's last update.
+4. Format your answer with Markdown (Bullet points, Bold text) to make it easy to read.`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
