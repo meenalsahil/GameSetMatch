@@ -1683,7 +1683,7 @@ Return ONLY a valid JSON array of strings (IDs). Example: ["id1", "id2"]`;
     }
   });
 
-// -------- AI: Ask Analyst (ANTI-HALLUCINATION) --------
+// -------- AI: Ask Analyst (V3 - SINGLES/DOUBLES FIX) --------
 app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
   const playerId = req.params.id;
   const { question } = req.body;
@@ -1744,161 +1744,158 @@ app.post("/api/players/:id/ask-stats", async (req: Request, res: Response) => {
       console.log("Cache lookup skipped");
     }
 
-    // 3. Build SMART search queries - ALWAYS use FULL NAME to avoid confusion
+    // 3. Detect if user is asking about doubles specifically
+    const questionLower = question.toLowerCase();
+    const isAskingDoubles = questionLower.includes('doubles') || questionLower.includes('double');
+    const isAskingRanking = questionLower.includes('ranking') || questionLower.includes('rank');
+    
+    // 4. Build MULTIPLE search queries for comprehensive coverage
     const playerRanking = player.ranking ? parseInt(player.ranking) : 999;
     const isLowerRanked = playerRanking > 100 || !player.ranking;
     
-    // CRITICAL: Always use FULL NAME in quotes to avoid confusion with relatives
-    const primaryQuery = `"${playerName}" tennis ${question} ${currentYear}`;
+    // Query 1: General tennis query
+    const query1 = `"${playerName}" tennis singles ${question} ${currentYear}`;
     
-    // Secondary query for ITF/Challenger (important for lower-ranked players!)
-    const secondaryQuery = isLowerRanked 
-      ? `"${playerName}" ITF Challenger results ${currentYear}`
+    // Query 2: ITF specific (M15, M25, Futures)
+    const query2 = isLowerRanked 
+      ? `"${playerName}" ITF M25 M15 Futures tennis ${currentYear} results`
+      : null;
+    
+    // Query 3: Challenger + tournament results
+    const query3 = isLowerRanked
+      ? `"${playerName}" Challenger tournament results wins ${currentYear}`
       : null;
 
     console.log(`🌍 Player: ${playerName} | Ranking: ${playerRanking} | Lower ranked: ${isLowerRanked}`);
-    console.log(`🔍 Primary search: ${primaryQuery}`);
-    if (secondaryQuery) console.log(`🔍 Secondary search: ${secondaryQuery}`);
+    console.log(`🔍 Query 1: ${query1}`);
+    if (query2) console.log(`🔍 Query 2 (ITF): ${query2}`);
+    if (query3) console.log(`🔍 Query 3 (Challenger): ${query3}`);
 
-    // 4. Search the web using Tavily (NO DOMAIN RESTRICTIONS!)
+    // 5. Search the web using Tavily - MULTIPLE SEARCHES
     let searchContext = "";
     let sourcesUsed: { url: string; title: string }[] = [];
     const tavilyKey = process.env.TVLY_KEY;
 
-    if (tavilyKey) {
+    const runTavilySearch = async (query: string, label: string) => {
       try {
-        // ========== SEARCH 1: Primary Query ==========
-        const tavilyRes1 = await fetch('https://api.tavily.com/search', {
+        const res = await fetch('https://api.tavily.com/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             api_key: tavilyKey,
-            query: primaryQuery,
+            query: query,
             search_depth: "advanced",
             include_answer: true,
             include_raw_content: false,
-            max_results: 6
+            max_results: 8  // Increased from 6
           })
         });
 
-        const tavilyData1 = await tavilyRes1.json();
-        console.log(`✅ Primary search returned ${tavilyData1.results?.length || 0} results`);
+        const data = await res.json();
+        console.log(`✅ ${label} returned ${data.results?.length || 0} results`);
 
-        if (tavilyData1.answer) {
-          searchContext += `PRIMARY SEARCH SUMMARY:\n${tavilyData1.answer}\n\n`;
+        let context = "";
+        if (data.answer) {
+          context += `${label} SUMMARY:\n${data.answer}\n\n`;
         }
 
-        if (tavilyData1.results && tavilyData1.results.length > 0) {
-          searchContext += "PRIMARY SOURCES:\n\n";
-          for (const result of tavilyData1.results) {
-            searchContext += `SOURCE: ${result.title}\nURL: ${result.url}\nCONTENT: ${result.content}\n\n`;
-            sourcesUsed.push({ url: result.url, title: result.title || new URL(result.url).hostname });
-          }
-        }
-
-        // ========== SEARCH 2: ITF/Challenger Query (for lower-ranked players) ==========
-        if (secondaryQuery) {
-          console.log(`🔍 Running secondary ITF/Challenger search...`);
-          
-          const tavilyRes2 = await fetch('https://api.tavily.com/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              api_key: tavilyKey,
-              query: secondaryQuery,
-              search_depth: "advanced",
-              include_answer: true,
-              include_raw_content: false,
-              max_results: 6
-            })
-          });
-
-          const tavilyData2 = await tavilyRes2.json();
-          console.log(`✅ Secondary search returned ${tavilyData2.results?.length || 0} results`);
-
-          if (tavilyData2.answer) {
-            searchContext += `\nITF/CHALLENGER SEARCH SUMMARY:\n${tavilyData2.answer}\n\n`;
-          }
-
-          if (tavilyData2.results && tavilyData2.results.length > 0) {
-            searchContext += "ITF/CHALLENGER SOURCES:\n\n";
-            for (const result of tavilyData2.results) {
-              if (!sourcesUsed.find(s => s.url === result.url)) {
-                searchContext += `SOURCE: ${result.title}\nURL: ${result.url}\nCONTENT: ${result.content}\n\n`;
-                sourcesUsed.push({ url: result.url, title: result.title || new URL(result.url).hostname });
-              }
+        if (data.results && data.results.length > 0) {
+          context += `${label} SOURCES:\n\n`;
+          for (const result of data.results) {
+            if (!sourcesUsed.find(s => s.url === result.url)) {
+              context += `SOURCE: ${result.title}\nURL: ${result.url}\nCONTENT: ${result.content}\n\n`;
+              sourcesUsed.push({ url: result.url, title: result.title || new URL(result.url).hostname });
             }
           }
         }
-
-        console.log(`📊 Total context: ${searchContext.length} chars, ${sourcesUsed.length} unique sources`);
-
-      } catch (searchErr) {
-        console.error("❌ Tavily search error:", searchErr);
+        return context;
+      } catch (err) {
+        console.error(`❌ ${label} error:`, err);
+        return "";
       }
+    };
+
+    if (tavilyKey) {
+      // Run searches in parallel for speed
+      const searchPromises = [runTavilySearch(query1, "GENERAL SEARCH")];
+      if (query2) searchPromises.push(runTavilySearch(query2, "ITF SEARCH"));
+      if (query3) searchPromises.push(runTavilySearch(query3, "CHALLENGER SEARCH"));
+
+      const results = await Promise.all(searchPromises);
+      searchContext = results.join("\n");
+
+      console.log(`📊 Total context: ${searchContext.length} chars, ${sourcesUsed.length} unique sources`);
     } else {
       console.warn("⚠️ TVLY_KEY not set in environment variables");
     }
 
-    // 5. Ask OpenAI with STRICT ANTI-HALLUCINATION PROMPT
+    // 6. Ask OpenAI with VERY SPECIFIC prompt
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const systemPrompt = searchContext
-      ? `You are a tennis data analyst. You MUST follow these rules EXACTLY:
+      ? `You are a tennis statistics analyst providing ACCURATE data for ${playerName}.
 
-═══════════════════════════════════════════════════════════════
-PLAYER IDENTITY - CRITICAL - DO NOT CONFUSE WITH OTHERS
-═══════════════════════════════════════════════════════════════
-PLAYER NAME: ${playerName}
-FIRST NAME: ${playerFirstName}
-LAST NAME: ${playerLastName}
+════════════════════════════════════════════════════════════════════════
+⚠️  CRITICAL RULES - READ CAREFULLY
+════════════════════════════════════════════════════════════════════════
 
-⚠️ WARNING: This player may have relatives or namesakes in tennis!
-- If searching for "Jacopo Berrettini", do NOT confuse with "Matteo Berrettini" (his brother, former top 10)
-- If searching for any player, ONLY report data that EXPLICITLY mentions "${playerFirstName}" or the full name "${playerName}"
-- Rankings, results, or stats for OTHER players with the same last name are WRONG
+RULE 1: SINGLES vs DOUBLES - NEVER MIX THEM!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Tennis has TWO separate ranking systems: SINGLES and DOUBLES
+- They are COMPLETELY DIFFERENT numbers
+- ${playerName}'s SINGLES ranking is around #300-500 range
+- ${playerName}'s DOUBLES ranking is around #1000-1300 range
+- When asked about "ranking" without specifying, ALWAYS report SINGLES ranking
+- Only report DOUBLES if the user specifically asks about doubles
+- If you see a ranking like #1200, that's probably DOUBLES - don't report it as singles!
 
-═══════════════════════════════════════════════════════════════
-STRICT DATA RULES - ANTI-HALLUCINATION
-═══════════════════════════════════════════════════════════════
-1. ONLY use information EXPLICITLY stated in the search results below
-2. If the search results don't contain specific data, say "This information was not found in the search results"
-3. NEVER guess or estimate rankings, scores, or results
-4. NEVER fill in gaps with assumed data
-5. If you see data for a different player (like a sibling), IGNORE IT
-6. When uncertain, say "I could not verify this information"
+RULE 2: PLAYER IDENTITY - NO CONFUSION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Player: ${playerName} (first name: ${playerFirstName})
+- DO NOT confuse with relatives (e.g., Matteo Berrettini is Jacopo's brother)
+- Only report data that EXPLICITLY mentions "${playerFirstName}" or "${playerName}"
+- If data is about a different person, IGNORE IT
 
-═══════════════════════════════════════════════════════════════
-PLAYER CONTEXT
-═══════════════════════════════════════════════════════════════
-- This is likely a lower-ranked player competing in ITF Futures and Challenger events
-- Their career-high ranking is probably #200-1000, NOT top 100
-- Look for M15, M25, W15, W25 (ITF) and Challenger results
-- Do NOT assume ATP/WTA main tour participation unless explicitly stated
+RULE 3: ITF/CHALLENGER FOCUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- This player competes mainly in ITF Futures (M15, M25) and Challenger events
+- Look for tournament names like: M15, M25, Challenger, ITF
+- These are NOT ATP main tour events (like Grand Slams or Masters)
+- ITF titles are significant achievements for this level player
 
-═══════════════════════════════════════════════════════════════
-USER QUESTION
-═══════════════════════════════════════════════════════════════
-"${question}"
+RULE 4: NO HALLUCINATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- ONLY use data from the search results below
+- If data is missing, say "This information was not found in the search results"
+- NEVER make up rankings, scores, or results
+- When uncertain, be honest about limitations
 
-═══════════════════════════════════════════════════════════════
-SEARCH RESULTS (USE ONLY THIS DATA)
-═══════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════
+USER QUESTION: "${question}"
+${isAskingRanking ? '\n⚠️ USER IS ASKING ABOUT RANKING - Remember: report SINGLES unless they specifically ask for DOUBLES!' : ''}
+${isAskingDoubles ? '\n⚠️ USER IS ASKING ABOUT DOUBLES specifically' : ''}
+════════════════════════════════════════════════════════════════════════
+
+SEARCH RESULTS (USE ONLY THIS DATA):
 ${searchContext}
 
-═══════════════════════════════════════════════════════════════
-RESPONSE FORMAT
-═══════════════════════════════════════════════════════════════
-- Be specific with dates, tournament names, opponents, scores
-- Use bullet points for clarity
-- If data is incomplete, acknowledge gaps honestly
-- End with a note if search results were limited`
+════════════════════════════════════════════════════════════════════════
+RESPONSE GUIDELINES:
+- List specific tournaments with dates, opponents, scores
+- For rankings: specify if SINGLES or DOUBLES
+- For results: include round reached (R1, R2, QF, SF, F, W)
+- Acknowledge when search data is incomplete
+- Format clearly with bullet points
+════════════════════════════════════════════════════════════════════════`
 
-      : `You are a tennis analyst. The user asked about ${playerName}, but real-time search is unavailable.
+      : `You are a tennis analyst. Real-time search is unavailable for ${playerName}.
+         
+State that you cannot retrieve current data and suggest checking:
+- ATP/WTA official website
+- ITF Tennis website (itftennis.com)
+- Live score sites like Flashscore or Sofascore
 
-IMPORTANT: Do NOT guess or provide unverified information. Simply state that you cannot retrieve current data for this player and suggest they check official sources like the ATP/WTA/ITF websites.
-
-Do NOT confuse this player with others who may have similar names (like family members).`;
+Do NOT guess or make up information.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -1906,14 +1903,14 @@ Do NOT confuse this player with others who may have similar names (like family m
         { role: "system", content: systemPrompt },
         { role: "user", content: question }
       ],
-      max_tokens: 2000,
-      temperature: 0.1  // Lower temperature = less creative = fewer hallucinations
+      max_tokens: 2500,  // Increased for longer responses
+      temperature: 0.1
     });
 
     const answer = completion.choices[0].message.content;
-    const topSources = sourcesUsed.slice(0, 8);
+    const topSources = sourcesUsed.slice(0, 10);
 
-    // 6. Save to cache
+    // 7. Save to cache
     try {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS ai_analyst_cache (
@@ -1942,13 +1939,13 @@ Do NOT confuse this player with others who may have similar names (like family m
       console.error("Cache save error:", cacheErr);
     }
 
-    // 7. Return response
+    // 8. Return response
     res.json({
       answer: answer,
       sources: topSources,
       sourcesCount: topSources.length,
       usedCache: false,
-      searchQueries: secondaryQuery ? [primaryQuery, secondaryQuery] : [primaryQuery],
+      searchQueries: [query1, query2, query3].filter(Boolean),
       timestamp: new Date()
     });
 
