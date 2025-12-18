@@ -1864,5 +1864,29 @@ INSTRUCTIONS:
     }
   });
 
+// -------- DEBUG ROUTE: Check Raw API Data --------
+  app.get("/api/debug-tennis", async (req: Request, res: Response) => {
+    try {
+      const rapidApiKey = process.env.RAPIDAPI_KEY;
+      if (!rapidApiKey) return res.json({ error: "No API Key configured" });
+
+      // Fetch Top 5 Rankings to see the field names
+      const url = "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/atp/rankings";
+      const response = await fetch(url, {
+         method: "GET",
+         headers: { 
+           'x-rapidapi-key': rapidApiKey, 
+           'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com' 
+         }
+      });
+      
+      const data = await response.json();
+      // Return the raw JSON to the browser so we can see the field names
+      res.json(data);
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
   return httpServer;
 }
