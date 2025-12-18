@@ -1864,29 +1864,50 @@ INSTRUCTIONS:
     }
   });
 
-// -------- DEBUG ROUTE: Check Raw API Data --------
+// -------- DEBUG: API Scanner (Find the working endpoint) --------
   app.get("/api/debug-tennis", async (req: Request, res: Response) => {
-    try {
-      const rapidApiKey = process.env.RAPIDAPI_KEY;
-      if (!rapidApiKey) return res.json({ error: "No API Key configured" });
+    const results: any = {};
+    const rapidApiKey = process.env.RAPIDAPI_KEY;
+    
+    if (!rapidApiKey) return res.json({ error: "No API Key configured" });
+    
+    // The list of likely endpoints to test
+    const endpoints = [
+      { name: "Search (Last Name)", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/search?search=Djokovic" },
+      { name: "Rankings V2 (Root)", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/rankings" },
+      { name: "Rankings V2 (ATP Path)", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/rankings/atp" },
+      { name: "Rankings V1 (Fallback)", url: "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v1/rankings" }
+    ];
 
-      // Fetch Top 5 Rankings to see the field names
-      const url = "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/atp/rankings";
-      const response = await fetch(url, {
-         method: "GET",
-         headers: { 
-           'x-rapidapi-key': rapidApiKey, 
-           'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com' 
-         }
-      });
+    try {
+      // Run all checks in parallel
+      await Promise.all(endpoints.map(async (ep) => {
+        try {
+          const response = await fetch(ep.url, {
+             method: "GET",
+             headers: { 
+               'x-rapidapi-key': rapidApiKey, 
+               'x-rapidapi-host': 'tennis-api-atp-wta-itf.p.rapidapi.com' 
+             }
+          });
+          
+          const data = await response.json();
+          results[ep.name] = {
+            status: response.status,
+            success: response.status === 200,
+            dataPreview: JSON.stringify(data).substring(0, 100) + "..." // Just the first 100 chars
+          };
+        } catch (e: any) {
+          results[ep.name] = { error: e.message };
+        }
+      }));
+
+      // Return the full report
+      res.json(results);
       
-      const data = await response.json();
-      // Return the raw JSON to the browser so we can see the field names
-      res.json(data);
     } catch (e: any) {
-      res.json({ error: e.message });
+      res.json({ fatalError: e.message });
     }
   });
-
   return httpServer;
 }
