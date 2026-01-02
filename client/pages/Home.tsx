@@ -34,9 +34,32 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* CSS for tennis animations */}
+      <style>{`
+        @keyframes bounce-ball {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-15px) rotate(180deg); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+        @keyframes serve-line {
+          0% { transform: translateX(-100%); opacity: 0; }
+          50% { opacity: 0.6; }
+          100% { transform: translateX(200%); opacity: 0; }
+        }
+        .ball-bounce { animation: bounce-ball 2.5s ease-in-out infinite; }
+        .ball-bounce-2 { animation: bounce-ball 2.5s ease-in-out infinite 0.8s; }
+        .float-card { animation: float 3s ease-in-out infinite; }
+        .float-card-2 { animation: float 3s ease-in-out infinite 0.3s; }
+        .float-card-3 { animation: float 3s ease-in-out infinite 0.6s; }
+        .serve-line { animation: serve-line 4s ease-in-out infinite; }
+      `}</style>
+
       {/* HERO SECTION */}
       <section className="relative overflow-hidden">
-        {/* Background video - KEPT FROM ORIGINAL */}
+        {/* Background video - PRESERVED */}
         <video
           className="absolute inset-0 w-full h-full object-cover"
           autoPlay
@@ -50,8 +73,35 @@ export default function HomePage() {
           />
         </video>
 
-        {/* Gradient overlay - KEPT FROM ORIGINAL */}
+        {/* Gradient overlay - PRESERVED */}
         <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/65 to-emerald-900/50" />
+        
+        {/* Tennis court line pattern overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(90deg, white 1px, transparent 1px),
+              linear-gradient(white 1px, transparent 1px)
+            `,
+            backgroundSize: '60px 60px'
+          }}
+        />
+
+        {/* Animated tennis balls */}
+        <div className="absolute top-24 right-24 ball-bounce hidden lg:block">
+          <div className="w-8 h-8 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full shadow-lg shadow-yellow-500/40 flex items-center justify-center">
+            <div className="w-5 h-0.5 bg-white/60 rounded-full rotate-45" />
+          </div>
+        </div>
+        <div className="absolute bottom-32 left-16 ball-bounce-2 hidden lg:block">
+          <div className="w-6 h-6 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full shadow-lg shadow-yellow-500/30" />
+        </div>
+        
+        {/* Speed serve line */}
+        <div className="absolute top-1/2 left-0 right-0 overflow-hidden h-0.5 hidden lg:block">
+          <div className="serve-line w-40 h-full bg-gradient-to-r from-transparent via-yellow-400 to-transparent" />
+        </div>
 
         {/* Hero content - TWO COLUMN LAYOUT */}
         <div className="relative z-10 container mx-auto px-6 py-16 lg:py-20 min-h-[75vh]">
@@ -59,18 +109,20 @@ export default function HomePage() {
             
             {/* ========== LEFT SIDE ========== */}
             <div className="flex flex-col justify-center">
-              {/* Trust pill */}
+              {/* Badge - Tennis style with yellow */}
               <div className="flex flex-wrap gap-3 mb-5">
-                <div className="inline-flex items-center gap-2 bg-emerald-900/40 border border-emerald-500/40 text-emerald-200 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  Verified tennis players • ATP / ITF / WTA linked
+                <div className="inline-flex items-center gap-2 bg-yellow-400 text-emerald-900 px-4 py-2 rounded-full text-sm font-bold shadow-lg shadow-yellow-400/30 hover:scale-105 transition-transform">
+                  <span className="text-base">🎾</span>
+                  Verified • ATP / ITF / WTA linked
                 </div>
               </div>
 
-              {/* Headline */}
+              {/* Headline - Yellow accent */}
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-4 leading-tight">
                 Connect{" "}
-                <span className="text-emerald-300">real tennis players</span>{" "}
+                <span className="text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.4)]">
+                  real tennis players
+                </span>{" "}
                 with supporters who care.
               </h1>
 
@@ -82,15 +134,16 @@ export default function HomePage() {
                 profiles.
               </p>
 
-              {/* CTAs */}
+              {/* CTAs - Tennis themed */}
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <Button
                   size="lg"
-                  className="text-lg px-8 py-6 shadow-lg shadow-emerald-500/30"
+                  className="text-lg px-8 py-6 bg-yellow-400 hover:bg-yellow-300 text-emerald-900 font-bold shadow-lg shadow-yellow-400/30 hover:scale-105 transition-all"
                   asChild
                   data-testid="button-cta-player"
                 >
                   <Link href="/signup/player">
+                    <span className="text-xl mr-2">🎾</span>
                     I'm a Player
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
@@ -99,7 +152,7 @@ export default function HomePage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="text-lg px-8 py-6 border-emerald-300/70 text-emerald-50 hover:bg-emerald-900/40"
+                  className="text-lg px-8 py-6 border-white/40 text-white hover:bg-white/10 backdrop-blur-sm hover:scale-105 transition-all"
                   asChild
                   data-testid="button-cta-sponsor"
                 >
@@ -110,19 +163,21 @@ export default function HomePage() {
                 </Button>
               </div>
 
-              {/* Trust strip bullets */}
-              <div className="flex flex-wrap gap-4 text-xs md:text-sm text-emerald-100/90 font-medium">
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  ATP / ITF / WTA profile link required
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  Video upload by Players for authenticity
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  Manual account review of each Player by Admin
+              {/* Trust strip - Match scoreboard style */}
+              <div className="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="border-r border-white/20">
+                    <CheckCircle2 className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
+                    <div className="text-white text-xs font-medium">ATP/ITF/WTA<br/>Verified</div>
+                  </div>
+                  <div className="border-r border-white/20">
+                    <div className="text-yellow-400 text-lg mb-1">🎥</div>
+                    <div className="text-white text-xs font-medium">Video<br/>Authentication</div>
+                  </div>
+                  <div>
+                    <div className="text-yellow-400 text-lg mb-1">👤</div>
+                    <div className="text-white text-xs font-medium">Admin<br/>Reviewed</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -131,21 +186,21 @@ export default function HomePage() {
             <div className="hidden lg:block">
               {/* AI Header Badge */}
               <div className="text-center mb-6">
-                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-full shadow-lg shadow-purple-500/25">
+                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-full shadow-xl shadow-purple-500/30 hover:scale-105 transition-transform">
                   <Zap className="w-5 h-5 text-yellow-300" />
                   <span className="font-bold text-lg">AI-Powered Features</span>
                   <span className="bg-yellow-400 text-purple-900 text-xs font-bold px-2 py-0.5 rounded-full ml-1">FREE</span>
                 </div>
               </div>
 
-              {/* Feature Panels */}
+              {/* Feature Panels with float animation */}
               <div className="space-y-4">
                 
                 {/* Panel 1: Smart Player Search */}
-                <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-5 hover:bg-white/15 transition-all cursor-pointer group hover:scale-[1.02] hover:shadow-xl">
+                <div className="float-card bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-5 hover:bg-white/20 transition-all cursor-pointer group hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/40 group-hover:scale-110 group-hover:rotate-6 transition-all">
                         <Search className="w-6 h-6 text-white" />
                       </div>
                       <div>
@@ -153,25 +208,25 @@ export default function HomePage() {
                         <p className="text-gray-400 text-sm">Find players by ranking, country & play style</p>
                       </div>
                     </div>
-                    <span className="bg-blue-500/20 text-blue-300 text-xs font-medium px-3 py-1 rounded-full">
+                    <span className="bg-blue-500/30 text-blue-300 text-xs font-semibold px-3 py-1 rounded-full border border-blue-400/30">
                       👀 Supporters
                     </span>
                   </div>
                   {/* Mini Preview */}
-                  <div className="mt-4 bg-black/30 rounded-lg p-3 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                    <span className="text-sm text-gray-400">Search "clay court specialists from Italy"...</span>
+                  <div className="mt-4 bg-black/40 rounded-lg p-3 flex items-center gap-2 border border-white/10">
+                    <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+                    <span className="text-sm text-gray-300">Search "clay court specialists from Italy"...</span>
                   </div>
                 </div>
 
                 {/* Panel 2: StAItistics (Highlighted) */}
-                <div className="bg-gradient-to-r from-purple-600/30 to-indigo-600/30 backdrop-blur-sm border border-purple-400/30 rounded-xl p-5 hover:from-purple-600/40 hover:to-indigo-600/40 transition-all cursor-pointer group relative overflow-hidden hover:scale-[1.02] hover:shadow-xl">
+                <div className="float-card-2 bg-gradient-to-br from-purple-600/40 to-pink-600/40 backdrop-blur-md border border-purple-400/40 rounded-2xl p-5 hover:from-purple-600/50 hover:to-pink-600/50 transition-all cursor-pointer group relative overflow-hidden hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/30">
                   {/* Decorative glow */}
-                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl" />
+                  <div className="absolute -top-10 -right-10 w-40 h-40 bg-yellow-400/20 rounded-full blur-3xl group-hover:bg-yellow-400/30 transition-all" />
                   
                   <div className="relative flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/40 group-hover:scale-110 group-hover:rotate-6 transition-all">
                         <BarChart3 className="w-6 h-6 text-white" />
                       </div>
                       <div>
@@ -181,26 +236,29 @@ export default function HomePage() {
                         <p className="text-purple-200 text-sm">Real-time rankings & performance analysis</p>
                       </div>
                     </div>
-                    <span className="bg-purple-500/30 text-purple-200 text-xs font-medium px-3 py-1 rounded-full">
+                    <span className="bg-purple-500/40 text-purple-200 text-xs font-semibold px-3 py-1 rounded-full border border-purple-400/40">
                       👀 Supporters
                     </span>
                   </div>
                   {/* Mini Preview */}
-                  <div className="relative mt-4 bg-black/30 rounded-lg p-3">
+                  <div className="relative mt-4 bg-black/40 rounded-lg p-3 border border-white/10">
                     <div className="text-sm text-gray-300">
-                      <span className="text-purple-400">Q:</span> "How did Jacopo perform in 2025?"
+                      <span className="text-purple-400 font-medium">Q:</span> "How did Jacopo perform in 2025?"
                     </div>
-                    <div className="text-sm text-white mt-1 font-medium">
-                      <span className="text-emerald-400">A:</span> 44-25 record • 4 titles • 64% win rate
+                    <div className="text-sm mt-1 font-medium">
+                      <span className="text-emerald-400">A:</span>{" "}
+                      <span className="text-white">44-25</span>{" "}
+                      <span className="text-yellow-400">• 4 titles</span>{" "}
+                      <span className="text-cyan-400">• 64% win</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Panel 3: Profile Builder */}
-                <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-5 hover:bg-white/15 transition-all cursor-pointer group hover:scale-[1.02] hover:shadow-xl">
+                <div className="float-card-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-5 hover:bg-white/20 transition-all cursor-pointer group hover:scale-[1.02] hover:shadow-2xl hover:shadow-emerald-500/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-400 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/40 group-hover:scale-110 group-hover:rotate-6 transition-all">
                         <UserCircle className="w-6 h-6 text-white" />
                       </div>
                       <div>
@@ -208,15 +266,16 @@ export default function HomePage() {
                         <p className="text-gray-400 text-sm">AI auto-fills your stats & achievements</p>
                       </div>
                     </div>
-                    <span className="bg-emerald-500/20 text-emerald-300 text-xs font-medium px-3 py-1 rounded-full">
+                    <span className="bg-emerald-500/30 text-emerald-300 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-400/30">
                       🎾 Players
                     </span>
                   </div>
                   {/* Mini Preview */}
-                  <div className="mt-4 bg-black/30 rounded-lg p-3 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-teal-400 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">JB</div>
-                    <div className="text-sm text-gray-300">
-                      Auto-imported: Ranking, Titles, Win Rate...
+                  <div className="mt-4 bg-black/40 rounded-lg p-3 flex items-center gap-3 border border-white/10">
+                    <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-emerald-900 text-xs font-bold shadow-lg">JB</div>
+                    <div>
+                      <div className="text-white text-sm font-medium">Auto-imported</div>
+                      <div className="text-gray-400 text-xs">Ranking, Titles, Win Rate...</div>
                     </div>
                   </div>
                 </div>
