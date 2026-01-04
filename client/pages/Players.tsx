@@ -178,17 +178,14 @@ export default function BrowsePlayers() {
     return true;
   });
 
-  // If AI search was performed, reorder based on AI matches
-  if (aiMatchedIds && aiMatchedIds.length > 0) {
-    const matchedPlayers = aiMatchedIds
+  // FIXED: If AI search was performed, ONLY show matched players (not all)
+  if (aiMatchedIds !== null) {
+    // AI search was performed - show ONLY matched players
+    filteredPlayers = aiMatchedIds
       .map((id) => filteredPlayers.find((p) => p.id === id))
       .filter(Boolean) as Player[];
-    const unmatchedPlayers = filteredPlayers.filter(
-      (p) => !aiMatchedIds.includes(p.id)
-    );
-    filteredPlayers = [...matchedPlayers, ...unmatchedPlayers];
   } else {
-    // Sort players
+    // No AI search - sort players normally
     filteredPlayers.sort((a, b) => {
       if (sortBy === "sponsors") {
         return (b.sponsorCount || 0) - (a.sponsorCount || 0);
@@ -237,7 +234,7 @@ export default function BrowsePlayers() {
       } else {
         toast({
           title: `Found ${data.matchedPlayerIds.length} matches!`,
-          description: "Players are now sorted by relevance.",
+          description: "Showing matched players only.",
         });
       }
     } catch (error: any) {
@@ -293,7 +290,7 @@ export default function BrowsePlayers() {
                   className="flex-1 border-0 shadow-none focus-visible:ring-0 text-gray-700 placeholder-gray-400"
                 />
               </div>
-              {aiMatchedIds ? (
+              {aiMatchedIds !== null ? (
                 <Button
                   onClick={clearAiSearch}
                   variant="outline"
@@ -326,62 +323,73 @@ export default function BrowsePlayers() {
             </p>
           </div>
 
-          {/* Filters */}
-          <div className="flex justify-center gap-3 mb-8 flex-wrap">
-            <Input
-              type="text"
-              placeholder="Quick search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-48 rounded-full bg-white border-gray-200"
-            />
-            <Select value={countryFilter} onValueChange={setCountryFilter}>
-              <SelectTrigger className="w-40 rounded-full bg-white border-gray-200">
-                <SelectValue placeholder="All Countries" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Countries</SelectItem>
-                {countries.map((country) => (
-                  <SelectItem key={country} value={country}>
-                    {getCountryFlag(country)} {country}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={rankFilter} onValueChange={setRankFilter}>
-              <SelectTrigger className="w-40 rounded-full bg-white border-gray-200">
-                <SelectValue placeholder="All Rankings" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Rankings</SelectItem>
-                <SelectItem value="top100">Top 100</SelectItem>
-                <SelectItem value="top500">Top 500</SelectItem>
-                <SelectItem value="top1000">Top 1000</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-44 rounded-full bg-purple-100 border-purple-200 text-purple-700">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sponsors">Most Sponsored</SelectItem>
-                <SelectItem value="ranking">Best Ranking</SelectItem>
-                <SelectItem value="name">Name A-Z</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Filters - Only show when NOT in AI search mode */}
+          {aiMatchedIds === null && (
+            <div className="flex justify-center gap-3 mb-8 flex-wrap">
+              <Input
+                type="text"
+                placeholder="Quick search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-48 rounded-full bg-white border-gray-200"
+              />
+              <Select value={countryFilter} onValueChange={setCountryFilter}>
+                <SelectTrigger className="w-40 rounded-full bg-white border-gray-200">
+                  <SelectValue placeholder="All Countries" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Countries</SelectItem>
+                  {countries.map((country) => (
+                    <SelectItem key={country} value={country}>
+                      {getCountryFlag(country)} {country}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={rankFilter} onValueChange={setRankFilter}>
+                <SelectTrigger className="w-40 rounded-full bg-white border-gray-200">
+                  <SelectValue placeholder="All Rankings" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Rankings</SelectItem>
+                  <SelectItem value="top100">Top 100</SelectItem>
+                  <SelectItem value="top500">Top 500</SelectItem>
+                  <SelectItem value="top1000">Top 1000</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-44 rounded-full bg-purple-100 border-purple-200 text-purple-700">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sponsors">Most Sponsored</SelectItem>
+                  <SelectItem value="ranking">Best Ranking</SelectItem>
+                  <SelectItem value="name">Name A-Z</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Results count */}
           <p className="text-gray-500 text-sm mb-4">
-            {aiMatchedIds
-              ? `Showing ${aiMatchedIds.length} AI matches out of ${filteredPlayers.length} players`
+            {aiMatchedIds !== null
+              ? `Found ${filteredPlayers.length} AI match${filteredPlayers.length !== 1 ? 'es' : ''}`
               : `Showing ${filteredPlayers.length} players`}
           </p>
 
           {/* Player List */}
           {filteredPlayers.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
-              <p className="text-gray-500">No players found matching your criteria.</p>
+              {aiMatchedIds !== null ? (
+                <>
+                  <p className="text-gray-500 mb-4">No players found matching your search.</p>
+                  <Button onClick={clearAiSearch} variant="outline">
+                    Clear Search & Show All Players
+                  </Button>
+                </>
+              ) : (
+                <p className="text-gray-500">No players found matching your criteria.</p>
+              )}
             </div>
           ) : (
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
