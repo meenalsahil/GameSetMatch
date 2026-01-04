@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -107,12 +107,32 @@ export default function BrowsePlayers() {
   const [sortBy, setSortBy] = useState("sponsors");
   const [isAiSearching, setIsAiSearching] = useState(false);
   const [aiMatchedIds, setAiMatchedIds] = useState<string[] | null>(null);
+  const [hasAutoSearched, setHasAutoSearched] = useState(false);
   const { toast } = useToast();
+  const [location] = useLocation();
 
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Read URL search parameter and auto-trigger AI search
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchParam = urlParams.get('search');
+    
+    if (searchParam && !hasAutoSearched) {
+      setAiSearchQuery(searchParam);
+      setHasAutoSearched(true);
+    }
+  }, [location, hasAutoSearched]);
+
+  // Auto-trigger AI search when aiSearchQuery is set from URL
+  useEffect(() => {
+    if (aiSearchQuery && hasAutoSearched && !aiMatchedIds && !isAiSearching) {
+      handleAiSearch();
+    }
+  }, [aiSearchQuery, hasAutoSearched]);
 
   const { data: players = [], isLoading } = useQuery<Player[]>({
     queryKey: ["/api/players"],
@@ -234,6 +254,9 @@ export default function BrowsePlayers() {
   const clearAiSearch = () => {
     setAiSearchQuery("");
     setAiMatchedIds(null);
+    setHasAutoSearched(false);
+    // Clear URL parameter
+    window.history.replaceState({}, '', '/players');
   };
 
   if (isLoading) {
