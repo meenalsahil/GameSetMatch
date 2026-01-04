@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Search, ExternalLink, Loader2, Flame, User, Users, Info } from "lucide-react";
+import { Sparkles, Search, ExternalLink, Loader2, Flame } from "lucide-react";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,9 +27,6 @@ interface Player {
   photoUrl: string | null;
   atpProfileUrl: string | null;
   sponsorCount?: number;
-  gender?: string;
-  playStyle?: string;
-  createdAt?: string;
 }
 
 // Generate gradient colors based on name
@@ -69,9 +66,12 @@ function getInitials(name: string): string {
 // Get country flag emoji
 function getCountryFlag(country: string): string {
   const flags: Record<string, string> = {
-    "United States": "🇺🇸", "US": "🇺🇸", "USA": "🇺🇸",
+    "United States": "🇺🇸",
+    "US": "🇺🇸",
+    "USA": "🇺🇸",
     "Canada": "🇨🇦",
-    "United Kingdom": "🇬🇧", "UK": "🇬🇧",
+    "United Kingdom": "🇬🇧",
+    "UK": "🇬🇧",
     "Australia": "🇦🇺",
     "France": "🇫🇷",
     "Germany": "🇩🇪",
@@ -99,33 +99,7 @@ function getCountryFlag(country: string): string {
   return flags[country] || "🌍";
 }
 
-// Format play style for display
-function formatPlayStyle(playStyle: string | undefined): string {
-  if (!playStyle) return "";
-  const styles: Record<string, string> = {
-    "singles": "Singles",
-    "doubles": "Doubles",
-    "both": "Singles & Doubles",
-  };
-  return styles[playStyle] || playStyle;
-}
-
-// Format gender for display
-function formatGender(gender: string | undefined): string {
-  if (!gender) return "";
-  return gender === "male" ? "Male" : gender === "female" ? "Female" : gender;
-}
-
-// Check if player joined within last 30 days
-function isNewPlayer(player: Player): boolean {
-  if (!player.createdAt) return false;
-  const createdDate = new Date(player.createdAt);
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  return createdDate >= thirtyDaysAgo;
-}
-
-export default function Players() {
+export default function BrowsePlayers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [aiSearchQuery, setAiSearchQuery] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
@@ -133,12 +107,32 @@ export default function Players() {
   const [sortBy, setSortBy] = useState("sponsors");
   const [isAiSearching, setIsAiSearching] = useState(false);
   const [aiMatchedIds, setAiMatchedIds] = useState<string[] | null>(null);
+  const [hasAutoSearched, setHasAutoSearched] = useState(false);
   const { toast } = useToast();
+  const [location] = useLocation();
 
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Read URL search parameter and auto-trigger AI search
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchParam = urlParams.get('search');
+    
+    if (searchParam && !hasAutoSearched) {
+      setAiSearchQuery(searchParam);
+      setHasAutoSearched(true);
+    }
+  }, [location, hasAutoSearched]);
+
+  // Auto-trigger AI search when aiSearchQuery is set from URL
+  useEffect(() => {
+    if (aiSearchQuery && hasAutoSearched && !aiMatchedIds && !isAiSearching) {
+      handleAiSearch();
+    }
+  }, [aiSearchQuery, hasAutoSearched]);
 
   const { data: players = [], isLoading } = useQuery<Player[]>({
     queryKey: ["/api/players"],
@@ -149,6 +143,12 @@ export default function Players() {
 
   // Find max sponsor count for "Top Sponsored" badge
   const maxSponsorCount = Math.max(...players.map((p) => p.sponsorCount || 0), 0);
+
+  // Check if player is new (you could add createdAt field later)
+  const isNewPlayer = (player: Player) => {
+    // For now, mark players with 0-2 sponsors as "new"
+    return (player.sponsorCount || 0) <= 2;
+  };
 
   // Filter and sort players
   let filteredPlayers = players.filter((player) => {
@@ -178,18 +178,17 @@ export default function Players() {
     return true;
   });
 
-  // --- UPDATED LOGIC HERE ---
-  // If AI search was performed (aiMatchedIds is NOT null), use strict filtering
-  if (aiMatchedIds !== null) {
-    // 1. Filter to only include players returned by AI
-    filteredPlayers = filteredPlayers.filter((p) => aiMatchedIds.includes(p.id));
-    
-    // 2. Sort them by the order AI returned them (Relevance)
-    filteredPlayers.sort((a, b) => {
-      return aiMatchedIds.indexOf(a.id) - aiMatchedIds.indexOf(b.id);
-    });
+  // If AI search was performed, reorder based on AI matches
+  if (aiMatchedIds && aiMatchedIds.length > 0) {
+    const matchedPlayers = aiMatchedIds
+      .map((id) => filteredPlayers.find((p) => p.id === id))
+      .filter(Boolean) as Player[];
+    const unmatchedPlayers = filteredPlayers.filter(
+      (p) => !aiMatchedIds.includes(p.id)
+    );
+    filteredPlayers = [...matchedPlayers, ...unmatchedPlayers];
   } else {
-    // Standard sorting if NO AI search active
+    // Sort players
     filteredPlayers.sort((a, b) => {
       if (sortBy === "sponsors") {
         return (b.sponsorCount || 0) - (a.sponsorCount || 0);
@@ -200,7 +199,6 @@ export default function Players() {
       return a.fullName.localeCompare(b.fullName);
     });
   }
-  // --------------------------
 
   // AI Search handler
   const handleAiSearch = async () => {
@@ -229,17 +227,16 @@ export default function Players() {
       }
 
       const data = await res.json();
-      const matches = data.matchedPlayerIds || [];
-      setAiMatchedIds(matches);
+      setAiMatchedIds(data.matchedPlayerIds || []);
       
-      if (matches.length === 0) {
+      if (data.matchedPlayerIds?.length === 0) {
         toast({
           title: "No matches found",
           description: "Try adjusting your search criteria.",
         });
       } else {
         toast({
-          title: `Found ${matches.length} matches!`,
+          title: `Found ${data.matchedPlayerIds.length} matches!`,
           description: "Players are now sorted by relevance.",
         });
       }
@@ -257,6 +254,9 @@ export default function Players() {
   const clearAiSearch = () => {
     setAiSearchQuery("");
     setAiMatchedIds(null);
+    setHasAutoSearched(false);
+    // Clear URL parameter
+    window.history.replaceState({}, '', '/players');
   };
 
   if (isLoading) {
@@ -273,15 +273,15 @@ export default function Players() {
         <div className="max-w-6xl mx-auto px-6 py-10">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Find a Player to Support</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Find Your Player</h1>
             <p className="text-gray-600">
-              Browse verified athletes and help fund their journey to success
+              Support talented tennis athletes on their journey to success
             </p>
           </div>
 
           {/* AI Search Bar */}
           <div className="max-w-3xl mx-auto mb-10">
-            <div className="bg-white rounded-2xl shadow-lg p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="bg-white rounded-2xl shadow-lg p-2 flex items-center gap-2">
               <div className="flex-1 flex items-center gap-3 px-4">
                 <Sparkles className="w-5 h-5 text-purple-500 flex-shrink-0" />
                 <Input
@@ -293,7 +293,7 @@ export default function Players() {
                   className="flex-1 border-0 shadow-none focus-visible:ring-0 text-gray-700 placeholder-gray-400"
                 />
               </div>
-              {aiMatchedIds !== null ? (
+              {aiMatchedIds ? (
                 <Button
                   onClick={clearAiSearch}
                   variant="outline"
@@ -326,18 +326,6 @@ export default function Players() {
             </p>
           </div>
 
-          {/* Rankings Disclaimer */}
-          <div className="max-w-3xl mx-auto mb-10 bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3 text-sm text-blue-800">
-            <Info className="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-600" />
-            <div>
-              <p className="font-semibold mb-1">About Player Rankings</p>
-              <p className="opacity-90 leading-relaxed">
-                Rankings on GameSetMatch are self-reported by players or last updated from our database (Dec 2025). 
-                For the most up-to-date live rankings, please verify on the official <a href="https://www.atptour.com" target="_blank" rel="noreferrer" className="underline hover:text-blue-950 font-medium">ATP</a> or <a href="https://www.wtatennis.com" target="_blank" rel="noreferrer" className="underline hover:text-blue-950 font-medium">WTA</a> websites via the player's profile link.
-              </p>
-            </div>
-          </div>
-
           {/* Filters */}
           <div className="flex justify-center gap-3 mb-8 flex-wrap">
             <Input
@@ -345,10 +333,10 @@ export default function Players() {
               placeholder="Quick search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-48 rounded-full bg-white border-gray-200"
+              className="w-48 rounded-full bg-white border-gray-200"
             />
             <Select value={countryFilter} onValueChange={setCountryFilter}>
-              <SelectTrigger className="w-full sm:w-40 rounded-full bg-white border-gray-200">
+              <SelectTrigger className="w-40 rounded-full bg-white border-gray-200">
                 <SelectValue placeholder="All Countries" />
               </SelectTrigger>
               <SelectContent>
@@ -385,8 +373,8 @@ export default function Players() {
 
           {/* Results count */}
           <p className="text-gray-500 text-sm mb-4">
-            {aiMatchedIds !== null
-              ? `Showing ${filteredPlayers.length} AI matches`
+            {aiMatchedIds
+              ? `Showing ${aiMatchedIds.length} AI matches out of ${filteredPlayers.length} players`
               : `Showing ${filteredPlayers.length} players`}
           </p>
 
@@ -394,11 +382,6 @@ export default function Players() {
           {filteredPlayers.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
               <p className="text-gray-500">No players found matching your criteria.</p>
-              {aiMatchedIds !== null && (
-                <Button onClick={clearAiSearch} variant="link" className="mt-2 text-emerald-600">
-                  Clear AI Search
-                </Button>
-              )}
             </div>
           ) : (
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -413,7 +396,7 @@ export default function Players() {
                 return (
                   <div
                     key={player.id}
-                    className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 p-5 transition-all cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                    className={`flex items-center gap-4 p-5 transition-all cursor-pointer border-b border-gray-100 last:border-b-0 ${
                       isTopSponsored
                         ? "bg-amber-50 hover:bg-amber-100"
                         : isAiMatch
@@ -422,10 +405,10 @@ export default function Players() {
                     }`}
                   >
                     {/* Avatar */}
-                   <div
+                    <div
                       className={`w-14 h-14 rounded-full bg-gradient-to-br ${getGradientColors(
                         player.fullName
-                      )} flex items-center justify-center text-xl font-bold text-white flex-shrink-0 self-start sm:self-center`}
+                      )} flex items-center justify-center text-xl font-bold text-white flex-shrink-0`}
                     >
                       {player.photoUrl ? (
                         <img
@@ -464,46 +447,28 @@ export default function Players() {
                           {getCountryFlag(player.country)} {player.country}
                         </span>
                       </div>
-                      
-                      {/* Main info line */}
                       <p className="text-sm text-gray-500">
                         {player.location} • {player.specialization}
                         {player.ranking && ` • Rank #${player.ranking}`}
                       </p>
                       
-                      {/* Gender & Play Style badges */}
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        {player.gender && (
-                          <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-                            <User className="w-3 h-3" />
-                            {formatGender(player.gender)}
-                          </span>
-                        )}
-                        {player.playStyle && (
-                          <span className="inline-flex items-center gap-1 text-xs bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full">
-                            <Users className="w-3 h-3" />
-                            {formatPlayStyle(player.playStyle)}
-                          </span>
-                        )}
-                        
-                        {/* ATP Profile Link */}
-                        {player.atpProfileUrl && (
-                          <a
-                            href={player.atpProfileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            View ATP Profile
-                          </a>
-                        )}
-                      </div>
+                      {/* ATP Profile Link */}
+                      {player.atpProfileUrl && (
+                        <a
+                          href={player.atpProfileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          View ATP Profile
+                        </a>
+                      )}
                     </div>
 
                     {/* Sponsor Count */}
-                    <div className="flex items-center justify-between w-full sm:w-auto sm:flex-col sm:items-end sm:gap-2">
+                    <div className="text-center px-4">
                       <p className="text-xl font-bold text-emerald-600">
                         {player.sponsorCount || 0}
                       </p>
