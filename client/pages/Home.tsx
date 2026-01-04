@@ -14,13 +14,14 @@ import {
   Search,
   BarChart3,
   UserCircle,
-  Zap,
+  Eye,
+  DollarSign,
+  TrendingUp,
 } from "lucide-react";
 import Footer from "@/components/Footer";
 
 export default function HomePage() {
   useEffect(() => {
-    // Smooth scroll to section if hash exists
     const hash = window.location.hash;
     if (hash) {
       const element = document.querySelector(hash);
@@ -34,32 +35,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* CSS for tennis animations */}
-      <style>{`
-        @keyframes bounce-ball {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-15px) rotate(180deg); }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
-        }
-        @keyframes serve-line {
-          0% { transform: translateX(-100%); opacity: 0; }
-          50% { opacity: 0.6; }
-          100% { transform: translateX(200%); opacity: 0; }
-        }
-        .ball-bounce { animation: bounce-ball 2.5s ease-in-out infinite; }
-        .ball-bounce-2 { animation: bounce-ball 2.5s ease-in-out infinite 0.8s; }
-        .float-card { animation: float 3s ease-in-out infinite; }
-        .float-card-2 { animation: float 3s ease-in-out infinite 0.3s; }
-        .float-card-3 { animation: float 3s ease-in-out infinite 0.6s; }
-        .serve-line { animation: serve-line 4s ease-in-out infinite; }
-      `}</style>
-
       {/* HERO SECTION */}
       <section className="relative overflow-hidden">
-        {/* Background video - PRESERVED */}
+        {/* Background video */}
         <video
           className="absolute inset-0 w-full h-full object-cover"
           autoPlay
@@ -73,216 +51,180 @@ export default function HomePage() {
           />
         </video>
 
-        {/* Gradient overlay - PRESERVED */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/65 to-emerald-900/50" />
-        
-        {/* Tennis court line pattern overlay */}
-        <div 
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `
-              linear-gradient(90deg, white 1px, transparent 1px),
-              linear-gradient(white 1px, transparent 1px)
-            `,
-            backgroundSize: '60px 60px'
-          }}
-        />
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/90 via-slate-900/85 to-emerald-950/80" />
 
-        {/* Animated tennis balls */}
-        <div className="absolute top-24 right-24 ball-bounce hidden lg:block">
-          <div className="w-8 h-8 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full shadow-lg shadow-yellow-500/40 flex items-center justify-center">
-            <div className="w-5 h-0.5 bg-white/60 rounded-full rotate-45" />
+        {/* Hero content */}
+        <div className="relative z-10 container mx-auto px-6 py-12 min-h-[90vh]">
+          
+          {/* Headline */}
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-3 py-1 rounded-full text-xs font-medium mb-4">
+              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+              Verified ATP / ITF / WTA Players Only
+            </div>
+            <h1 className="text-4xl lg:text-5xl font-bold text-white mb-3">
+              Connect <span className="text-emerald-400">real tennis players</span> with supporters
+            </h1>
           </div>
-        </div>
-        <div className="absolute bottom-32 left-16 ball-bounce-2 hidden lg:block">
-          <div className="w-6 h-6 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full shadow-lg shadow-yellow-500/30" />
-        </div>
-        
-        {/* Speed serve line */}
-        <div className="absolute top-1/2 left-0 right-0 overflow-hidden h-0.5 hidden lg:block">
-          <div className="serve-line w-40 h-full bg-gradient-to-r from-transparent via-yellow-400 to-transparent" />
-        </div>
 
-        {/* Hero content - TWO COLUMN LAYOUT */}
-        <div className="relative z-10 container mx-auto px-6 py-16 lg:py-20 min-h-[75vh]">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+          {/* Two Column: Supporters vs Players */}
+          <div className="grid lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
             
-            {/* ========== LEFT SIDE ========== */}
-            <div className="flex flex-col justify-center">
-              {/* Badge - Tennis style with yellow */}
-              <div className="flex flex-wrap gap-3 mb-5">
-                <div className="inline-flex items-center gap-2 bg-yellow-400 text-emerald-900 px-4 py-2 rounded-full text-sm font-bold shadow-lg shadow-yellow-400/30 hover:scale-105 transition-transform">
-                  <span className="text-base">🎾</span>
-                  Verified • ATP / ITF / WTA linked
+            {/* ========== FOR SUPPORTERS (Blue) ========== */}
+            <div className="bg-blue-950/40 backdrop-blur border border-blue-500/30 rounded-3xl p-8">
+              
+              {/* Section Header */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                  <Eye className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-white font-bold text-xl">For Supporters</h2>
+                  <p className="text-blue-300/70 text-sm">Find & support verified players</p>
                 </div>
               </div>
 
-              {/* Headline - Yellow accent */}
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-4 leading-tight">
-                Connect{" "}
-                <span className="text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.4)]">
-                  real tennis players
-                </span>{" "}
-                with supporters who care.
-              </h1>
-
-              {/* Subheadline */}
-              <p className="text-base md:text-lg text-emerald-50/90 max-w-2xl mb-8">
-                GameSetMatch helps supporters connect with verified tennis
-                players using ATP/ITF/WTA profile links and verification
-                videos—so you know you're backing genuine athletes, not fake
-                profiles.
-              </p>
-
-              {/* CTAs - Tennis themed */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Button
-                  size="lg"
-                  className="text-lg px-8 py-6 bg-yellow-400 hover:bg-yellow-300 text-emerald-900 font-bold shadow-lg shadow-yellow-400/30 hover:scale-105 transition-all"
-                  asChild
-                  data-testid="button-cta-player"
+              {/* Search Box */}
+              <div className="mb-6">
+                <label className="text-blue-200/60 text-xs font-medium mb-2 block">
+                  Search for verified players to support
+                </label>
+                <form 
+                  className="bg-white rounded-xl p-1.5 flex items-center gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.target as HTMLFormElement);
+                    const query = formData.get('search') as string;
+                    window.location.href = `/players${query ? `?search=${encodeURIComponent(query)}` : ''}`;
+                  }}
                 >
-                  <Link href="/signup/player">
-                    <span className="text-xl mr-2">🎾</span>
-                    I'm a Player
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
-
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-lg px-8 py-6 border-white/40 text-white hover:bg-white/10 backdrop-blur-sm hover:scale-105 transition-all"
-                  asChild
-                  data-testid="button-cta-sponsor"
-                >
-                  <Link href="/players">
-                    I am a Supporter
-                    <PlayCircle className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
+                  <div className="flex-1 flex items-center gap-2 px-3 py-2">
+                    <Search className="w-5 h-5 text-gray-400" />
+                    <input 
+                      type="text"
+                      name="search"
+                      placeholder='Try: "Left-handed players from Spain"'
+                      className="flex-1 text-gray-800 placeholder-gray-400 outline-none text-sm"
+                    />
+                  </div>
+                  <Button 
+                    type="submit"
+                    className="bg-blue-500 hover:bg-blue-600 text-white font-medium px-5 py-2.5 rounded-lg text-sm"
+                  >
+                    Search
+                  </Button>
+                </form>
               </div>
 
-              {/* Trust strip - Match scoreboard style */}
-              <div className="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="border-r border-white/20">
-                    <CheckCircle2 className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
-                    <div className="text-white text-xs font-medium">ATP/ITF/WTA<br/>Verified</div>
-                  </div>
-                  <div className="border-r border-white/20">
-                    <div className="text-yellow-400 text-lg mb-1">🎥</div>
-                    <div className="text-white text-xs font-medium">Video<br/>Authentication</div>
+              {/* AI Feature: StAItistics */}
+              <div className="bg-purple-900/30 border border-purple-500/20 rounded-xl p-4 mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <BarChart3 className="w-4 h-4 text-purple-400" />
+                  <span className="text-white font-medium text-sm">
+                    St<span className="text-purple-400">AI</span>tistics
+                  </span>
+                  <span className="bg-purple-500/30 text-purple-300 text-xs px-2 py-0.5 rounded-full">FREE</span>
+                </div>
+                <div className="bg-black/30 rounded-lg p-3 text-sm">
+                  <div className="text-gray-400 mb-1">Q: "How did Jacopo perform in 2025?"</div>
+                  <div className="text-white">A: 44-25 record • 4 titles • 64% win rate</div>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <Button 
+                className="w-full bg-blue-500 hover:bg-blue-400 text-white font-semibold py-3 rounded-xl"
+                asChild
+              >
+                <Link href="/players">
+                  Browse All Players
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+
+            {/* ========== FOR PLAYERS (Green) ========== */}
+            <div className="bg-emerald-950/40 backdrop-blur border border-emerald-500/30 rounded-3xl p-8">
+              
+              {/* Section Header */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-lg">
+                  🎾
+                </div>
+                <div>
+                  <h2 className="text-white font-bold text-xl">For Players</h2>
+                  <p className="text-emerald-300/70 text-sm">Get verified & find supporters</p>
+                </div>
+              </div>
+
+              {/* Benefits List */}
+              <div className="space-y-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   </div>
                   <div>
-                    <div className="text-yellow-400 text-lg mb-1">👤</div>
-                    <div className="text-white text-xs font-medium">Admin<br/>Reviewed</div>
+                    <h4 className="text-white font-medium text-sm">Get Verified</h4>
+                    <p className="text-gray-400 text-xs">Link your ATP/ITF/WTA profile for credibility</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                    <DollarSign className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-medium text-sm">Receive Support</h4>
+                    <p className="text-gray-400 text-xs">Get funding for travel, gear, coaching & more</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                    <TrendingUp className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-medium text-sm">Share Your Journey</h4>
+                    <p className="text-gray-400 text-xs">Build your profile and connect with fans</p>
                   </div>
                 </div>
               </div>
+
+              {/* AI Feature: Profile Builder */}
+              <div className="bg-emerald-900/30 border border-emerald-500/20 rounded-xl p-4 mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <UserCircle className="w-4 h-4 text-emerald-400" />
+                  <span className="text-white font-medium text-sm">AI Profile Builder</span>
+                  <span className="bg-emerald-500/30 text-emerald-300 text-xs px-2 py-0.5 rounded-full">FREE</span>
+                </div>
+                <p className="text-gray-400 text-sm">
+                  Our AI auto-fills your stats, rankings, and achievements from official databases. Create your profile in minutes.
+                </p>
+              </div>
+
+              {/* CTA */}
+              <Button 
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-semibold py-3 rounded-xl"
+                asChild
+              >
+                <Link href="/signup/player">
+                  Register as Player
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
+          </div>
 
-            {/* ========== RIGHT SIDE - AI FEATURES PANELS ========== */}
-            <div className="hidden lg:block">
-              {/* AI Header Badge */}
-              <div className="text-center mb-6">
-                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-full shadow-xl shadow-purple-500/30 hover:scale-105 transition-transform">
-                  <Zap className="w-5 h-5 text-yellow-300" />
-                  <span className="font-bold text-lg">AI-Powered Features</span>
-                  <span className="bg-yellow-400 text-purple-900 text-xs font-bold px-2 py-0.5 rounded-full ml-1">FREE</span>
-                </div>
-              </div>
-
-              {/* Feature Panels with float animation */}
-              <div className="space-y-4">
-                
-                {/* Panel 1: Smart Player Search */}
-                <div className="float-card bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-5 hover:bg-white/20 transition-all cursor-pointer group hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/20">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/40 group-hover:scale-110 group-hover:rotate-6 transition-all">
-                        <Search className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h4 className="text-white font-bold text-lg">Smart Player Search</h4>
-                        <p className="text-gray-400 text-sm">Find players by ranking, country & play style</p>
-                      </div>
-                    </div>
-                    <span className="bg-blue-500/30 text-blue-300 text-xs font-semibold px-3 py-1 rounded-full border border-blue-400/30">
-                      👀 Supporters
-                    </span>
-                  </div>
-                  {/* Mini Preview */}
-                  <div className="mt-4 bg-black/40 rounded-lg p-3 flex items-center gap-2 border border-white/10">
-                    <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
-                    <span className="text-sm text-gray-300">Search "clay court specialists from Italy"...</span>
-                  </div>
-                </div>
-
-                {/* Panel 2: StAItistics (Highlighted) */}
-                <div className="float-card-2 bg-gradient-to-br from-purple-600/40 to-pink-600/40 backdrop-blur-md border border-purple-400/40 rounded-2xl p-5 hover:from-purple-600/50 hover:to-pink-600/50 transition-all cursor-pointer group relative overflow-hidden hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/30">
-                  {/* Decorative glow */}
-                  <div className="absolute -top-10 -right-10 w-40 h-40 bg-yellow-400/20 rounded-full blur-3xl group-hover:bg-yellow-400/30 transition-all" />
-                  
-                  <div className="relative flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/40 group-hover:scale-110 group-hover:rotate-6 transition-all">
-                        <BarChart3 className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h4 className="text-white font-bold text-lg flex items-center gap-1">
-                          St<span className="bg-yellow-400 text-purple-900 px-1.5 py-0.5 rounded font-extrabold text-sm">AI</span>tistics
-                        </h4>
-                        <p className="text-purple-200 text-sm">Real-time rankings & performance analysis</p>
-                      </div>
-                    </div>
-                    <span className="bg-purple-500/40 text-purple-200 text-xs font-semibold px-3 py-1 rounded-full border border-purple-400/40">
-                      👀 Supporters
-                    </span>
-                  </div>
-                  {/* Mini Preview */}
-                  <div className="relative mt-4 bg-black/40 rounded-lg p-3 border border-white/10">
-                    <div className="text-sm text-gray-300">
-                      <span className="text-purple-400 font-medium">Q:</span> "How did Jacopo perform in 2025?"
-                    </div>
-                    <div className="text-sm mt-1 font-medium">
-                      <span className="text-emerald-400">A:</span>{" "}
-                      <span className="text-white">44-25</span>{" "}
-                      <span className="text-yellow-400">• 4 titles</span>{" "}
-                      <span className="text-cyan-400">• 64% win</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Panel 3: Profile Builder */}
-                <div className="float-card-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-5 hover:bg-white/20 transition-all cursor-pointer group hover:scale-[1.02] hover:shadow-2xl hover:shadow-emerald-500/20">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-400 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/40 group-hover:scale-110 group-hover:rotate-6 transition-all">
-                        <UserCircle className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h4 className="text-white font-bold text-lg">Profile Builder</h4>
-                        <p className="text-gray-400 text-sm">AI auto-fills your stats & achievements</p>
-                      </div>
-                    </div>
-                    <span className="bg-emerald-500/30 text-emerald-300 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-400/30">
-                      🎾 Players
-                    </span>
-                  </div>
-                  {/* Mini Preview */}
-                  <div className="mt-4 bg-black/40 rounded-lg p-3 flex items-center gap-3 border border-white/10">
-                    <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-emerald-900 text-xs font-bold shadow-lg">JB</div>
-                    <div>
-                      <div className="text-white text-sm font-medium">Auto-imported</div>
-                      <div className="text-gray-400 text-xs">Ranking, Titles, Win Rate...</div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
+          {/* Trust bar */}
+          <div className="flex flex-wrap justify-center gap-8 mt-10 text-sm text-gray-500">
+            <span className="flex items-center gap-2">
+              <span className="text-emerald-400">✓</span> ATP/ITF/WTA Verified
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="text-emerald-400">✓</span> Video Authentication
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="text-emerald-400">✓</span> Manual Admin Review
+            </span>
           </div>
         </div>
       </section>
@@ -306,7 +248,6 @@ export default function HomePage() {
             <h3 className="text-3xl font-bold text-center mb-3">
               For Players
             </h3>
-            {/* AI Badge for Players - Profile Builder */}
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 bg-green-100 border border-green-200 text-green-700 px-4 py-1.5 rounded-full text-sm font-medium">
                 <Sparkles className="w-4 h-4" />
@@ -427,7 +368,6 @@ export default function HomePage() {
           <div>
             <div className="text-center mb-12">
               <h3 className="text-3xl font-bold mb-3">For Supporters</h3>
-              {/* UPDATED: Now includes both Smart Search AND StAItistics */}
               <div className="inline-flex items-center gap-2 bg-purple-100 border border-purple-200 text-purple-700 px-4 py-1.5 rounded-full text-sm font-medium">
                 <Sparkles className="w-4 h-4" />
                 AI-powered Smart Search & St<span className="bg-purple-600 text-white px-1 rounded text-xs font-bold mx-0.5">AI</span>tistics • FREE
