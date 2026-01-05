@@ -63,9 +63,12 @@ export default function HomePage() {
               <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
               Verified ATP / ITF / WTA Players Only
             </div>
-            <h1 className="text-4xl lg:text-5xl font-bold text-white mb-3">
+            <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4">
               Connect <span className="text-emerald-400">real tennis players</span> with supporters
             </h1>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              The road to the ATP is expensive. <span className="text-emerald-400 font-semibold">We make it possible.</span>
+            </p>
           </div>
 
           {/* Two Column: Supporters vs Players */}
